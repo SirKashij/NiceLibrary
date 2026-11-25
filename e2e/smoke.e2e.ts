@@ -28,6 +28,37 @@ describe('the built app', () => {
     expect(existsSync(join(appData!, 'io.github.sirkashij.nicelibrary', 'nicelibrary.db'))).toBe(true);
   });
 
+  /** Loads `src` into an image in the app's window and answers whether it loaded. */
+  async function loadImage(src: string): Promise<'loaded' | 'failed'> {
+    await app.execute(
+      `window.__imageCheck = 'loading';
+       const image = new Image();
+       image.onload = () => { window.__imageCheck = image.naturalWidth > 0 ? 'loaded' : 'failed'; };
+       image.onerror = () => { window.__imageCheck = 'failed'; };
+       image.src = arguments[0];`,
+      src,
+    );
+    const deadline = Date.now() + 30_000;
+    for (;;) {
+      const state = await app.execute<string>('return window.__imageCheck');
+      if (state !== 'loading') return state as 'loaded' | 'failed';
+      if (Date.now() > deadline) throw new Error(`${src} neither loaded nor failed within 30 s`);
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+
+  it('loads a Steam Cover through the core’s cover URL scheme', async () => {
+    const src = await app.execute<string>("return window.__TAURI_INTERNALS__.convertFileSrc('steam:620', 'cover')");
+
+    expect(await loadImage(src)).toBe('loaded');
+  });
+
+  it('does not let the interface load images from the web itself', async () => {
+    const steam = 'https://shared.steamstatic.com/store_item_assets/steam/apps/620/library_600x900.jpg';
+
+    expect(await loadImage(steam)).toBe('failed');
+  });
+
   it('shows in the settings whether the core found Steam', async () => {
     const t = await app.messages();
     await app.execute(

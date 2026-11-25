@@ -131,3 +131,93 @@ mod steam_locator {
         }
     }
 }
+
+/// `Downloader` (crates/core): `Ok(Some(bytes))` when the server sends the
+/// file, `Ok(None)` when it answers that the file does not exist (404, 410),
+/// `Err` for every other failure.
+///
+/// The tests run a small web server of their own on this machine; only the
+/// last one reaches Steam's artwork host.
+mod downloader {
+    use std::io::{BufRead, BufReader, Write};
+    use std::net::TcpListener;
+    use std::thread;
+
+    use nicelibrary_core::Downloader;
+    use nicelibrary_lib::ports::HttpDownloader;
+
+    /// A web server on this machine that answers one request with `status`
+    /// and `body`, and the address it serves.
+    fn serve_once(status: &str, body: &[u8]) -> String {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let (status, body) = (status.to_owned(), body.to_vec());
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            // Read the request up to the blank line that ends its head.
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut line = String::new();
+            while reader.read_line(&mut line).unwrap() > 0 && line != "\r\n" {
+                line.clear();
+            }
+            let head = format!("HTTP/1.1 {status}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len());
+            stream.write_all(head.as_bytes()).unwrap();
+            stream.write_all(&body).unwrap();
+        });
+        format!("http://{address}/cover.png")
+    }
+
+    /// A PNG image generated for the test.
+    fn generated_png() -> Vec<u8> {
+        let mut bytes = Vec::new();
+        let mut encoder = png::Encoder::new(&mut bytes, 2, 3);
+        encoder.set_color(png::ColorType::Rgb);
+        let mut writer = encoder.write_header().unwrap();
+        writer.write_image_data(&[90; 2 * 3 * 3]).unwrap();
+        writer.finish().unwrap();
+        bytes
+    }
+
+    #[test]
+    fn a_file_the_server_sends_is_downloaded() {
+        let image = generated_png();
+        let url = serve_once("200 OK", &image);
+
+        assert_eq!(HttpDownloader::new().download(&url), Ok(Some(image)));
+    }
+
+    #[test]
+    fn a_file_the_server_does_not_have_is_none() {
+        for status in ["404 Not Found", "410 Gone"] {
+            let url = serve_once(status, b"<!doctype html><title>Not found</title>");
+
+            assert_eq!(HttpDownloader::new().download(&url), Ok(None), "{status}");
+        }
+    }
+
+    #[test]
+    fn a_server_error_is_an_error() {
+        let url = serve_once("503 Service Unavailable", b"busy");
+
+        assert!(HttpDownloader::new().download(&url).is_err());
+    }
+
+    #[test]
+    fn a_server_that_cannot_be_reached_is_an_error() {
+        // A port that was free a moment ago and has no server now.
+        let address = TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap();
+
+        assert!(HttpDownloader::new().download(&format!("http://{address}/cover.png")).is_err());
+    }
+
+    #[test]
+    fn downloads_a_cover_from_steams_artwork_host_over_https() {
+        // Portal 2's upright library image. Only its format is checked, and it
+        // is not kept anywhere.
+        let url = "https://shared.steamstatic.com/store_item_assets/steam/apps/620/library_600x900.jpg";
+
+        let bytes = HttpDownloader::new().download(url).expect("Steam reachable").expect("the image exists");
+
+        assert!(bytes.starts_with(&[0xFF, 0xD8, 0xFF]), "not a JPEG");
+    }
+}

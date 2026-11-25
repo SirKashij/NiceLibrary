@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
@@ -12,6 +12,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => steam,
+    coverUrl: (game) => `cover://localhost/${game.id}`,
   };
 }
 
@@ -92,6 +93,40 @@ describe('Installed Steam Games in the Library', () => {
 
     const list = await screen.findByRole('list', { name: 'Spiele' });
     expect(within(list).getByText('Nicht installiert')).toBeInTheDocument();
+  });
+});
+
+describe('Covers in the Library', () => {
+  it('shows each Game as its Cover, loaded from the core', async () => {
+    render(<App operations={fakeOperations([steamGame(400, 'Portal'), steamGame(620, 'Portal 2')])} lang="en" />);
+
+    const cover = await screen.findByRole('img', { name: 'Cover of Portal 2' });
+    expect(cover.tagName).toBe('IMG');
+    expect(cover).toHaveAttribute('src', 'cover://localhost/steam:620');
+    expect(screen.getByRole('img', { name: 'Cover of Portal' })).toHaveAttribute('src', 'cover://localhost/steam:400');
+  });
+
+  it('shows a neutral placeholder with the title when a Game has no Cover', async () => {
+    render(<App operations={fakeOperations([steamGame(3527290, 'Untitled Prototype')])} lang="en" />);
+
+    // The core answers "no Cover" (or cannot fetch one), so the image fails to load.
+    fireEvent.error(await screen.findByRole('img', { name: 'Cover of Untitled Prototype' }));
+
+    const placeholder = screen.getByRole('img', { name: 'Cover of Untitled Prototype' });
+    expect(placeholder.tagName).not.toBe('IMG');
+    expect(placeholder).toHaveTextContent('Untitled Prototype');
+  });
+
+  it('keeps the title under each Cover', async () => {
+    render(<App operations={fakeOperations([steamGame(620, 'Portal 2')])} lang="en" />);
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'Portal 2' })).toBeInTheDocument();
+  });
+
+  it('names Covers in German', async () => {
+    render(<App operations={fakeOperations([steamGame(620, 'Portal 2')])} lang="de" />);
+
+    expect(await screen.findByRole('img', { name: 'Cover von Portal 2' })).toBeInTheDocument();
   });
 });
 

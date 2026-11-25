@@ -3,9 +3,11 @@
 //! Version 1 implements them for Windows (ADR-0001). On other systems the
 //! app builds with stand-ins that report nothing found.
 
+mod http;
 #[cfg(windows)]
 mod steam_windows;
 
+pub use http::HttpDownloader;
 #[cfg(windows)]
 pub use steam_windows::{Hive, RegistryValue, WindowsSteamLocator};
 
@@ -13,7 +15,7 @@ use nicelibrary_core::Ports;
 
 /// The ports of this machine.
 pub fn real_ports() -> Ports {
-    Ports { steam_locator: steam_locator() }
+    Ports { steam_locator: steam_locator(), downloader: Box::new(HttpDownloader::new()) }
 }
 
 #[cfg(windows)]

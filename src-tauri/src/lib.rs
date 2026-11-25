@@ -3,7 +3,9 @@
 
 pub mod ports;
 
-use nicelibrary_core::{Core, Error, Game, SteamInstallation, Store};
+use nicelibrary_core::{Core, CoverCache, Error, Game, SteamInstallation, Store};
+use percent_encoding::percent_decode_str;
+use tauri::http::{Response, StatusCode, header};
 use tauri::{App, Manager, WebviewWindowBuilder};
 
 #[tauri::command]
@@ -22,16 +24,50 @@ fn steam_installation(core: tauri::State<'_, Core>) -> SteamInstallation {
     core.steam_installation()
 }
 
+/// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
+/// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
+pub const COVER_PROTOCOL: &str = "cover";
+
+/// Answers a request for `cover://localhost/<game id>` with the Game's Cover:
+/// the image, 404 when the Game has none, 503 when it could not be fetched.
+/// The interface shows a placeholder for both.
+pub fn cover_response(core: &Core, uri_path: &str) -> Response<Vec<u8>> {
+    let game_id = percent_decode_str(uri_path.trim_start_matches('/')).decode_utf8_lossy();
+    let (status, media_type, body) = match core.cover(&game_id) {
+        Ok(Some(cover)) => (StatusCode::OK, cover.media_type, cover.bytes),
+        Ok(None) => (StatusCode::NOT_FOUND, "text/plain", Vec::new()),
+        Err(error) => (StatusCode::SERVICE_UNAVAILABLE, "text/plain", error.to_string().into_bytes()),
+    };
+    Response::builder()
+        .status(status)
+        .header(header::CONTENT_TYPE, media_type)
+        .body(body)
+        .expect("a valid response")
+}
+
 /// The database's file name in the app's data folder in the user profile
 /// (`%APPDATA%\<identifier>` on Windows).
 const DATABASE: &str = "nicelibrary.db";
 
+/// The folder of downloaded Covers in the app's cache folder in the user
+/// profile (`%LOCALAPPDATA%\<identifier>` on Windows).
+const COVERS: &str = "covers";
+
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![library, read_installed_games, steam_installation])
+        .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
+            let app = context.app_handle().clone();
+            let path = request.uri().path().to_owned();
+            // Off the main thread: a Cover may have to be downloaded first.
+            tauri::async_runtime::spawn_blocking(move || {
+                responder.respond(cover_response(&app.state::<Core>(), &path));
+            });
+        })
         .setup(|app| {
             let store = Store::open(&app.path().app_data_dir()?.join(DATABASE))?;
-            app.manage(Core::new(ports::real_ports(), store));
+            let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
+            app.manage(Core::new(ports::real_ports(), store, covers));
             create_main_window(app)
         })
         .run(tauri::generate_context!())

@@ -95,22 +95,41 @@ function LibraryView({ operations }: { operations: Operations }) {
         </p>
       )}
       {fromSteam.state === 'ready' && fromSteam.value.length === 0 && <p className="note">{t('library.empty')}</p>}
-      {games && games.length > 0 && <GameList games={games} />}
+      {games && games.length > 0 && <CoverGrid games={games} coverUrl={operations.coverUrl} />}
     </Page>
   );
 }
 
-function GameList({ games }: { games: Game[] }) {
+function CoverGrid({ games, coverUrl }: { games: Game[]; coverUrl: Operations['coverUrl'] }) {
   const t = useT();
   return (
     <ul className="games" aria-label={t('library.games')}>
       {games.map((game) => (
         <li key={game.id} className="game" data-installed={game.installed}>
+          <Cover title={game.title} src={coverUrl(game)} />
           <h2 className="game-title">{game.title}</h2>
           {!game.installed && <span className="muted">{t('library.notInstalled')}</span>}
         </li>
       ))}
     </ul>
+  );
+}
+
+/** A Game's Cover, or a neutral placeholder with its title when there is none or it cannot be loaded. */
+function Cover({ title, src }: { title: string; src: string }) {
+  const t = useT();
+  const [failed, setFailed] = useState(false);
+  const label = t('library.cover', { title });
+
+  if (failed) {
+    return (
+      <div className="cover cover-placeholder" role="img" aria-label={label}>
+        <span>{title}</span>
+      </div>
+    );
+  }
+  return (
+    <img className="cover" src={src} alt={label} loading="lazy" decoding="async" onError={() => setFailed(true)} />
   );
 }
 

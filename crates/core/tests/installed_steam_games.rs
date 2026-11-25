@@ -5,7 +5,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use nicelibrary_core::{Core, Game, Ports, Source, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, Game, Ports, Source, SteamLocator, Store};
 use tempfile::TempDir;
 
 /// A substitute for the registry lookup: Steam is where the test says.
@@ -14,6 +14,15 @@ struct SteamAt(Option<PathBuf>);
 impl SteamLocator for SteamAt {
     fn steam_folder(&self) -> Option<PathBuf> {
         self.0.clone()
+    }
+}
+
+/// A computer without a network connection.
+struct Offline;
+
+impl Downloader for Offline {
+    fn download(&self, _url: &str) -> Result<Option<Vec<u8>>, String> {
+        Err("no network connection".into())
     }
 }
 
@@ -110,8 +119,9 @@ impl Profile {
     /// Starts the app: a core over this profile's database.
     fn start(&self, steam: Option<&Path>) -> Core {
         Core::new(
-            Ports { steam_locator: Box::new(SteamAt(steam.map(Path::to_path_buf))) },
+            Ports { steam_locator: Box::new(SteamAt(steam.map(Path::to_path_buf))), downloader: Box::new(Offline) },
             Store::open(&self.database()).expect("database opens"),
+            CoverCache::new(self.0.path().join("covers")),
         )
     }
 }

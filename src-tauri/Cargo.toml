@@ -23,9 +23,14 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 nicelibrary-core = { path = "../crates/core" }
 tauri = { version = "2", features = [] }
+# HTTP client for Covers. The OS's TLS (schannel on Windows) with the OS's
+# root certificates, so no certificate bundle ships with the app.
+percent-encoding = "2"
+ureq = { version = "3", default-features = false, features = ["native-tls-no-default"] }
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56"
 
 [dev-dependencies]
+png = "0.18"
 tempfile = { workspace = true }
