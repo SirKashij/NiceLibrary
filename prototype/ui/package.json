@@ -1,0 +1,21 @@
+{
+  "name": "prototype-ui",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "PROTOTYPE - throwaway UI variants, not production code",
+  "scripts": {
+    "dev": "vite --open"
+  },
+  "dependencies": {
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.2",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}
