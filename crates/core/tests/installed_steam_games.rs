@@ -132,10 +132,7 @@ fn lists_the_installed_steam_games_by_title() {
 
     let core = Profile::new().start(Some(steam.path()));
 
-    assert_eq!(
-        core.refresh_installed_games().unwrap(),
-        vec![installed(400, "Portal"), installed(620, "Portal 2")]
-    );
+    assert_eq!(core.read_installed_games().unwrap(), vec![installed(400, "Portal"), installed(620, "Portal 2")]);
     assert_eq!(core.library().unwrap(), vec![installed(400, "Portal"), installed(620, "Portal 2")]);
 }
 
@@ -150,7 +147,7 @@ fn reads_every_library_folder_including_ones_on_other_drives() {
 
     let core = Profile::new().start(Some(steam.path()));
 
-    assert_eq!(titles(&core.refresh_installed_games().unwrap()), ["Half-Life", "Half-Life 2", "Portal 2"]);
+    assert_eq!(titles(&core.read_installed_games().unwrap()), ["Half-Life", "Half-Life 2", "Portal 2"]);
 }
 
 #[test]
@@ -171,7 +168,7 @@ fn reads_library_folders_in_the_format_of_older_steam_versions() {
 
     let core = Profile::new().start(Some(steam.path()));
 
-    assert_eq!(core.refresh_installed_games().unwrap(), vec![installed(70, "Half-Life")]);
+    assert_eq!(core.read_installed_games().unwrap(), vec![installed(70, "Half-Life")]);
 }
 
 #[test]
@@ -183,7 +180,7 @@ fn a_game_whose_manifest_lies_in_two_library_folders_appears_once() {
 
     let core = Profile::new().start(Some(steam.path()));
 
-    assert_eq!(core.refresh_installed_games().unwrap(), vec![installed(620, "Portal 2")]);
+    assert_eq!(core.read_installed_games().unwrap(), vec![installed(620, "Portal 2")]);
 }
 
 #[test]
@@ -198,7 +195,7 @@ fn steams_own_redistributables_and_runtimes_do_not_appear() {
 
     let core = Profile::new().start(Some(steam.path()));
 
-    assert_eq!(core.refresh_installed_games().unwrap(), vec![installed(620, "Portal 2")]);
+    assert_eq!(core.read_installed_games().unwrap(), vec![installed(620, "Portal 2")]);
 }
 
 #[test]
@@ -209,7 +206,7 @@ fn a_game_still_downloading_for_the_first_time_does_not_appear_but_one_waiting_f
 
     let core = Profile::new().start(Some(steam.path()));
 
-    assert_eq!(core.refresh_installed_games().unwrap(), vec![installed(400, "Portal")]);
+    assert_eq!(core.read_installed_games().unwrap(), vec![installed(400, "Portal")]);
 }
 
 #[test]
@@ -220,7 +217,24 @@ fn a_damaged_manifest_is_skipped() {
 
     let core = Profile::new().start(Some(steam.path()));
 
-    assert_eq!(core.refresh_installed_games().unwrap(), vec![installed(620, "Portal 2")]);
+    assert_eq!(core.read_installed_games().unwrap(), vec![installed(620, "Portal 2")]);
+}
+
+#[test]
+fn a_manifest_without_a_name_takes_its_title_from_the_install_folder_and_one_without_either_is_skipped() {
+    let steam = SteamFixture::new();
+    let steamapps = steam.path().join("steamapps");
+    fs::create_dir_all(&steamapps).unwrap();
+    fs::write(
+        steamapps.join("appmanifest_620.acf"),
+        r#""AppState" { "appid" "620" "name" "" "StateFlags" "4" "installdir" "Portal 2" }"#,
+    )
+    .unwrap();
+    fs::write(steamapps.join("appmanifest_400.acf"), r#""AppState" { "appid" "400" "StateFlags" "4" }"#).unwrap();
+
+    let core = Profile::new().start(Some(steam.path()));
+
+    assert_eq!(core.read_installed_games().unwrap(), vec![installed(620, "Portal 2")]);
 }
 
 #[test]
@@ -228,7 +242,7 @@ fn a_second_start_shows_the_games_before_steam_is_read_again() {
     let steam = SteamFixture::new();
     steam.install(steam.path(), 620, "Portal 2");
     let profile = Profile::new();
-    profile.start(Some(steam.path())).refresh_installed_games().unwrap();
+    profile.start(Some(steam.path())).read_installed_games().unwrap();
 
     // Second start, even with Steam gone: the stored Library is there at once.
     let core = profile.start(None);
@@ -241,9 +255,9 @@ fn reading_steam_again_keeps_the_library_when_steam_cannot_be_found() {
     let steam = SteamFixture::new();
     steam.install(steam.path(), 620, "Portal 2");
     let profile = Profile::new();
-    profile.start(Some(steam.path())).refresh_installed_games().unwrap();
+    profile.start(Some(steam.path())).read_installed_games().unwrap();
 
-    assert_eq!(profile.start(None).refresh_installed_games().unwrap(), vec![installed(620, "Portal 2")]);
+    assert_eq!(profile.start(None).read_installed_games().unwrap(), vec![installed(620, "Portal 2")]);
 }
 
 #[test]
@@ -252,11 +266,12 @@ fn a_damaged_list_of_library_folders_leaves_the_library_as_it_was() {
     let drive = steam.add_library_folder();
     steam.install(&drive, 70, "Half-Life");
     let profile = Profile::new();
-    profile.start(Some(steam.path())).refresh_installed_games().unwrap();
+    profile.start(Some(steam.path())).read_installed_games().unwrap();
 
-    fs::write(steam.path().join("steamapps").join("libraryfolders.vdf"), r#""libraryfolders" { "0" { "path" "#).unwrap();
+    fs::write(steam.path().join("steamapps").join("libraryfolders.vdf"), r#""libraryfolders" { "0" { "path" "#)
+        .unwrap();
 
-    assert_eq!(profile.start(Some(steam.path())).refresh_installed_games().unwrap(), vec![installed(70, "Half-Life")]);
+    assert_eq!(profile.start(Some(steam.path())).read_installed_games().unwrap(), vec![installed(70, "Half-Life")]);
 }
 
 #[test]
@@ -265,12 +280,12 @@ fn an_uninstalled_game_is_no_longer_installed() {
     steam.install(steam.path(), 620, "Portal 2");
     steam.install(steam.path(), 400, "Portal");
     let core = Profile::new().start(Some(steam.path()));
-    core.refresh_installed_games().unwrap();
+    core.read_installed_games().unwrap();
 
     steam.uninstall(steam.path(), 400);
 
     assert_eq!(
-        core.refresh_installed_games().unwrap(),
+        core.read_installed_games().unwrap(),
         vec![Game { installed: false, ..installed(400, "Portal") }, installed(620, "Portal 2")]
     );
 }
@@ -279,7 +294,7 @@ fn an_uninstalled_game_is_no_longer_installed() {
 fn without_steam_the_library_stays_empty() {
     let core = Profile::new().start(None);
 
-    assert!(core.refresh_installed_games().unwrap().is_empty());
+    assert!(core.read_installed_games().unwrap().is_empty());
 }
 
 #[test]
@@ -287,14 +302,14 @@ fn games_belong_to_the_steam_account_they_were_read_for() {
     let steam = SteamFixture::new();
     steam.install(steam.path(), 620, "Portal 2");
     let core = Profile::new().start(Some(steam.path()));
-    core.refresh_installed_games().unwrap();
+    core.read_installed_games().unwrap();
 
     // Another account logs in; until it has been read, its Library is empty,
     // and the first account's Games are not shown as its own.
     steam.logged_in(PLAYER_TWO);
     steam.uninstall(steam.path(), 620);
     steam.install(steam.path(), 400, "Portal");
-    assert_eq!(core.refresh_installed_games().unwrap(), vec![installed(400, "Portal")]);
+    assert_eq!(core.read_installed_games().unwrap(), vec![installed(400, "Portal")]);
 
     // Back on the first account, its own rows are still there.
     steam.logged_in(PLAYER_ONE);
@@ -304,7 +319,7 @@ fn games_belong_to_the_steam_account_they_were_read_for() {
         "the library shows the account last read until it is read again"
     );
     assert_eq!(
-        core.refresh_installed_games().unwrap(),
+        core.read_installed_games().unwrap(),
         vec![installed(400, "Portal"), Game { installed: false, ..installed(620, "Portal 2") }]
     );
 }
@@ -314,7 +329,7 @@ fn a_database_from_a_newer_version_of_the_app_is_refused_and_left_alone() {
     let profile = Profile::new();
     let steam = SteamFixture::new();
     steam.install(steam.path(), 620, "Portal 2");
-    profile.start(Some(steam.path())).refresh_installed_games().unwrap();
+    profile.start(Some(steam.path())).read_installed_games().unwrap();
     mark_as_written_by_a_newer_version(&profile.database());
     let before = fs::read(profile.database()).unwrap();
 

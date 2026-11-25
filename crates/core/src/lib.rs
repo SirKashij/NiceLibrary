@@ -34,6 +34,13 @@ pub struct Game {
     pub installed: bool,
 }
 
+impl Game {
+    /// The Steam Game with Steam's app id `app_id`.
+    pub(crate) fn steam(app_id: u32, title: String, installed: bool) -> Self {
+        Self { id: format!("steam:{app_id}"), title, source: Source::Steam, installed }
+    }
+}
+
 /// Why an operation failed. The interface receives the message as text.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Error {
@@ -98,7 +105,7 @@ impl Core {
     ///
     /// When Steam, its Steam Account or its list of library folders cannot be
     /// found or read, the stored Library is left as it is.
-    pub fn refresh_installed_games(&self) -> Result<Vec<Game>, Error> {
+    pub fn read_installed_games(&self) -> Result<Vec<Game>, Error> {
         if let Some(folder) = self.ports.steam_locator.steam_folder()
             && let Some(account) = steam::current_account(&folder)
             && let Some(apps) = steam::installed_apps(&folder)

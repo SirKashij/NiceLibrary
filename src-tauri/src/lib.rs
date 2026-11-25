@@ -13,8 +13,8 @@ fn library(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
 
 /// Async, so reading Steam's folders runs off the main thread.
 #[tauri::command]
-async fn refresh_installed_games(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
-    core.refresh_installed_games()
+async fn read_installed_games(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
+    core.read_installed_games()
 }
 
 #[tauri::command]
@@ -28,7 +28,7 @@ const DATABASE: &str = "nicelibrary.db";
 
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![library, refresh_installed_games, steam_installation])
+        .invoke_handler(tauri::generate_handler![library, read_installed_games, steam_installation])
         .setup(|app| {
             let store = Store::open(&app.path().app_data_dir()?.join(DATABASE))?;
             app.manage(Core::new(ports::real_ports(), store));

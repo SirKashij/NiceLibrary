@@ -10,7 +10,7 @@ const NO_STEAM: SteamInstallation = { state: 'notFound' };
 function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM): Operations {
   return {
     library: async () => games,
-    refreshInstalledGames: async () => games,
+    readInstalledGames: async () => games,
     steamInstallation: async () => steam,
   };
 }
@@ -34,7 +34,7 @@ describe('Installed Steam Games in the Library', () => {
       <App
         operations={{
           ...fakeOperations(),
-          refreshInstalledGames: async () => [steamGame(400, 'Portal'), steamGame(620, 'Portal 2')],
+          readInstalledGames: async () => [steamGame(400, 'Portal'), steamGame(620, 'Portal 2')],
         }}
         lang="en"
       />,
@@ -47,7 +47,7 @@ describe('Installed Steam Games in the Library', () => {
   it('shows the stored Library at once, while Steam is still being read', async () => {
     render(
       <App
-        operations={{ ...fakeOperations([steamGame(620, 'Portal 2')]), refreshInstalledGames: pending }}
+        operations={{ ...fakeOperations([steamGame(620, 'Portal 2')]), readInstalledGames: pending }}
         lang="en"
       />,
     );
@@ -65,7 +65,7 @@ describe('Installed Steam Games in the Library', () => {
   });
 
   it('does not call the Library empty before Steam has been read', async () => {
-    render(<App operations={{ ...fakeOperations([]), refreshInstalledGames: pending }} lang="en" />);
+    render(<App operations={{ ...fakeOperations([]), readInstalledGames: pending }} lang="en" />);
 
     await screen.findByRole('heading', { level: 1, name: 'Library' });
     await new Promise((r) => setTimeout(r, 0));
@@ -77,13 +77,13 @@ describe('Installed Steam Games in the Library', () => {
       <App
         operations={{
           ...fakeOperations([steamGame(620, 'Portal 2')]),
-          refreshInstalledGames: () => Promise.reject(new Error('database: disk full')),
+          readInstalledGames: () => Promise.reject(new Error('database: disk full')),
         }}
         lang="en"
       />,
     );
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Your installed games could not be updated.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your installed games could not be read from Steam.');
     expect(gameTitles()).toEqual(['Portal 2']);
   });
 
@@ -183,7 +183,7 @@ describe('app shell', () => {
     const failing: Operations = {
       ...fakeOperations(),
       library: () => Promise.reject(new Error('core unavailable')),
-      refreshInstalledGames: () => Promise.reject(new Error('core unavailable')),
+      readInstalledGames: () => Promise.reject(new Error('core unavailable')),
     };
     render(<App operations={failing} lang="en" />);
 

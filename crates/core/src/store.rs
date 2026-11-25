@@ -11,7 +11,8 @@ use std::sync::{Mutex, MutexGuard};
 
 use rusqlite::{Connection, params};
 
-use crate::{Error, Game, Source};
+use crate::steam::InstalledApp;
+use crate::{Error, Game};
 
 /// The schema changes, oldest first. Never edit or reorder a released entry;
 /// append a new one instead.
@@ -33,13 +34,6 @@ const MIGRATIONS: &[&str] = &[
 /// The setting that names the Steam Account whose Games the Library shows.
 const STEAM_ACCOUNT: &str = "steam_account";
 
-/// An installed Steam app as read from its app manifest.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct InstalledApp {
-    pub app_id: u32,
-    pub title: String,
-}
-
 /// The local store.
 pub struct Store {
     connection: Mutex<Connection>,
@@ -53,8 +47,7 @@ impl Store {
     /// than changed.
     pub fn open(path: &Path) -> Result<Self, Error> {
         if let Some(folder) = path.parent() {
-            fs::create_dir_all(folder)
-                .map_err(|e| Error::new(format!("cannot create {}: {e}", folder.display())))?;
+            fs::create_dir_all(folder).map_err(|e| Error::new(format!("cannot create {}: {e}", folder.display())))?;
         }
         let mut connection = Connection::open(path)?;
         migrate(&mut connection)?;
@@ -103,29 +96,23 @@ impl Store {
         let mut statement =
             connection.prepare("SELECT app_id, title, installed FROM steam_games WHERE steam_account = ?1")?;
         let games = statement
-            .query_map([account], |row| {
-                Ok(Game {
-                    id: format!("steam:{}", row.get::<_, u32>(0)?),
-                    title: row.get(1)?,
-                    source: Source::Steam,
-                    installed: row.get(2)?,
-                })
-            })?
+            .query_map([account], |row| Ok(Game::steam(row.get(0)?, row.get(1)?, row.get(2)?)))?
             .collect::<Result<_, _>>()?;
         Ok(games)
     }
 }
 
 fn migrate(connection: &mut Connection) -> Result<(), Error> {
-    let done: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-    let done = usize::try_from(done).unwrap_or(usize::MAX);
-    if done > MIGRATIONS.len() {
+    // How many migrations have already run on this database.
+    let applied: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
+    let applied = usize::try_from(applied).unwrap_or(usize::MAX);
+    if applied > MIGRATIONS.len() {
         return Err(Error::new(format!(
-            "the database was written by a newer version of NiceLibrary (schema {done}, this version knows {})",
+            "the database was written by a newer version of NiceLibrary (schema {applied}, this version knows {})",
             MIGRATIONS.len()
         )));
     }
-    for (index, migration) in MIGRATIONS.iter().enumerate().skip(done) {
+    for (index, migration) in MIGRATIONS.iter().enumerate().skip(applied) {
         let transaction = connection.transaction()?;
         transaction.execute_batch(migration)?;
         transaction.pragma_update(None, "user_version", i64::try_from(index + 1).expect("few migrations"))?;

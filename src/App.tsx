@@ -76,16 +76,16 @@ function LibraryView({ operations }: { operations: Operations }) {
   const t = useT();
   // The stored Library answers at once; reading Steam again replaces it.
   const stored = useOperation(operations, (o) => o.library());
-  const refreshed = useOperation(operations, (o) => o.refreshInstalledGames());
+  const fromSteam = useOperation(operations, (o) => o.readInstalledGames());
 
   const games =
-    refreshed.state === 'ready' ? refreshed.value : stored.state === 'ready' ? stored.value : undefined;
+    fromSteam.state === 'ready' ? fromSteam.value : stored.state === 'ready' ? stored.value : undefined;
   const failure: MessageKey | undefined =
-    refreshed.state !== 'failed'
+    fromSteam.state !== 'failed'
       ? undefined
       : stored.state === 'failed'
         ? 'library.loadFailed'
-        : 'library.refreshFailed';
+        : 'library.readFailed';
 
   return (
     <Page title="nav.library">
@@ -94,7 +94,7 @@ function LibraryView({ operations }: { operations: Operations }) {
           {t(failure)}
         </p>
       )}
-      {refreshed.state === 'ready' && refreshed.value.length === 0 && <p className="note">{t('library.empty')}</p>}
+      {fromSteam.state === 'ready' && fromSteam.value.length === 0 && <p className="note">{t('library.empty')}</p>}
       {games && games.length > 0 && <GameList games={games} />}
     </Page>
   );

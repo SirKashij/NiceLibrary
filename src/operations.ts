@@ -30,13 +30,13 @@ export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
   /** Reads which Steam Games are Installed, stores it and answers the Library. */
-  refreshInstalledGames(): Promise<Game[]>;
+  readInstalledGames(): Promise<Game[]>;
   /** The Steam installation and its Steam Accounts, the most recently used first. */
   steamInstallation(): Promise<SteamInstallation>;
 }
 
 export const tauriOperations: Operations = {
   library: () => invoke<Game[]>('library'),
-  refreshInstalledGames: () => invoke<Game[]>('refresh_installed_games'),
+  readInstalledGames: () => invoke<Game[]>('read_installed_games'),
   steamInstallation: () => invoke<SteamInstallation>('steam_installation'),
 };

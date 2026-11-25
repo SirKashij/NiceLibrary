@@ -7,7 +7,7 @@ export const en = {
   'nav.settings': 'Settings',
   'library.empty': 'Your library is empty. Games from Steam and games you add yourself will show up here.',
   'library.loadFailed': 'The library could not be loaded.',
-  'library.refreshFailed': 'Your installed games could not be updated.',
+  'library.readFailed': 'Your installed games could not be read from Steam.',
   'library.games': 'Games',
   'library.notInstalled': 'Not installed',
   'statistics.empty': 'Statistics appear once you have played.',

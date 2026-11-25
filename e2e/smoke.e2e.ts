@@ -12,7 +12,7 @@ describe('the built app', () => {
     const t = await app.messages();
 
     expect(await app.text('main h1')).toBe(t['nav.library']);
-    // The note appears only once `refresh_installed_games` answered with no
+    // The note appears only once `read_installed_games` answered with no
     // Games; a machine with Steam Games shows the list instead.
     const library = await app.text('main .note, main .games');
     const games = await app.execute<string[]>(

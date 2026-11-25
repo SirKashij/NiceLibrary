@@ -8,7 +8,13 @@ use std::path::{Path, PathBuf};
 use serde::Serialize;
 
 use crate::keyvalues;
-use crate::store::InstalledApp;
+
+/// A Steam app that is fully installed, as its app manifest describes it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct InstalledApp {
+    pub app_id: u32,
+    pub title: String,
+}
 
 /// Port: where Steam is installed on this computer.
 ///
@@ -183,8 +189,8 @@ fn read_manifest(path: &Path) -> Option<InstalledApp> {
         .into_iter()
         .flatten()
         .map(str::trim)
-        .find(|title| !title.is_empty())
-        .map_or_else(|| format!("Steam app {app_id}"), str::to_owned);
+        .find(|title| !title.is_empty())?
+        .to_owned();
     Some(InstalledApp { app_id, title })
 }
 

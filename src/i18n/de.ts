@@ -9,7 +9,7 @@ export const de: Record<MessageKey, string> = {
   'nav.settings': 'Einstellungen',
   'library.empty': 'Deine Bibliothek ist leer. Spiele aus Steam und Spiele, die du selbst hinzufügst, erscheinen hier.',
   'library.loadFailed': 'Die Bibliothek konnte nicht geladen werden.',
-  'library.refreshFailed': 'Deine installierten Spiele konnten nicht aktualisiert werden.',
+  'library.readFailed': 'Deine installierten Spiele konnten nicht aus Steam gelesen werden.',
   'library.games': 'Spiele',
   'library.notInstalled': 'Nicht installiert',
   'statistics.empty': 'Statistiken erscheinen, sobald du gespielt hast.',
