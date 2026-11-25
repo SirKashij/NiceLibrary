@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { I18nProvider, useT, type Lang, type MessageKey } from './i18n';
-import type { Operations } from './operations';
+import type { Game, Operations } from './operations';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -74,17 +74,43 @@ function useOperation<T>(operations: Operations, call: (operations: Operations) 
 
 function LibraryView({ operations }: { operations: Operations }) {
   const t = useT();
-  const library = useOperation(operations, (o) => o.library());
+  // The stored Library answers at once; reading Steam again replaces it.
+  const stored = useOperation(operations, (o) => o.library());
+  const fromSteam = useOperation(operations, (o) => o.readInstalledGames());
+
+  const games =
+    fromSteam.state === 'ready' ? fromSteam.value : stored.state === 'ready' ? stored.value : undefined;
+  const failure: MessageKey | undefined =
+    fromSteam.state !== 'failed'
+      ? undefined
+      : stored.state === 'failed'
+        ? 'library.loadFailed'
+        : 'library.readFailed';
 
   return (
     <Page title="nav.library">
-      {library.state === 'ready' && library.value.length === 0 && <p className="note">{t('library.empty')}</p>}
-      {library.state === 'failed' && (
+      {failure && (
         <p className="note" role="alert">
-          {t('library.loadFailed')}
+          {t(failure)}
         </p>
       )}
+      {fromSteam.state === 'ready' && fromSteam.value.length === 0 && <p className="note">{t('library.empty')}</p>}
+      {games && games.length > 0 && <GameList games={games} />}
     </Page>
+  );
+}
+
+function GameList({ games }: { games: Game[] }) {
+  const t = useT();
+  return (
+    <ul className="games" aria-label={t('library.games')}>
+      {games.map((game) => (
+        <li key={game.id} className="game" data-installed={game.installed}>
+          <h2 className="game-title">{game.title}</h2>
+          {!game.installed && <span className="muted">{t('library.notInstalled')}</span>}
+        </li>
+      ))}
+    </ul>
   );
 }
 

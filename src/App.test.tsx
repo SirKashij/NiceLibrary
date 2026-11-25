@@ -6,9 +6,94 @@ import type { Game, Operations, SteamInstallation } from './operations';
 
 const NO_STEAM: SteamInstallation = { state: 'notFound' };
 
+/** Fake operations: `games` is both the stored Library and what reading Steam again finds. */
 function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM): Operations {
-  return { library: async () => games, steamInstallation: async () => steam };
+  return {
+    library: async () => games,
+    readInstalledGames: async () => games,
+    steamInstallation: async () => steam,
+  };
 }
+
+/** A promise that never settles: an operation still running. */
+const pending = <T,>() => new Promise<T>(() => {});
+
+function steamGame(appId: number, title: string, installed = true): Game {
+  return { id: `steam:${appId}`, title, source: 'steam', installed };
+}
+
+function gameTitles() {
+  return within(screen.getByRole('list', { name: 'Games' }))
+    .getAllByRole('listitem')
+    .map((item) => within(item).getByRole('heading').textContent);
+}
+
+describe('Installed Steam Games in the Library', () => {
+  it('lists each Game by title once Steam has been read', async () => {
+    render(
+      <App
+        operations={{
+          ...fakeOperations(),
+          readInstalledGames: async () => [steamGame(400, 'Portal'), steamGame(620, 'Portal 2')],
+        }}
+        lang="en"
+      />,
+    );
+
+    expect(await screen.findByRole('list', { name: 'Games' })).toBeInTheDocument();
+    expect(gameTitles()).toEqual(['Portal', 'Portal 2']);
+  });
+
+  it('shows the stored Library at once, while Steam is still being read', async () => {
+    render(
+      <App
+        operations={{ ...fakeOperations([steamGame(620, 'Portal 2')]), readInstalledGames: pending }}
+        lang="en"
+      />,
+    );
+
+    expect(await screen.findByRole('list', { name: 'Games' })).toBeInTheDocument();
+    expect(gameTitles()).toEqual(['Portal 2']);
+  });
+
+  it('marks a Game that is no longer Installed', async () => {
+    render(<App operations={fakeOperations([steamGame(400, 'Portal', false), steamGame(620, 'Portal 2')])} lang="en" />);
+
+    const [portal, portal2] = within(await screen.findByRole('list', { name: 'Games' })).getAllByRole('listitem');
+    expect(within(portal).getByText('Not installed')).toBeInTheDocument();
+    expect(within(portal2).queryByText('Not installed')).not.toBeInTheDocument();
+  });
+
+  it('does not call the Library empty before Steam has been read', async () => {
+    render(<App operations={{ ...fakeOperations([]), readInstalledGames: pending }} lang="en" />);
+
+    await screen.findByRole('heading', { level: 1, name: 'Library' });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByText(/Your library is empty/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the stored Library and says so when Steam cannot be read again', async () => {
+    render(
+      <App
+        operations={{
+          ...fakeOperations([steamGame(620, 'Portal 2')]),
+          readInstalledGames: () => Promise.reject(new Error('database: disk full')),
+        }}
+        lang="en"
+      />,
+    );
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your installed games could not be read from Steam.');
+    expect(gameTitles()).toEqual(['Portal 2']);
+  });
+
+  it('speaks German', async () => {
+    render(<App operations={fakeOperations([steamGame(400, 'Portal', false)])} lang="de" />);
+
+    const list = await screen.findByRole('list', { name: 'Spiele' });
+    expect(within(list).getByText('Nicht installiert')).toBeInTheDocument();
+  });
+});
 
 const TWO_ACCOUNTS: SteamInstallation = {
   state: 'found',
@@ -95,7 +180,11 @@ describe('app shell', () => {
   });
 
   it('says so when the Library cannot be loaded', async () => {
-    const failing: Operations = { ...fakeOperations(), library: () => Promise.reject(new Error('core unavailable')) };
+    const failing: Operations = {
+      ...fakeOperations(),
+      library: () => Promise.reject(new Error('core unavailable')),
+      readInstalledGames: () => Promise.reject(new Error('core unavailable')),
+    };
     render(<App operations={failing} lang="en" />);
 
     expect(await screen.findByRole('alert')).toHaveTextContent('The library could not be loaded.');

@@ -56,3 +56,9 @@ Add one `it(...)` to `e2e/smoke.e2e.ts`, or create a new `e2e/<topic>.e2e.ts` th
 - `execute(script, ...args)`: runs a script in the app's window and returns its result.
 
 If a check needs another WebDriver command, add a method to the handle in `e2e/app.ts`, not raw requests to a test.
+
+## The database
+
+The app keeps its data in one SQLite database in the user profile, `%APPDATA%\io.github.sirkashij.nicelibrary\nicelibrary.db`. The end-to-end tests start the real app, so they use that file too. The core tests use a temporary database each.
+
+The schema changes only through migrations, the list `MIGRATIONS` in `crates/core/src/store.rs`. To change the schema, append an entry; never edit or reorder one that has been released. A database written by a newer version of the app is refused, not changed.
