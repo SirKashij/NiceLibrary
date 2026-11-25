@@ -87,6 +87,16 @@ function LibraryView({ operations }: { operations: Operations }) {
         ? 'library.loadFailed'
         : 'library.readFailed';
 
+  // Why the last Launch did not start its Game, if it did not.
+  const [launchProblem, setLaunchProblem] = useState<{ message: MessageKey; title: string }>();
+  const launch = (game: Game) => {
+    operations.launch(game).then(
+      ({ outcome }) =>
+        setLaunchProblem(outcome === 'steamNotFound' ? { message: 'launch.steamNotFound', title: game.title } : undefined),
+      () => setLaunchProblem({ message: 'launch.failed', title: game.title }),
+    );
+  };
+
   return (
     <Page title="nav.library">
       {failure && (
@@ -94,19 +104,44 @@ function LibraryView({ operations }: { operations: Operations }) {
           {t(failure)}
         </p>
       )}
+      {launchProblem && (
+        <p className="note" role="alert">
+          {t(launchProblem.message, { title: launchProblem.title })}
+        </p>
+      )}
       {fromSteam.state === 'ready' && fromSteam.value.length === 0 && <p className="note">{t('library.empty')}</p>}
-      {games && games.length > 0 && <CoverGrid games={games} coverUrl={operations.coverUrl} />}
+      {games && games.length > 0 && <CoverGrid games={games} coverUrl={operations.coverUrl} onPlay={launch} />}
     </Page>
   );
 }
 
-function CoverGrid({ games, coverUrl }: { games: Game[]; coverUrl: Operations['coverUrl'] }) {
+function CoverGrid({
+  games,
+  coverUrl,
+  onPlay,
+}: {
+  games: Game[];
+  coverUrl: Operations['coverUrl'];
+  onPlay: (game: Game) => void;
+}) {
   const t = useT();
   return (
     <ul className="games" aria-label={t('library.games')}>
       {games.map((game) => (
         <li key={game.id} className="game" data-installed={game.installed}>
-          <Cover title={game.title} src={coverUrl(game)} />
+          <div className="cover-frame">
+            <Cover title={game.title} src={coverUrl(game)} />
+            {game.installed && (
+              <button
+                type="button"
+                className="play"
+                aria-label={t('library.playGame', { title: game.title })}
+                onClick={() => onPlay(game)}
+              >
+                {t('library.play')}
+              </button>
+            )}
+          </div>
           <h2 className="game-title">{game.title}</h2>
           {!game.installed && <span className="muted">{t('library.notInstalled')}</span>}
         </li>

@@ -7,8 +7,17 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use nicelibrary_core::{Core, CoverCache, Downloader, Ports, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, Opener, Ports, SteamLocator, Store};
 use tempfile::TempDir;
+
+/// A computer that opens no URL; these tests launch nothing.
+struct NoUrls;
+
+impl Opener for NoUrls {
+    fn open_url(&self, url: &str) -> Result<(), String> {
+        Err(format!("this test opens no URL, not even {url}"))
+    }
+}
 
 struct NoSteam;
 
@@ -98,7 +107,7 @@ impl Profile {
     /// Starts the app over this profile, reaching Steam's artwork through `steam`.
     fn start(&self, steam: &FakeSteam) -> Core {
         Core::new(
-            Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(steam.clone()) },
+            Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(steam.clone()), opener: Box::new(NoUrls) },
             Store::open(&self.0.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(self.covers().join("covers")),
         )

@@ -13,6 +13,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     readInstalledGames: async () => games,
     steamInstallation: async () => steam,
     coverUrl: (game) => `cover://localhost/${game.id}`,
+    launch: async () => ({ outcome: 'started' }),
   };
 }
 

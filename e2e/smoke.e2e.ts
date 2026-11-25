@@ -59,6 +59,19 @@ describe('the built app', () => {
     expect(await loadImage(steam)).toBe('failed');
   });
 
+  it('hands a Launch to the core', async () => {
+    // A Game that is in no Library, so nothing is opened: the core's own
+    // refusal shows that the command and its argument reached it.
+    const answer = await app.execute<string>(
+      `return window.__TAURI_INTERNALS__.invoke('launch', { gameId: 'steam:0' }).then(
+         (outcome) => 'launched: ' + JSON.stringify(outcome),
+         (error) => String(error),
+       )`,
+    );
+
+    expect(answer).toBe('no such game in the library: steam:0');
+  });
+
   it('shows in the settings whether the core found Steam', async () => {
     const t = await app.messages();
     await app.execute(

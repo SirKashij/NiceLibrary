@@ -221,3 +221,115 @@ mod downloader {
         assert!(bytes.starts_with(&[0xFF, 0xD8, 0xFF]), "not a JPEG");
     }
 }
+
+/// `Opener` (crates/core): `Ok` once the program registered for the URL's
+/// scheme has the URL, `Err` when none is registered or it cannot be
+/// started, never a dialog. Anything that is not a URL is refused, so a Game's
+/// executable can never be started through it.
+///
+/// The tests register URL schemes of their own under
+/// `HKCU\Software\Classes\nicelibrary-contract-<name>-<process id>`, whose
+/// program writes the URL it receives to a file, and delete them again. They
+/// never open a `steam://` URL, so Steam does not start.
+#[cfg(windows)]
+mod opener {
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::time::{Duration, Instant};
+
+    use nicelibrary_core::Opener;
+    use nicelibrary_lib::ports::WindowsOpener;
+    use tempfile::TempDir;
+    use winreg::RegKey;
+    use winreg::enums::HKEY_CURRENT_USER;
+
+    /// A URL scheme registered for one test, removed when dropped. Its
+    /// program writes each URL it is handed to `received.txt`.
+    struct TestScheme {
+        scheme: String,
+        folder: TempDir,
+    }
+
+    impl TestScheme {
+        fn register(name: &str) -> Self {
+            let scheme = format!("nicelibrary-contract-{name}-{}", std::process::id());
+            let folder = tempfile::tempdir().unwrap();
+            let classes = RegKey::predef(HKEY_CURRENT_USER);
+            let (key, _) = classes.create_subkey(class_key(&scheme)).unwrap();
+            key.set_value("", &"URL:NiceLibrary contract test").unwrap();
+            key.set_value("URL Protocol", &"").unwrap();
+            let (command, _) = key.create_subkey(r"shell\open\command").unwrap();
+            let cmd = std::env::var("ComSpec").unwrap_or_else(|_| r"C:\Windows\System32\cmd.exe".into());
+            let received = folder.path().join("received.txt");
+            command.set_value("", &format!(r#""{cmd}" /d /c echo %1> "{}""#, received.display())).unwrap();
+            Self { scheme, folder }
+        }
+
+        /// The URL the scheme's program received, waiting for it up to ten seconds.
+        fn received(&self) -> Option<String> {
+            wait_for_file(&self.folder.path().join("received.txt"))
+        }
+    }
+
+    impl Drop for TestScheme {
+        fn drop(&mut self) {
+            let _ = RegKey::predef(HKEY_CURRENT_USER).delete_subkey_all(class_key(&self.scheme));
+        }
+    }
+
+    fn class_key(scheme: &str) -> String {
+        format!(r"Software\Classes\{scheme}")
+    }
+
+    fn wait_for_file(path: &Path) -> Option<String> {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while Instant::now() < deadline {
+            // The program may still be writing; a complete line ends the wait.
+            if let Ok(text) = fs::read_to_string(path)
+                && text.ends_with('\n')
+            {
+                return Some(text.trim().to_owned());
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        None
+    }
+
+    /// A program that leaves a marker file when it runs, for checking that
+    /// something was not started.
+    fn marker_program(folder: &Path) -> (PathBuf, PathBuf) {
+        let program = folder.join("game.cmd");
+        let marker = folder.join("started.txt");
+        fs::write(&program, format!("@echo started> \"{}\"\r\n", marker.display())).unwrap();
+        (program, marker)
+    }
+
+    #[test]
+    fn opens_a_url_with_the_program_registered_for_its_scheme() {
+        let scheme = TestScheme::register("opens");
+        let url = format!("{}://rungameid/620", scheme.scheme);
+
+        assert_eq!(WindowsOpener.open_url(&url), Ok(()));
+        assert_eq!(scheme.received().as_deref(), Some(url.as_str()));
+    }
+
+    #[test]
+    fn a_scheme_without_a_registered_program_is_an_error() {
+        let scheme = format!("nicelibrary-contract-unregistered-{}", std::process::id());
+
+        assert!(WindowsOpener.open_url(&format!("{scheme}://rungameid/620")).is_err());
+    }
+
+    #[test]
+    fn a_path_to_a_program_is_refused_and_not_started() {
+        let folder = tempfile::tempdir().unwrap();
+        let (program, marker) = marker_program(folder.path());
+        let file_url = format!("file:///{}", program.display().to_string().replace('\\', "/"));
+
+        for target in [program.display().to_string(), file_url] {
+            assert!(WindowsOpener.open_url(&target).is_err(), "{target} was not refused");
+        }
+        std::thread::sleep(Duration::from_secs(1));
+        assert!(!marker.exists(), "the program was started");
+    }
+}

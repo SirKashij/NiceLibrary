@@ -15,7 +15,7 @@ NiceLibrary is MIT licensed (ADR-0004). By contributing, you agree that your con
 
 CI runs all of them on Windows for every pull request.
 
-`cargo test-contract` writes temporary registry values under `HKEY_CURRENT_USER\Software\NiceLibraryContractTests` and removes them when it finishes. It only reads Steam's own registry keys. It also starts small web servers on `127.0.0.1` and downloads one Cover from Steam's artwork host, so it needs a network connection.
+`cargo test-contract` writes temporary registry values under `HKEY_CURRENT_USER\Software\NiceLibraryContractTests` and removes them when it finishes. It only reads Steam's own registry keys. To check how URLs are opened, it registers URL schemes of its own under `HKEY_CURRENT_USER\Software\Classes\nicelibrary-contract-*`, opens them (a console window flashes briefly) and removes them again; it never opens a `steam://` URL. It also starts small web servers on `127.0.0.1` and downloads one Cover from Steam's artwork host, so it needs a network connection.
 
 ### End-to-end tests
 
