@@ -15,7 +15,7 @@ use std::fmt;
 use serde::{Serialize, Serializer};
 
 pub use covers::{Cover, CoverCache, Downloader};
-pub use launch::{Launch, Opener};
+pub use launch::{Launch, OpenError, Opener};
 pub use steam::{SteamAccount, SteamInstallation, SteamLocator};
 pub use store::Store;
 
@@ -136,7 +136,7 @@ impl Core {
         self.covers.steam_cover(self.ports.downloader.as_ref(), app_id)
     }
 
-    /// Launches the Game `game_id`. A Steam Game starts through Steam, by
+    /// Launches the Game `game_id`. A Steam Game is launched through Steam, by
     /// opening its `steam://rungameid/` URL; the app never starts a Steam
     /// Game's executable itself (ADR-0002).
     pub fn launch(&self, game_id: &str) -> Result<Launch, Error> {
@@ -152,8 +152,11 @@ impl Core {
         if self.ports.steam_locator.steam_folder().is_none() {
             return Ok(Launch::SteamNotFound);
         }
-        self.ports.opener.open_url(&launch::steam_run_url(app_id)).map_err(Error::new)?;
-        Ok(Launch::Started)
+        match self.ports.opener.open_url(&launch::steam_launch_url(app_id)) {
+            Ok(()) => Ok(Launch::Launched),
+            Err(OpenError::NoProgram) => Ok(Launch::SteamNotFound),
+            Err(error) => Err(Error::new(format!("{} could not be launched: {error}", game.title))),
+        }
     }
 }
 

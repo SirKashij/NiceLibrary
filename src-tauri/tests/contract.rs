@@ -223,9 +223,9 @@ mod downloader {
 }
 
 /// `Opener` (crates/core): `Ok` once the program registered for the URL's
-/// scheme has the URL, `Err` when none is registered or it cannot be
-/// started, never a dialog. Anything that is not a URL is refused, so a Game's
-/// executable can never be started through it.
+/// scheme has the URL, `Err(NoProgram)` when none is registered, never a
+/// dialog. Anything that is not a URL, and every `file://` URL, is refused
+/// with `Err(Failed)`, so a Game's executable can never be started through it.
 ///
 /// The tests register URL schemes of their own under
 /// `HKCU\Software\Classes\nicelibrary-contract-<name>-<process id>`, whose
@@ -237,7 +237,7 @@ mod opener {
     use std::path::{Path, PathBuf};
     use std::time::{Duration, Instant};
 
-    use nicelibrary_core::Opener;
+    use nicelibrary_core::{OpenError, Opener};
     use nicelibrary_lib::ports::WindowsOpener;
     use tempfile::TempDir;
     use winreg::RegKey;
@@ -317,7 +317,7 @@ mod opener {
     fn a_scheme_without_a_registered_program_is_an_error() {
         let scheme = format!("nicelibrary-contract-unregistered-{}", std::process::id());
 
-        assert!(WindowsOpener.open_url(&format!("{scheme}://rungameid/620")).is_err());
+        assert_eq!(WindowsOpener.open_url(&format!("{scheme}://rungameid/620")), Err(OpenError::NoProgram));
     }
 
     #[test]
@@ -327,7 +327,8 @@ mod opener {
         let file_url = format!("file:///{}", program.display().to_string().replace('\\', "/"));
 
         for target in [program.display().to_string(), file_url] {
-            assert!(WindowsOpener.open_url(&target).is_err(), "{target} was not refused");
+            let refused = WindowsOpener.open_url(&target);
+            assert!(matches!(refused, Err(OpenError::Failed(_))), "{target} was not refused: {refused:?}");
         }
         std::thread::sleep(Duration::from_secs(1));
         assert!(!marker.exists(), "the program was started");

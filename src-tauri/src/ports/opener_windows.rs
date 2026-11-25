@@ -5,7 +5,7 @@ use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 use std::ptr;
 
-use nicelibrary_core::Opener;
+use nicelibrary_core::{OpenError, Opener};
 use windows_sys::Win32::Foundation::{GetLastError, S_FALSE, S_OK};
 use windows_sys::Win32::System::Com::{
     COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE, CoInitializeEx, CoUninitialize,
@@ -20,14 +20,14 @@ use windows_sys::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 pub struct WindowsOpener;
 
 impl Opener for WindowsOpener {
-    fn open_url(&self, url: &str) -> Result<(), String> {
-        let Some(scheme) = scheme(url) else {
-            return Err(format!("not a URL that may be opened: {url}"));
+    fn open_url(&self, url: &str) -> Result<(), OpenError> {
+        let Some(scheme) = openable_scheme(url) else {
+            return Err(OpenError::Failed(format!("not a URL that may be opened: {url}")));
         };
         // Without a registered program, Windows would offer to find an app
         // for the link instead of failing, even when told to show no dialog.
         if !is_registered(scheme) {
-            return Err(format!("no program is registered for {scheme}:// URLs"));
+            return Err(OpenError::NoProgram);
         }
         let verb = wide("open");
         let file = wide(url);
@@ -54,14 +54,14 @@ impl Opener for WindowsOpener {
             }
             opened.then_some(()).ok_or(error)
         };
-        opened.map_err(|code| format!("Windows could not open {url} (error {code})"))
+        opened.map_err(|code| OpenError::Failed(format!("Windows could not open {url} (error {code})")))
     }
 }
 
 /// The scheme of `text` if it is a URL of a scheme other than `file`: only
 /// those are opened, so no path to a program can be started through the
 /// opener.
-fn scheme(text: &str) -> Option<&str> {
+fn openable_scheme(text: &str) -> Option<&str> {
     let (scheme, _) = text.split_once("://")?;
     // A single letter is a drive ("C://"), not a scheme.
     let url = scheme.len() > 1

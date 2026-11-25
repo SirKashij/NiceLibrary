@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { I18nProvider, useT, type Lang, type MessageKey } from './i18n';
 import type { Game, Operations } from './operations';
 
@@ -89,11 +89,16 @@ function LibraryView({ operations }: { operations: Operations }) {
 
   // Why the last Launch did not start its Game, if it did not.
   const [launchProblem, setLaunchProblem] = useState<{ message: MessageKey; title: string }>();
+  // Only the answer to the latest Launch counts; an earlier one may answer later.
+  const latestLaunch = useRef(0);
   const launch = (game: Game) => {
+    const id = ++latestLaunch.current;
+    const report = (problem?: { message: MessageKey; title: string }) => {
+      if (id === latestLaunch.current) setLaunchProblem(problem);
+    };
     operations.launch(game).then(
-      ({ outcome }) =>
-        setLaunchProblem(outcome === 'steamNotFound' ? { message: 'launch.steamNotFound', title: game.title } : undefined),
-      () => setLaunchProblem({ message: 'launch.failed', title: game.title }),
+      ({ outcome }) => report(outcome === 'steamNotFound' ? { message: 'launch.steamNotFound', title: game.title } : undefined),
+      () => report({ message: 'launch.failed', title: game.title }),
     );
   };
 

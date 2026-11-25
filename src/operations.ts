@@ -27,7 +27,7 @@ export type SteamInstallation =
   | { state: 'found'; path: string; accounts: SteamAccount[] };
 
 /** How a Launch went, when nothing failed. Mirrors `Launch` in crates/core. */
-export type LaunchOutcome = { outcome: 'started' } | { outcome: 'steamNotFound' };
+export type LaunchOutcome = { outcome: 'launched' } | { outcome: 'steamNotFound' };
 
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */

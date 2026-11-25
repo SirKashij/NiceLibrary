@@ -8,38 +8,38 @@ function steamGame(appId: number, title: string, installed = true): Game {
   return { id: `steam:${appId}`, title, source: 'steam', installed };
 }
 
-/** Fake operations over a stored Library; `launch` records each Game it is asked to start. */
+/** Fake operations over a stored Library; `launch` records each Game it is asked to launch. */
 function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOutcome>) {
-  const launched: string[] = [];
+  const requested: string[] = [];
   const operations: Operations = {
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
     launch: (game) => {
-      launched.push(game.id);
+      requested.push(game.id);
       return launch(game);
     },
   };
-  return { operations, launched };
+  return { operations, requested };
 }
 
-const started = async (): Promise<LaunchOutcome> => ({ outcome: 'started' });
+const launched = async (): Promise<LaunchOutcome> => ({ outcome: 'launched' });
 
 describe('Launching an Installed Steam Game', () => {
   it('launches the Game whose play button is clicked', async () => {
     const user = userEvent.setup();
-    const { operations, launched } = fakeOperations([steamGame(400, 'Portal'), steamGame(620, 'Portal 2')], started);
+    const { operations, requested } = fakeOperations([steamGame(400, 'Portal'), steamGame(620, 'Portal 2')], launched);
     render(<App operations={operations} lang="en" />);
 
     await user.click(await screen.findByRole('button', { name: 'Play Portal 2' }));
 
-    expect(launched).toEqual(['steam:620']);
+    expect(requested).toEqual(['steam:620']);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('offers no play button for a Game that is not Installed', async () => {
-    const { operations } = fakeOperations([steamGame(400, 'Portal', false), steamGame(620, 'Portal 2')], started);
+    const { operations } = fakeOperations([steamGame(400, 'Portal', false), steamGame(620, 'Portal 2')], launched);
     render(<App operations={operations} lang="en" />);
 
     const [portal, portal2] = within(await screen.findByRole('list', { name: 'Games' })).getAllByRole('listitem');
@@ -75,7 +75,7 @@ describe('Launching an Installed Steam Game', () => {
     const user = userEvent.setup();
     let steamThere = false;
     const { operations } = fakeOperations([steamGame(620, 'Portal 2')], async () =>
-      steamThere ? { outcome: 'started' } : { outcome: 'steamNotFound' },
+      steamThere ? { outcome: 'launched' } : { outcome: 'steamNotFound' },
     );
     render(<App operations={operations} lang="en" />);
     const play = await screen.findByRole('button', { name: 'Play Portal 2' });
@@ -84,6 +84,25 @@ describe('Launching an Installed Steam Game', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     steamThere = true;
     await user.click(play);
+
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('reports only the latest Launch when an earlier one answers late', async () => {
+    const user = userEvent.setup();
+    let answerFirst: (outcome: LaunchOutcome) => void = () => {};
+    const answers = [
+      new Promise<LaunchOutcome>((resolve) => (answerFirst = resolve)),
+      Promise.resolve<LaunchOutcome>({ outcome: 'launched' }),
+    ];
+    const { operations } = fakeOperations([steamGame(620, 'Portal 2')], () => answers.shift()!);
+    render(<App operations={operations} lang="en" />);
+    const play = await screen.findByRole('button', { name: 'Play Portal 2' });
+
+    await user.click(play);
+    await user.click(play);
+    answerFirst({ outcome: 'steamNotFound' });
+    await new Promise((r) => setTimeout(r, 0));
 
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });

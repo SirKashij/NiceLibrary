@@ -4,15 +4,15 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use nicelibrary_core::{Core, CoverCache, Downloader, Opener, Ports, SteamAccount, SteamInstallation, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, OpenError, Opener, Ports, SteamAccount, SteamInstallation, SteamLocator, Store};
 use tempfile::TempDir;
 
 /// A computer that opens no URL; these tests launch nothing.
 struct NoUrls;
 
 impl Opener for NoUrls {
-    fn open_url(&self, url: &str) -> Result<(), String> {
-        Err(format!("this test opens no URL, not even {url}"))
+    fn open_url(&self, url: &str) -> Result<(), OpenError> {
+        Err(OpenError::Failed(format!("this test opens no URL, not even {url}")))
     }
 }
 

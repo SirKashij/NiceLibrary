@@ -4,7 +4,7 @@
 
 use std::path::PathBuf;
 
-use nicelibrary_core::{Core, CoverCache, Downloader, Opener, Ports, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, OpenError, Opener, Ports, SteamLocator, Store};
 use nicelibrary_lib::cover_response;
 use tempfile::TempDir;
 
@@ -12,8 +12,8 @@ use tempfile::TempDir;
 struct NoUrls;
 
 impl Opener for NoUrls {
-    fn open_url(&self, url: &str) -> Result<(), String> {
-        Err(format!("this test opens no URL, not even {url}"))
+    fn open_url(&self, url: &str) -> Result<(), OpenError> {
+        Err(OpenError::Failed(format!("this test opens no URL, not even {url}")))
     }
 }
 

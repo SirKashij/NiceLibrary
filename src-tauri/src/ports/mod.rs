@@ -52,8 +52,8 @@ fn opener() -> Box<dyn Opener> {
     struct NoOpener;
 
     impl Opener for NoOpener {
-        fn open_url(&self, url: &str) -> Result<(), String> {
-            Err(format!("opening {url} is not supported on this system"))
+        fn open_url(&self, url: &str) -> Result<(), nicelibrary_core::OpenError> {
+            Err(nicelibrary_core::OpenError::Failed(format!("opening {url} is not supported on this system")))
         }
     }
 

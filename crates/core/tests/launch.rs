@@ -6,7 +6,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use nicelibrary_core::{Core, CoverCache, Downloader, Launch, Opener, Ports, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, Launch, OpenError, Opener, Ports, SteamLocator, Store};
 use tempfile::TempDir;
 
 /// A substitute for the registry lookup: Steam is where the test says.
@@ -39,7 +39,7 @@ impl Downloader for Offline {
 #[derive(Clone, Default)]
 struct RecordingOpener {
     opened: Arc<Mutex<Vec<String>>>,
-    failing: Arc<Mutex<bool>>,
+    failure: Arc<Mutex<Option<OpenError>>>,
 }
 
 impl RecordingOpener {
@@ -47,15 +47,15 @@ impl RecordingOpener {
         self.opened.lock().unwrap().clone()
     }
 
-    fn fail(&self) {
-        *self.failing.lock().unwrap() = true;
+    fn fail_with(&self, error: OpenError) {
+        *self.failure.lock().unwrap() = Some(error);
     }
 }
 
 impl Opener for RecordingOpener {
-    fn open_url(&self, url: &str) -> Result<(), String> {
-        if *self.failing.lock().unwrap() {
-            return Err("no program is registered for this URL".into());
+    fn open_url(&self, url: &str) -> Result<(), OpenError> {
+        if let Some(error) = self.failure.lock().unwrap().clone() {
+            return Err(error);
         }
         self.opened.lock().unwrap().push(url.to_owned());
         Ok(())
@@ -133,7 +133,7 @@ fn launching_an_installed_steam_game_opens_its_run_game_url() {
     steam.install(620, "Portal 2");
     let app = App::start(&steam);
 
-    assert_eq!(app.core.launch("steam:620"), Ok(Launch::Started));
+    assert_eq!(app.core.launch("steam:620"), Ok(Launch::Launched));
     assert_eq!(app.opener.opened(), ["steam://rungameid/620"]);
 }
 
@@ -175,14 +175,26 @@ fn a_launch_fails_when_the_url_cannot_be_opened() {
     let steam = SteamFixture::new();
     steam.install(620, "Portal 2");
     let app = App::start(&steam);
-    app.opener.fail();
+    app.opener.fail_with(OpenError::Failed("the program could not be started".into()));
 
     assert!(app.core.launch("steam:620").is_err());
 }
 
 #[test]
+fn when_steam_no_longer_handles_its_urls_the_launch_says_steam_is_missing() {
+    // The Steam folder is still there, but Steam's link registration is gone
+    // (a broken or half-removed installation).
+    let steam = SteamFixture::new();
+    steam.install(620, "Portal 2");
+    let app = App::start(&steam);
+    app.opener.fail_with(OpenError::NoProgram);
+
+    assert_eq!(app.core.launch("steam:620"), Ok(Launch::SteamNotFound));
+}
+
+#[test]
 fn a_launch_reaches_the_interface_in_the_shape_the_interface_expects() {
-    assert_eq!(serde_json::to_value(Launch::Started).unwrap(), serde_json::json!({ "outcome": "started" }));
+    assert_eq!(serde_json::to_value(Launch::Launched).unwrap(), serde_json::json!({ "outcome": "launched" }));
     assert_eq!(
         serde_json::to_value(Launch::SteamNotFound).unwrap(),
         serde_json::json!({ "outcome": "steamNotFound" })
