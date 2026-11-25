@@ -1,0 +1,17 @@
+[package]
+name = "nicelibrary"
+description = "NiceLibrary desktop shell: thin Tauri adapter over nicelibrary-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "nicelibrary_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+nicelibrary-core = { path = "../crates/core" }
+tauri = { version = "2", features = [] }
