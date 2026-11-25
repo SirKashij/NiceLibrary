@@ -11,7 +11,20 @@ export interface Game {
   title: string;
   source: Source;
   installed: boolean;
+  /** Playtime in minutes; for a Steam Game Steam's figure. `null` while not known, before the first Sync. */
+  playtimeMinutes: number | null;
+  /** Last Played, in seconds since the Unix epoch; `null` for never or not known. */
+  lastPlayed: number | null;
 }
+
+/** How a Sync went, when nothing failed. Every outcome but `synced` changed nothing. Mirrors `SyncOutcome` in crates/core. */
+export type SyncOutcome =
+  | { outcome: 'synced'; /** Seconds since the Unix epoch. */ at: number }
+  | { outcome: 'noKey' }
+  | { outcome: 'noSteamAccount' }
+  | { outcome: 'keyRejected' }
+  | { outcome: 'gameDetailsPrivate' }
+  | { outcome: 'steamUnreachable' };
 
 /** A Steam Account that has logged in on this computer. Mirrors `SteamAccount` in crates/core. */
 export interface SteamAccount {
@@ -76,6 +89,14 @@ export interface Operations {
   removeSteamWebApiKey(): Promise<void>;
   /** Opens the Steam page where the user creates their key, in the browser. */
   openSteamWebApiKeyPage(): Promise<void>;
+  /**
+   * Fetches every Steam Game the Steam Account owns, with Playtime and Last
+   * Played, and merges it into the stored Library. Any outcome but `synced`,
+   * and a rejection, leaves the stored data as it was.
+   */
+  sync(): Promise<SyncOutcome>;
+  /** When the last successful Sync happened, in seconds since the Unix epoch; `null` before the first. */
+  lastSync(): Promise<number | null>;
 }
 
 export const tauriOperations: Operations = {
@@ -91,4 +112,6 @@ export const tauriOperations: Operations = {
   storeSteamWebApiKey: (key) => invoke<SteamWebApiKeyCheck>('store_steam_web_api_key', { key }),
   removeSteamWebApiKey: () => invoke<void>('remove_steam_web_api_key'),
   openSteamWebApiKeyPage: () => invoke<void>('open_steam_web_api_key_page'),
+  sync: () => invoke<SyncOutcome>('sync'),
+  lastSync: () => invoke<number | null>('last_sync'),
 };

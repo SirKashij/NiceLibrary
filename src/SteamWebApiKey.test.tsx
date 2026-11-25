@@ -39,6 +39,8 @@ function fakeOperations({ stored = false } = {}) {
     openSteamWebApiKeyPage: async () => {
       calls.pageOpened += 1;
     },
+    sync: async () => ({ outcome: 'noKey' }),
+    lastSync: async () => null,
   };
   return { operations, calls };
 }

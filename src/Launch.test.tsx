@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LaunchOutcome, Operations } from './operations';
 
 function steamGame(appId: number, title: string, installed = true): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null };
 }
 
 /** Fake operations over a stored Library; `launch` records each Game it is asked to launch. */
@@ -22,6 +22,8 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    sync: async () => ({ outcome: 'noKey' }),
+    lastSync: async () => null,
     launch: (game) => {
       requested.push(game.id);
       return launch(game);

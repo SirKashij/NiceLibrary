@@ -152,7 +152,7 @@ impl Profile {
     /// Starts the app: a core over this profile's database.
     fn start(&self, steam: Option<&Path>) -> Core {
         Core::new(
-            Ports { steam_locator: Box::new(SteamAt(steam.map(Path::to_path_buf))), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi) },
+            Ports { steam_locator: Box::new(SteamAt(steam.map(Path::to_path_buf))), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock) },
             Store::open(&self.database()).expect("database opens"),
             CoverCache::new(self.0.path().join("covers")),
         )
@@ -160,7 +160,15 @@ impl Profile {
 }
 
 fn installed(app_id: u32, title: &str) -> Game {
-    Game { id: format!("steam:{app_id}"), title: title.into(), source: Source::Steam, installed: true }
+    // Without a Sync, Steam's Playtime and Last Played are not known.
+    Game {
+        id: format!("steam:{app_id}"),
+        title: title.into(),
+        source: Source::Steam,
+        installed: true,
+        playtime_minutes: None,
+        last_played: None,
+    }
 }
 
 fn titles(games: &[Game]) -> Vec<&str> {
@@ -388,4 +396,13 @@ fn a_database_from_a_newer_version_of_the_app_is_refused_and_left_alone() {
 fn mark_as_written_by_a_newer_version(database: &Path) {
     let connection = rusqlite::Connection::open(database).unwrap();
     connection.pragma_update(None, "user_version", 9999).unwrap();
+}
+
+/// A clock that stands still; these tests do not depend on the time.
+struct StoppedClock;
+
+impl nicelibrary_core::Clock for StoppedClock {
+    fn now(&self) -> std::time::SystemTime {
+        std::time::UNIX_EPOCH
+    }
 }

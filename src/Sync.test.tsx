@@ -1,0 +1,228 @@
+import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it } from 'vitest';
+import { App } from './App';
+import type { Game, Operations, SyncOutcome } from './operations';
+
+/** 2026-11-25 12:00 UTC, in seconds since the Unix epoch. */
+const NOW = 1_795_608_000;
+/** 2026-11-20 20:15 UTC. */
+const LAST_WEEK = 1_795_205_700;
+
+/** A promise that never settles: an operation still running. */
+const pending = <T,>() => new Promise<T>(() => {});
+
+function steamGame(appId: number, title: string, installed: boolean, minutes: number | null, lastPlayed: number | null): Game {
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: minutes, lastPlayed };
+}
+
+/**
+ * Fake operations that behave like the core: a Sync answers `outcome`, and
+ * only a successful one replaces the stored Library with `synced` and
+ * remembers when.
+ */
+function fakeOperations({
+  before = [] as Game[],
+  synced = [] as Game[],
+  lastSync = null as number | null,
+  outcome = { outcome: 'synced', at: NOW } as SyncOutcome,
+} = {}) {
+  const calls = { syncs: 0 };
+  let library = before;
+  let last = lastSync;
+  const operations: Operations = {
+    library: async () => library,
+    readInstalledGames: async () => library,
+    steamInstallation: async () => ({ state: 'notFound' }),
+    steamAccount: async () => null,
+    chooseSteamAccount: async () => ({ outcome: 'chosen' }),
+    coverUrl: (game) => `cover://localhost/${game.id}`,
+    launch: async () => ({ outcome: 'launched' }),
+    steamWebApiKeyStored: async () => true,
+    storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
+    removeSteamWebApiKey: async () => {},
+    openSteamWebApiKeyPage: async () => {},
+    sync: async () => {
+      calls.syncs += 1;
+      if (outcome.outcome === 'synced') {
+        library = synced;
+        last = outcome.at;
+      }
+      return outcome;
+    },
+    lastSync: async () => last,
+  };
+  return { operations, calls };
+}
+
+function syncRegion(name = 'Sync') {
+  return within(screen.getByRole('complementary')).getByRole('region', { name });
+}
+
+function gameTitles() {
+  return within(screen.getByRole('list', { name: 'Games' }))
+    .getAllByRole('listitem')
+    .map((item) => within(item).getByRole('heading').textContent);
+}
+
+describe('The last Sync in the sidebar', () => {
+  it('says when the last successful Sync happened', async () => {
+    render(<App operations={fakeOperations({ lastSync: LAST_WEEK }).operations} lang="en" />);
+
+    expect(await within(syncRegion()).findByText('Last synced Nov 20, 2026, 8:15 PM')).toBeInTheDocument();
+  });
+
+  it('says when there has been no Sync yet', async () => {
+    render(<App operations={fakeOperations().operations} lang="en" />);
+
+    expect(await within(syncRegion()).findByText('Not synced yet')).toBeInTheDocument();
+  });
+
+  it('speaks German', async () => {
+    render(<App operations={fakeOperations({ lastSync: LAST_WEEK }).operations} lang="de" />);
+
+    const region = syncRegion('Synchronisierung');
+    expect(await within(region).findByText('Zuletzt synchronisiert am 20.11.2026, 20:15')).toBeInTheDocument();
+    expect(within(region).getByRole('button', { name: 'Jetzt synchronisieren' })).toBeInTheDocument();
+  });
+});
+
+describe('Sync now', () => {
+  it('brings every owned Steam Game into the Library and shows the new time', async () => {
+    const user = userEvent.setup();
+    const { operations, calls } = fakeOperations({
+      before: [steamGame(620, 'Portal 2', true, null, null)],
+      synced: [steamGame(400, 'Portal', false, 95, LAST_WEEK), steamGame(620, 'Portal 2', true, 1234, NOW - 3600)],
+      lastSync: LAST_WEEK,
+    });
+    render(<App operations={operations} lang="en" />);
+    await screen.findByRole('list', { name: 'Games' });
+
+    await user.click(within(syncRegion()).getByRole('button', { name: 'Sync now' }));
+
+    expect(await within(syncRegion()).findByText('Last synced Nov 25, 2026, 12:00 PM')).toBeInTheDocument();
+    expect(calls.syncs).toBe(1);
+    await screen.findByText('Portal');
+    expect(gameTitles()).toEqual(['Portal', 'Portal 2']);
+    const [portal] = within(screen.getByRole('list', { name: 'Games' })).getAllByRole('listitem');
+    expect(within(portal).getByText('Not installed')).toBeInTheDocument();
+  });
+
+  it('cannot be started twice at once and says that it is running', async () => {
+    const user = userEvent.setup();
+    const { operations } = fakeOperations();
+    let syncs = 0;
+    render(
+      <App
+        operations={{
+          ...operations,
+          sync: () => {
+            syncs += 1;
+            return pending();
+          },
+        }}
+        lang="en"
+      />,
+    );
+
+    await user.click(within(syncRegion()).getByRole('button', { name: 'Sync now' }));
+
+    const button = within(syncRegion()).getByRole('button', { name: 'Syncing…' });
+    expect(button).toBeDisabled();
+    await user.click(button);
+    expect(syncs).toBe(1);
+  });
+
+  it.each([
+    ['noKey', 'Add your Steam Web API key in the settings to sync your Steam library.'],
+    ['noSteamAccount', 'Choose your Steam account in the settings to sync your Steam library.'],
+    ['keyRejected', 'Steam rejected your Steam Web API key. Replace it in the settings. Nothing was changed.'],
+    [
+      'gameDetailsPrivate',
+      'Steam does not share your games because your game details are private. Set them to public in your Steam privacy settings. Nothing was changed.',
+    ],
+    ['steamUnreachable', 'Steam could not be reached. Nothing was changed. Try again later.'],
+  ] as const)('says what went wrong when the Sync fails with %s, and changes nothing', async (outcome, message) => {
+    const user = userEvent.setup();
+    const { operations } = fakeOperations({
+      before: [steamGame(620, 'Portal 2', true, 1234, LAST_WEEK)],
+      lastSync: LAST_WEEK,
+      outcome: { outcome },
+    });
+    render(<App operations={operations} lang="en" />);
+    await screen.findByRole('list', { name: 'Games' });
+
+    await user.click(within(syncRegion()).getByRole('button', { name: 'Sync now' }));
+
+    expect(await within(syncRegion()).findByRole('alert')).toHaveTextContent(message);
+    expect(within(syncRegion()).getByText('Last synced Nov 20, 2026, 8:15 PM')).toBeInTheDocument();
+    expect(gameTitles()).toEqual(['Portal 2']);
+  });
+
+  it('says that the Sync failed when the core reports an error', async () => {
+    const user = userEvent.setup();
+    const { operations } = fakeOperations({ lastSync: LAST_WEEK });
+    render(<App operations={{ ...operations, sync: () => Promise.reject(new Error('database: disk full')) }} lang="en" />);
+
+    await user.click(within(syncRegion()).getByRole('button', { name: 'Sync now' }));
+
+    expect(await within(syncRegion()).findByRole('alert')).toHaveTextContent('The sync failed. Nothing was changed.');
+  });
+
+  it('clears the last problem once a Sync succeeds', async () => {
+    const user = userEvent.setup();
+    const { operations } = fakeOperations();
+    let answer: SyncOutcome = { outcome: 'steamUnreachable' };
+    render(<App operations={{ ...operations, sync: async () => answer }} lang="en" />);
+    const button = within(syncRegion()).getByRole('button', { name: 'Sync now' });
+    await user.click(button);
+    await within(syncRegion()).findByRole('alert');
+
+    answer = { outcome: 'synced', at: NOW };
+    await user.click(within(syncRegion()).getByRole('button', { name: 'Sync now' }));
+
+    expect(await within(syncRegion()).findByText('Last synced Nov 25, 2026, 12:00 PM')).toBeInTheDocument();
+    expect(within(syncRegion()).queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('Playtime and Last Played in the Library', () => {
+  it("shows Steam's Playtime and Last Played under each Game", async () => {
+    render(
+      <App
+        operations={
+          fakeOperations({
+            before: [
+              steamGame(70, 'Half-Life', false, 0, null),
+              steamGame(400, 'Portal', false, 45, LAST_WEEK),
+              steamGame(620, 'Portal 2', true, 1234, LAST_WEEK),
+            ],
+          }).operations
+        }
+        lang="en"
+      />,
+    );
+
+    const [halfLife, portal, portal2] = within(await screen.findByRole('list', { name: 'Games' })).getAllByRole(
+      'listitem',
+    );
+    expect(within(halfLife).getByText('Never played')).toBeInTheDocument();
+    expect(within(portal).getByText('45 min played · last Nov 20, 2026')).toBeInTheDocument();
+    expect(within(portal2).getByText('20.6 h played · last Nov 20, 2026')).toBeInTheDocument();
+  });
+
+  it('shows them in German', async () => {
+    render(
+      <App operations={fakeOperations({ before: [steamGame(620, 'Portal 2', true, 1234, LAST_WEEK)] }).operations} lang="de" />,
+    );
+
+    expect(await screen.findByText('20,6 Std. gespielt · zuletzt 20.11.2026')).toBeInTheDocument();
+  });
+
+  it('shows nothing about Playtime while it is not known', async () => {
+    render(<App operations={fakeOperations({ before: [steamGame(620, 'Portal 2', true, null, null)] }).operations} lang="en" />);
+
+    const [portal2] = within(await screen.findByRole('list', { name: 'Games' })).getAllByRole('listitem');
+    expect(within(portal2).queryByText(/played/)).not.toBeInTheDocument();
+  });
+});

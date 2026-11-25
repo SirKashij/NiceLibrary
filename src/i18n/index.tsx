@@ -1,5 +1,5 @@
 // The translation system. Every visible text goes through `useT`.
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { de } from './de';
 import { en, type MessageKey } from './en';
 
@@ -24,12 +24,48 @@ function fill(text: string, params: Params = {}): string {
 }
 
 const I18nContext = createContext<Translate>((key, params) => fill(en[key], params));
+const LangContext = createContext<Lang>('en');
 
 export function I18nProvider({ lang, children }: { lang: Lang; children: ReactNode }) {
   const table = messages[lang];
-  return <I18nContext.Provider value={(key, params) => fill(table[key], params)}>{children}</I18nContext.Provider>;
+  return (
+    <LangContext.Provider value={lang}>
+      <I18nContext.Provider value={(key, params) => fill(table[key], params)}>{children}</I18nContext.Provider>
+    </LangContext.Provider>
+  );
 }
 
 export function useT(): Translate {
   return useContext(I18nContext);
+}
+
+/** Durations and times written the way the interface language writes them, in the computer's time zone. */
+export interface Format {
+  /** A Playtime: minutes below an hour, hours with one decimal above. */
+  playtime(minutes: number): string;
+  /** The day of a moment given in seconds since the Unix epoch. */
+  date(seconds: number): string;
+  /** The day and time of a moment given in seconds since the Unix epoch. */
+  dateTime(seconds: number): string;
+}
+
+export function useFormat(): Format {
+  const lang = useContext(LangContext);
+  const t = useT();
+  const { number, date, dateTime } = useMemo(
+    () => ({
+      number: new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }),
+      date: new Intl.DateTimeFormat(lang, { dateStyle: 'medium' }),
+      dateTime: new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }),
+    }),
+    [lang],
+  );
+  return {
+    playtime: (minutes) =>
+      minutes < 60
+        ? t('format.minutes', { n: number.format(minutes) })
+        : t('format.hours', { n: number.format(minutes / 60) }),
+    date: (seconds) => date.format(seconds * 1000),
+    dateTime: (seconds) => dateTime.format(seconds * 1000),
+  };
 }
