@@ -1,0 +1,2 @@
+# One line ending everywhere, so text edits match regardless of the editor.
+* text=auto eol=lf

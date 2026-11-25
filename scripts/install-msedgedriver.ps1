@@ -2,7 +2,7 @@
 # tauri-driver needs it to drive the app's WebView2; a driver of another
 # version refuses the session. The driver lands in target/e2e/, where the
 # end-to-end tests look for it.
-# Usage: pwsh scripts/install-msedgedriver.ps1
+# Usage: powershell -ExecutionPolicy Bypass -File scripts/install-msedgedriver.ps1
 $ErrorActionPreference = 'Stop'
 
 $runtimeKey = 'SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
