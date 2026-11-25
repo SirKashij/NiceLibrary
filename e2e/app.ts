@@ -1,14 +1,15 @@
 // Drives the built app through WebDriver. `useApp()` starts tauri-driver,
 // launches the app in a fresh session before the tests of a file and closes
 // both afterwards. Tests only see the handle it returns.
-import { spawn, type ChildProcess } from 'node:child_process';
+import { execFileSync, spawn, type ChildProcess } from 'node:child_process';
 import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, beforeAll } from 'vitest';
-import { de } from '../src/i18n/de';
-import { en, type MessageKey } from '../src/i18n/en';
+import { messages, type Lang, type MessageKey } from '../src/i18n';
 
 const root = resolve(import.meta.dirname, '..');
+// Keep in step with the version installed in .github/workflows/ci.yml.
+const TAURI_DRIVER_INSTALL = 'cargo install tauri-driver --version 2.1.0 --locked';
 const DRIVER_PORT = 4444;
 const DRIVER_URL = `http://127.0.0.1:${DRIVER_PORT}`;
 const WAIT_MS = 10_000;
@@ -24,6 +25,17 @@ export interface App {
   execute<T>(script: string, ...args: unknown[]): Promise<T>;
 }
 
+/** A WebDriver command the driver answered with an error. */
+class WebDriverError extends Error {
+  constructor(
+    message: string,
+    /** The W3C error code, such as "no such element". */
+    readonly code: string,
+  ) {
+    super(message);
+  }
+}
+
 /** Registers hooks that launch the app for the tests of the calling file. */
 export function useApp(): App {
   let driver: ChildProcess | undefined;
@@ -31,6 +43,9 @@ export function useApp(): App {
 
   beforeAll(async () => {
     const application = appPath();
+    if (await driverAnswers()) {
+      throw new Error(`Port ${DRIVER_PORT} is in use, probably by a tauri-driver left over from an earlier run. Stop it first.`);
+    }
     driver = startDriver();
     await waitForDriver(driver);
     const created = await command<{ sessionId: string }>('POST', '/session', {
@@ -41,7 +56,7 @@ export function useApp(): App {
 
   afterAll(async () => {
     if (session) await command('DELETE', `/session/${session}`).catch(() => {});
-    driver?.kill();
+    if (driver) stopProcessTree(driver);
   });
 
   const inSession = <T>(method: string, path: string, body?: unknown) => {
@@ -55,15 +70,16 @@ export function useApp(): App {
     execute,
 
     async text(selector) {
-      const element = await poll(() =>
-        inSession<Record<string, string>>('POST', '/element', { using: 'css selector', value: selector }),
+      const element = await poll(
+        () => inSession<Record<string, string>>('POST', '/element', { using: 'css selector', value: selector }),
+        (error) => error instanceof WebDriverError && error.code === 'no such element',
       );
       return inSession<string>('GET', `/element/${element[ELEMENT_KEY]}/text`);
     },
 
     async messages() {
       const lang = await execute<string>('return document.documentElement.lang');
-      return lang === 'de' ? de : en;
+      return messages[lang as Lang] ?? messages.en;
     },
   };
 }
@@ -96,18 +112,44 @@ function startDriver(): ChildProcess {
   return spawn('tauri-driver', args, { stdio: ['ignore', 'inherit', 'inherit'] });
 }
 
+/** Stops tauri-driver together with the msedgedriver and app it started. */
+function stopProcessTree(driver: ChildProcess): void {
+  if (driver.exitCode !== null || driver.pid === undefined) return;
+  if (process.platform === 'win32') {
+    try {
+      execFileSync('taskkill', ['/PID', String(driver.pid), '/T', '/F'], { stdio: 'ignore' });
+    } catch {
+      // Already gone.
+    }
+  } else {
+    driver.kill();
+  }
+}
+
+async function driverAnswers(): Promise<boolean> {
+  try {
+    await command('GET', '/status');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function waitForDriver(driver: ChildProcess): Promise<void> {
   let failure: Error | undefined;
   driver.once('error', (error) => {
-    failure = new Error(`tauri-driver could not be started (${error.message}). Install it: cargo install tauri-driver --locked`);
+    failure = new Error(`tauri-driver could not be started (${error.message}). Install it: ${TAURI_DRIVER_INSTALL}`);
   });
   driver.once('exit', (code) => {
     failure ??= new Error(`tauri-driver exited with code ${code}.`);
   });
-  await poll(async () => {
-    if (failure) throw Object.assign(failure, { final: true });
-    await command('GET', '/status');
-  });
+  await poll(
+    async () => {
+      if (failure) throw failure;
+      await command('GET', '/status');
+    },
+    () => !failure,
+  );
 }
 
 async function command<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
@@ -116,21 +158,29 @@ async function command<T = unknown>(method: string, path: string, body?: unknown
     headers: body === undefined ? undefined : { 'content-type': 'application/json' },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const payload = (await response.json()) as { value: T & { error?: string; message?: string } };
-  if (!response.ok) {
-    throw new Error(`WebDriver ${method} ${path} failed: ${payload.value.error}: ${payload.value.message}`);
+  const raw = await response.text();
+  let payload: { value?: T & { error?: string; message?: string } } | undefined;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    // Not a WebDriver answer; reported below with the raw text.
   }
-  return payload.value;
+  if (!response.ok || payload === undefined) {
+    const error = payload?.value?.error ?? `HTTP ${response.status}`;
+    const message = payload?.value?.message ?? raw;
+    throw new WebDriverError(`WebDriver ${method} ${path} failed: ${error}: ${message}`, error);
+  }
+  return payload.value as T;
 }
 
-/** Retries `attempt` until it succeeds or the wait time is over. */
-async function poll<T>(attempt: () => Promise<T>): Promise<T> {
+/** Retries `attempt` while `retryable` accepts its error, until the wait time is over. */
+async function poll<T>(attempt: () => Promise<T>, retryable: (error: unknown) => boolean): Promise<T> {
   const deadline = Date.now() + WAIT_MS;
   for (;;) {
     try {
       return await attempt();
     } catch (error) {
-      if ((error as { final?: boolean }).final || Date.now() > deadline) throw error;
+      if (!retryable(error) || Date.now() > deadline) throw error;
       await new Promise((r) => setTimeout(r, 200));
     }
   }

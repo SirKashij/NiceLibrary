@@ -1,5 +1,9 @@
 # Contributing to NiceLibrary
 
+## License of contributions
+
+NiceLibrary is MIT licensed (ADR-0004). By contributing, you agree that your contribution is licensed under the same MIT license ("inbound = outbound"). There is no contributor license agreement.
+
 ## Tests
 
 | Command | What it tests |
@@ -18,7 +22,7 @@ The end-to-end tests in `e2e/` start the built app and check what no lower test 
 One-time setup:
 
 ```sh
-cargo install tauri-driver --locked
+cargo install tauri-driver --version 2.1.0 --locked   # the version CI uses
 pwsh scripts/install-msedgedriver.ps1   # again after each WebView2 update
 ```
 

@@ -96,7 +96,8 @@ jobs:
 
       # End-to-end tests drive the binary just built through WebDriver:
       # tauri-driver in front of the msedgedriver that matches the runner's
-      # WebView2. rust-cache keeps the installed tauri-driver.
+      # WebView2. rust-cache keeps the installed tauri-driver; keep its version
+      # in step with e2e/app.ts and CONTRIBUTING.md.
       - name: Install WebDriver tools
         run: |
           cargo install tauri-driver --version 2.1.0 --locked
