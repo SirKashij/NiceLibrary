@@ -98,6 +98,10 @@ The link between a Local Game and the Steam title whose Cover it borrows. The pe
 One round of fetching the Steam Account's Games, Playtime and Achievements from Steam.
 _Avoid_: Refresh, update (update means a new app version)
 
+**Steam Web API key**:
+The person's own key for Steam's Web API, which the app needs to read the Steam Account's Games, Playtime and Achievements. It is personal and is kept only in the operating system's secret store.
+_Avoid_: API key (alone), token, password
+
 **Limited Mode**:
 How the app runs when it cannot read the Steam Account's data from Steam: Installed Steam Games and launching work, Achievements are missing.
 _Avoid_: Offline mode, basic mode

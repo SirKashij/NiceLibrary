@@ -7,19 +7,57 @@ mod http;
 #[cfg(windows)]
 mod opener_windows;
 #[cfg(windows)]
+mod secrets_windows;
+#[cfg(windows)]
 mod steam_windows;
 
-pub use http::HttpDownloader;
+pub use http::{HttpDownloader, HttpWebApi};
 #[cfg(windows)]
 pub use opener_windows::WindowsOpener;
 #[cfg(windows)]
+pub use secrets_windows::WindowsSecretStore;
+#[cfg(windows)]
 pub use steam_windows::{Hive, RegistryValue, WindowsSteamLocator};
 
-use nicelibrary_core::{Opener, Ports, SteamLocator};
+use nicelibrary_core::{Opener, Ports, SecretStore, SteamLocator};
 
 /// The ports of this machine.
 pub fn real_ports() -> Ports {
-    Ports { steam_locator: steam_locator(), downloader: Box::new(HttpDownloader::new()), opener: opener() }
+    Ports {
+        steam_locator: steam_locator(),
+        downloader: Box::new(HttpDownloader::new()),
+        opener: opener(),
+        secrets: secrets(),
+        web_api: Box::new(HttpWebApi::new()),
+    }
+}
+
+#[cfg(windows)]
+fn secrets() -> Box<dyn SecretStore> {
+    Box::new(WindowsSecretStore::new())
+}
+
+#[cfg(not(windows))]
+fn secrets() -> Box<dyn SecretStore> {
+    /// A secret store on Linux and macOS is not part of version 1; without
+    /// one, no Steam Web API key can be kept.
+    struct NoSecretStore;
+
+    impl SecretStore for NoSecretStore {
+        fn read(&self, _name: &str) -> Result<Option<String>, String> {
+            Ok(None)
+        }
+
+        fn write(&self, _name: &str, _secret: &str) -> Result<(), String> {
+            Err("keeping secrets is not supported on this system".into())
+        }
+
+        fn delete(&self, _name: &str) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    Box::new(NoSecretStore)
 }
 
 #[cfg(windows)]

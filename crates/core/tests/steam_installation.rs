@@ -7,6 +7,30 @@ use std::path::{Path, PathBuf};
 use nicelibrary_core::{Core, CoverCache, Downloader, OpenError, Opener, Ports, SteamAccount, SteamInstallation, SteamLocator, Store};
 use tempfile::TempDir;
 
+/// A computer whose secret store holds nothing and whose network reaches no
+/// Web API; these tests need neither.
+struct NoSecretsNoWebApi;
+
+impl nicelibrary_core::SecretStore for NoSecretsNoWebApi {
+    fn read(&self, _name: &str) -> Result<Option<String>, String> {
+        Ok(None)
+    }
+
+    fn write(&self, _name: &str, _secret: &str) -> Result<(), String> {
+        Err("this test stores no secret".into())
+    }
+
+    fn delete(&self, _name: &str) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+impl nicelibrary_core::WebApi for NoSecretsNoWebApi {
+    fn get(&self, _url: &str) -> Result<nicelibrary_core::WebAnswer, String> {
+        Err("this test asks no Web API".into())
+    }
+}
+
 /// A computer that opens no URL; these tests launch nothing.
 struct NoUrls;
 
@@ -53,7 +77,7 @@ fn core_with_steam_at(folder: Option<&Path>) -> TestCore {
     let store = Store::open(&profile.path().join("nicelibrary.db")).unwrap();
     TestCore {
         core: Core::new(
-            Ports { steam_locator: Box::new(SteamAt(folder.map(Path::to_path_buf))), downloader: Box::new(Offline), opener: Box::new(NoUrls) },
+            Ports { steam_locator: Box::new(SteamAt(folder.map(Path::to_path_buf))), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi) },
             store,
             CoverCache::new(profile.path().join("covers")),
         ),

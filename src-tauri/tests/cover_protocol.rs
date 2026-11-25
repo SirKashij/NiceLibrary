@@ -8,6 +8,30 @@ use nicelibrary_core::{Core, CoverCache, Downloader, OpenError, Opener, Ports, S
 use nicelibrary_lib::cover_response;
 use tempfile::TempDir;
 
+/// A computer whose secret store holds nothing and whose network reaches no
+/// Web API; these tests need neither.
+struct NoSecretsNoWebApi;
+
+impl nicelibrary_core::SecretStore for NoSecretsNoWebApi {
+    fn read(&self, _name: &str) -> Result<Option<String>, String> {
+        Ok(None)
+    }
+
+    fn write(&self, _name: &str, _secret: &str) -> Result<(), String> {
+        Err("this test stores no secret".into())
+    }
+
+    fn delete(&self, _name: &str) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+impl nicelibrary_core::WebApi for NoSecretsNoWebApi {
+    fn get(&self, _url: &str) -> Result<nicelibrary_core::WebAnswer, String> {
+        Err("this test asks no Web API".into())
+    }
+}
+
 /// A computer that opens no URL; these tests launch nothing.
 struct NoUrls;
 
@@ -44,7 +68,7 @@ impl Downloader for FakeSteam {
 fn core(online: bool) -> (Core, TempDir) {
     let profile = tempfile::tempdir().unwrap();
     let core = Core::new(
-        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(FakeSteam { online }), opener: Box::new(NoUrls) },
+        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(FakeSteam { online }), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi) },
         Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.path().join("covers")),
     );

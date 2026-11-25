@@ -32,6 +32,9 @@ export type SteamAccountChoice = { outcome: 'chosen' } | { outcome: 'invalidStea
 /** How a Launch went, when nothing failed. Mirrors `Launch` in crates/core. */
 export type LaunchOutcome = { outcome: 'launched' } | { outcome: 'steamNotFound' };
 
+/** How storing the Steam Web API key went, when nothing failed. Mirrors `SteamWebApiKeyCheck` in crates/core. */
+export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' } | { outcome: 'steamUnreachable' };
+
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
@@ -60,6 +63,19 @@ export interface Operations {
    * Rejects when the Game could not be launched.
    */
   launch(game: Game): Promise<LaunchOutcome>;
+  /** Whether a Steam Web API key is stored. The key itself never reaches the interface. */
+  steamWebApiKeyStored(): Promise<boolean>;
+  /**
+   * Checks a pasted Steam Web API key with Steam and stores it in the
+   * operating system's secret store in place of any earlier one. A key that
+   * is `invalid`, or that cannot be checked because Steam is unreachable,
+   * changes nothing. Rejects when the key could not be stored.
+   */
+  storeSteamWebApiKey(key: string): Promise<SteamWebApiKeyCheck>;
+  /** Removes the stored Steam Web API key, if there is one. */
+  removeSteamWebApiKey(): Promise<void>;
+  /** Opens the Steam page where the user creates their key, in the browser. */
+  openSteamWebApiKeyPage(): Promise<void>;
 }
 
 export const tauriOperations: Operations = {
@@ -71,4 +87,8 @@ export const tauriOperations: Operations = {
   // The `cover` URL scheme of the desktop shell (COVER_PROTOCOL in src-tauri/src/lib.rs).
   coverUrl: (game) => convertFileSrc(game.id, 'cover'),
   launch: (game) => invoke<LaunchOutcome>('launch', { gameId: game.id }),
+  steamWebApiKeyStored: () => invoke<boolean>('steam_web_api_key_stored'),
+  storeSteamWebApiKey: (key) => invoke<SteamWebApiKeyCheck>('store_steam_web_api_key', { key }),
+  removeSteamWebApiKey: () => invoke<void>('remove_steam_web_api_key'),
+  openSteamWebApiKeyPage: () => invoke<void>('open_steam_web_api_key_page'),
 };

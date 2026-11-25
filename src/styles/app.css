@@ -10,7 +10,7 @@ body {
   line-height: var(--line-height-body);
   overflow: hidden;
 }
-h1, h2, p, ul { margin: 0; }
+h1, h2, h3, p, ul, ol { margin: 0; }
 ul { padding: 0; list-style: none; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
 button:focus-visible, input:focus-visible {
@@ -57,8 +57,8 @@ button:focus-visible, input:focus-visible {
 input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .steam-id-form { display: grid; gap: var(--space-2); }
 .steam-id-form label { color: var(--color-text-muted); font-size: var(--text-size-label); }
-.steam-id-row { display: flex; gap: var(--space-2); }
-.steam-id-row input {
+.field-row { display: flex; gap: var(--space-2); }
+.field-row input {
   flex: 1; min-width: 0; font: inherit; color: var(--color-text); background: var(--color-surface);
   border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
 }
@@ -67,6 +67,16 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
   padding: var(--space-1) var(--space-3); background: var(--color-surface-raised);
 }
 .button:hover { border-color: var(--color-text-muted); }
+.button:disabled { color: var(--color-text-muted); cursor: default; }
+.button:disabled:hover { border-color: var(--color-line); }
+.settings-actions { display: flex; gap: var(--space-2); }
+/* The guided step for the Steam Web API key. */
+.key-form { display: grid; gap: var(--space-2); }
+.key-form > label { color: var(--color-text-muted); font-size: var(--text-size-label); }
+.key-steps { display: grid; gap: var(--space-2); padding-left: var(--space-5); }
+.key-page { display: flex; align-items: baseline; gap: var(--space-2); margin-top: var(--space-1); }
+.key-data { display: grid; gap: var(--space-1); padding-top: var(--space-2); }
+.key-data h3 { font-size: var(--text-size-label); font-weight: var(--weight-medium); }
 .muted { color: var(--color-text-muted); font-size: var(--text-size-label); overflow-wrap: anywhere; }
 
 /* Library: a grid of Covers, each with its title below. The Covers carry the colour (ADR-0007). */

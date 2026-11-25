@@ -46,6 +46,10 @@ function fakeOperations(steam: SteamInstallation, choose?: Operations['chooseSte
         return { outcome: 'chosen' };
       }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
+    steamWebApiKeyStored: async () => false,
+    storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
+    removeSteamWebApiKey: async () => {},
+    openSteamWebApiKeyPage: async () => {},
     launch: async () => ({ outcome: 'launched' }),
   };
   return { operations, chosen };

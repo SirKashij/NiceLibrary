@@ -148,7 +148,7 @@ mod downloader {
 
     /// A web server on this machine that answers one request with `status`
     /// and `body`, and the address it serves.
-    fn serve_once(status: &str, body: &[u8]) -> String {
+    pub fn serve_once(status: &str, body: &[u8]) -> String {
         let listener = TcpListener::bind("127.0.0.1:0").unwrap();
         let address = listener.local_addr().unwrap();
         let (status, body) = (status.to_owned(), body.to_vec());
@@ -332,5 +332,146 @@ mod opener {
         }
         std::thread::sleep(Duration::from_secs(1));
         assert!(!marker.exists(), "the program was started");
+    }
+}
+
+/// `WebApi` (crates/core): `Ok` with the status and body of every answer the
+/// server gives, whatever its status; `Err` only when no answer arrives.
+///
+/// The tests use the web servers of the `downloader` tests; only the last one
+/// reaches Steam's Web API, with a made-up key.
+mod web_api {
+    use std::net::TcpListener;
+
+    use nicelibrary_core::{WebAnswer, WebApi};
+    use nicelibrary_lib::ports::HttpWebApi;
+
+    use super::downloader::serve_once;
+
+    #[test]
+    fn answers_with_the_status_and_body_the_server_sends() {
+        for (status, code) in [("200 OK", 200), ("403 Forbidden", 403), ("503 Service Unavailable", 503)] {
+            let body = format!(r#"{{"response":{{"status":{code}}}}}"#);
+            let url = serve_once(status, body.as_bytes());
+
+            assert_eq!(HttpWebApi::new().get(&url), Ok(WebAnswer { status: code, body: body.into_bytes() }), "{status}");
+        }
+    }
+
+    #[test]
+    fn a_server_that_cannot_be_reached_is_an_error() {
+        // A port that was free a moment ago and has no server now.
+        let address = TcpListener::bind("127.0.0.1:0").unwrap().local_addr().unwrap();
+
+        assert!(HttpWebApi::new().get(&format!("http://{address}/IStoreService/GetAppList/v1/")).is_err());
+    }
+
+    #[test]
+    fn steam_answers_a_made_up_key_with_forbidden_over_https() {
+        // The core reads 401 and 403 as Steam's refusal of a key (crates/core/src/steam_web_api.rs).
+        let url = "https://api.steampowered.com/IStoreService/GetAppList/v1/?key=0123456789ABCDEF0123456789ABCDEF&max_results=1";
+
+        let answer = HttpWebApi::new().get(url).expect("Steam reachable");
+
+        assert!(matches!(answer.status, 401 | 403), "Steam answered HTTP {}", answer.status);
+    }
+}
+
+/// `SecretStore` (crates/core): `read` answers what the last `write` under
+/// the same name stored, also after a restart; `write` replaces; `delete`
+/// removes and is `Ok` when nothing is stored.
+///
+/// The tests keep their secrets in the Windows Credential Manager under
+/// `NiceLibraryContractTests/<test>-<process id>/` and delete them again;
+/// they never touch the app's own entries.
+#[cfg(windows)]
+mod secret_store {
+    use nicelibrary_core::SecretStore;
+    use nicelibrary_lib::ports::WindowsSecretStore;
+
+    /// The secret store of one test, emptied when dropped.
+    struct TestStore {
+        prefix: String,
+        names: Vec<&'static str>,
+    }
+
+    impl TestStore {
+        fn new(test: &str, names: &[&'static str]) -> Self {
+            Self { prefix: format!("NiceLibraryContractTests/{test}-{}/", std::process::id()), names: names.to_vec() }
+        }
+
+        /// The store as the app sees it after a start.
+        fn open(&self) -> WindowsSecretStore {
+            WindowsSecretStore::under(&self.prefix)
+        }
+    }
+
+    impl Drop for TestStore {
+        fn drop(&mut self) {
+            for name in &self.names {
+                let _ = self.open().delete(name);
+            }
+        }
+    }
+
+    #[test]
+    fn a_secret_written_is_read_back_after_a_restart() {
+        let test = TestStore::new("roundtrip", &["key"]);
+
+        test.open().write("key", "0123456789ABCDEF0123456789ABCDEF").unwrap();
+
+        assert_eq!(test.open().read("key"), Ok(Some("0123456789ABCDEF0123456789ABCDEF".to_owned())));
+    }
+
+    #[test]
+    fn nothing_written_reads_as_none() {
+        let test = TestStore::new("none", &[]);
+
+        assert_eq!(test.open().read("key"), Ok(None));
+    }
+
+    #[test]
+    fn a_secret_written_again_replaces_the_first() {
+        let test = TestStore::new("replace", &["key"]);
+        test.open().write("key", "first").unwrap();
+
+        test.open().write("key", "second").unwrap();
+
+        assert_eq!(test.open().read("key"), Ok(Some("second".to_owned())));
+    }
+
+    #[test]
+    fn a_deleted_secret_is_gone_and_deleting_again_is_fine() {
+        let test = TestStore::new("delete", &["key"]);
+        test.open().write("key", "secret").unwrap();
+
+        test.open().delete("key").unwrap();
+
+        assert_eq!(test.open().read("key"), Ok(None));
+        assert_eq!(test.open().delete("key"), Ok(()));
+    }
+
+    #[test]
+    fn names_and_stores_keep_their_secrets_apart() {
+        let one = TestStore::new("apart-one", &["key", "other"]);
+        let two = TestStore::new("apart-two", &["key"]);
+
+        one.open().write("key", "one").unwrap();
+        one.open().write("other", "other").unwrap();
+        two.open().write("key", "two").unwrap();
+
+        assert_eq!(one.open().read("key"), Ok(Some("one".to_owned())));
+        assert_eq!(one.open().read("other"), Ok(Some("other".to_owned())));
+        assert_eq!(two.open().read("key"), Ok(Some("two".to_owned())));
+    }
+
+    #[test]
+    fn any_text_is_kept_as_it_was_written() {
+        let test = TestStore::new("text", &["key"]);
+        let text = "Schlüssel 🔑 with spaces and \"quotes\"";
+
+        test.open().write("key", text).unwrap();
+
+        assert_eq!(test.open().read("key"), Ok(Some(text.to_owned())));
     }
 }
