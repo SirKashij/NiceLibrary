@@ -1,10 +1,15 @@
-# Builds and tests every push and pull request.
+# Builds and tests every pull request and every push to main.
 # Windows is the platform version 1 ships for; Linux is only built, to keep
 # the cross-platform door open (ADR-0001). Nothing is published or uploaded.
+#
+# Pull requests build a debug binary to stay fast; main builds the release
+# and the installer. Only main saves the Rust cache, so pull requests restore
+# main's cache instead of filling the quota with their own.
 name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
@@ -12,7 +17,7 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  # Every commit on main keeps its own run; superseded branch runs are cancelled.
+  # Every commit on main keeps its own run; superseded pull request runs are cancelled.
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 defaults:
@@ -37,6 +42,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install npm dependencies
         run: npm ci
@@ -55,7 +62,12 @@ jobs:
       - name: Contract tests for the real ports
         run: cargo test-contract --locked
 
-      - name: Build app and installer
+      - name: Build app (debug)
+        if: github.ref != 'refs/heads/main'
+        run: npm run tauri -- build --ci --debug --no-bundle -- --locked
+
+      - name: Build app and installer (release)
+        if: github.ref == 'refs/heads/main'
         run: npm run tauri -- build --ci -- --locked
 
   linux:
@@ -82,6 +94,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install npm dependencies
         run: npm ci
@@ -89,4 +103,4 @@ jobs:
       # The bundle targets are Windows installers, so Linux builds the
       # binary only.
       - name: Build app
-        run: npm run tauri -- build --ci --no-bundle -- --locked
+        run: npm run tauri -- build --ci --no-bundle ${{ github.ref != 'refs/heads/main' && '--debug' || '' }} -- --locked
