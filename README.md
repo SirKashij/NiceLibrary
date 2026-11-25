@@ -17,7 +17,10 @@ npm install
 npm run dev     # starts the app
 npm test        # interface tests
 cargo test      # core tests
+cargo test -p nicelibrary --features contract-tests --test contract   # real ports, Windows only
 ```
+
+CI builds and tests every push and pull request on Windows and builds the app on Linux, without publishing anything.
 
 ## License
 
@@ -40,7 +43,10 @@ npm install
 npm run dev     # startet die App
 npm test        # Tests der Oberfläche
 cargo test      # Tests des Core
+cargo test -p nicelibrary --features contract-tests --test contract   # echte Ports, nur Windows
 ```
+
+Die CI baut und testet jeden Push und Pull Request unter Windows und baut die App unter Linux, ohne etwas zu veröffentlichen.
 
 ### Lizenz
 

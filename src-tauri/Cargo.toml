@@ -9,6 +9,14 @@ license.workspace = true
 name = "nicelibrary_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
+[features]
+# Enables the contract tests for the real ports (tests/contract.rs).
+contract-tests = []
+
+[[test]]
+name = "contract"
+required-features = ["contract-tests"]
+
 [build-dependencies]
 tauri-build = { version = "2", features = [] }
 
