@@ -1,7 +1,9 @@
 //! The desktop shell. Each Tauri command forwards to one operation of the
 //! application core and adds nothing of its own.
 
-use nicelibrary_core::{Core, Game};
+pub mod ports;
+
+use nicelibrary_core::{Core, Game, SteamInstallation};
 use tauri::{App, WebviewWindowBuilder};
 
 #[tauri::command]
@@ -9,10 +11,15 @@ fn library(core: tauri::State<'_, Core>) -> Vec<Game> {
     core.library()
 }
 
+#[tauri::command]
+fn steam_installation(core: tauri::State<'_, Core>) -> SteamInstallation {
+    core.steam_installation()
+}
+
 pub fn run() {
     tauri::Builder::default()
-        .manage(Core::new())
-        .invoke_handler(tauri::generate_handler![library])
+        .manage(Core::new(ports::real_ports()))
+        .invoke_handler(tauri::generate_handler![library, steam_installation])
         .setup(|app| create_main_window(app))
         .run(tauri::generate_context!())
         .expect("error while running NiceLibrary");

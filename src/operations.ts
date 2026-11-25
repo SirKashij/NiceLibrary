@@ -12,11 +12,27 @@ export interface Game {
   installed: boolean;
 }
 
+/** A Steam Account that has logged in on this computer. Mirrors `SteamAccount` in crates/core. */
+export interface SteamAccount {
+  /** SteamID64, as text because it exceeds JavaScript's safe integers. */
+  steamId: string;
+  displayName: string;
+  mostRecent: boolean;
+}
+
+/** The Steam installation on this computer. Mirrors `SteamInstallation` in crates/core. */
+export type SteamInstallation =
+  | { state: 'notFound' }
+  | { state: 'found'; path: string; accounts: SteamAccount[] };
+
 export interface Operations {
   /** All Games in the Library. */
   library(): Promise<Game[]>;
+  /** The Steam installation and its Steam Accounts, the most recently used first. */
+  steamInstallation(): Promise<SteamInstallation>;
 }
 
 export const tauriOperations: Operations = {
   library: () => invoke<Game[]>('library'),
+  steamInstallation: () => invoke<SteamInstallation>('steam_installation'),
 };

@@ -1,8 +1,18 @@
-use nicelibrary_core::{Core, Game, Source};
+use std::path::PathBuf;
+
+use nicelibrary_core::{Core, Game, Ports, Source, SteamLocator};
+
+struct NoSteam;
+
+impl SteamLocator for NoSteam {
+    fn steam_folder(&self) -> Option<PathBuf> {
+        None
+    }
+}
 
 #[test]
 fn a_fresh_core_has_an_empty_library() {
-    let core = Core::new();
+    let core = Core::new(Ports { steam_locator: Box::new(NoSteam) });
 
     assert!(core.library().is_empty());
 }

@@ -13,4 +13,16 @@ describe('the built app', () => {
     // The empty-Library note only appears once the `library` command answered.
     expect(await app.text('main .note')).toBe(t['library.empty']);
   });
+
+  it('shows in the settings whether the core found Steam', async () => {
+    const t = await app.messages();
+    await app.execute(
+      'Array.from(document.querySelectorAll("nav button")).find((b) => b.textContent === arguments[0]).click()',
+      t['nav.settings'],
+    );
+
+    // The first line under the Steam heading only appears once the `steam_installation` command answered.
+    const answer = await app.text('.settings-section > :not(h2)');
+    expect(answer === t['steam.notFound'] || answer.startsWith(t['steam.found']), answer).toBe(true);
+  });
 });
