@@ -6,6 +6,7 @@
 
 mod covers;
 pub mod keyvalues;
+mod launch;
 mod steam;
 mod store;
 
@@ -14,6 +15,7 @@ use std::fmt;
 use serde::{Serialize, Serializer};
 
 pub use covers::{Cover, CoverCache, Downloader};
+pub use launch::{Launch, OpenError, Opener};
 pub use steam::{SteamAccount, SteamInstallation, SteamLocator};
 pub use store::Store;
 
@@ -79,6 +81,7 @@ impl Serialize for Error {
 pub struct Ports {
     pub steam_locator: Box<dyn SteamLocator>,
     pub downloader: Box<dyn Downloader>,
+    pub opener: Box<dyn Opener>,
 }
 
 /// The application core. Each public method is one operation.
@@ -127,9 +130,37 @@ impl Core {
     /// The Cover of the Game `game_id`; `None` when it has none and the
     /// interface shows a placeholder instead.
     pub fn cover(&self, game_id: &str) -> Result<Option<Cover>, Error> {
-        let Some(app_id) = game_id.strip_prefix("steam:").and_then(|id| id.parse().ok()) else {
+        let Some(app_id) = steam_app_id(game_id) else {
             return Ok(None);
         };
         self.covers.steam_cover(self.ports.downloader.as_ref(), app_id)
     }
+
+    /// Launches the Game `game_id`. A Steam Game is launched through Steam, by
+    /// opening its `steam://rungameid/` URL; the app never starts a Steam
+    /// Game's executable itself (ADR-0002).
+    pub fn launch(&self, game_id: &str) -> Result<Launch, Error> {
+        let Some(game) = self.library()?.into_iter().find(|game| game.id == game_id) else {
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
+        };
+        if !game.installed {
+            return Err(Error::new(format!("not installed: {}", game.title)));
+        }
+        let Some(app_id) = steam_app_id(&game.id) else {
+            return Err(Error::new(format!("only Steam Games can be launched so far: {}", game.title)));
+        };
+        if self.ports.steam_locator.steam_folder().is_none() {
+            return Ok(Launch::SteamNotFound);
+        }
+        match self.ports.opener.open_url(&launch::steam_launch_url(app_id)) {
+            Ok(()) => Ok(Launch::Launched),
+            Err(OpenError::NoProgram) => Ok(Launch::SteamNotFound),
+            Err(error) => Err(Error::new(format!("{} could not be launched: {error}", game.title))),
+        }
+    }
+}
+
+/// Steam's app id in a Steam Game's id (`steam:<app id>`).
+fn steam_app_id(game_id: &str) -> Option<u32> {
+    game_id.strip_prefix("steam:")?.parse().ok()
 }

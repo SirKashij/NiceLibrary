@@ -1,6 +1,15 @@
 use std::path::PathBuf;
 
-use nicelibrary_core::{Core, CoverCache, Downloader, Game, Ports, Source, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, Source, SteamLocator, Store};
+
+/// A computer that opens no URL; these tests launch nothing.
+struct NoUrls;
+
+impl Opener for NoUrls {
+    fn open_url(&self, url: &str) -> Result<(), OpenError> {
+        Err(OpenError::Failed(format!("this test opens no URL, not even {url}")))
+    }
+}
 
 struct NoSteam;
 
@@ -24,7 +33,7 @@ fn a_fresh_core_has_an_empty_library() {
     let profile = tempfile::tempdir().unwrap();
     let store = Store::open(&profile.path().join("nicelibrary.db")).unwrap();
     let core = Core::new(
-        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(Offline) },
+        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(Offline), opener: Box::new(NoUrls) },
         store,
         CoverCache::new(profile.path().join("covers")),
     );

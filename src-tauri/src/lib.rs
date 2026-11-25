@@ -3,7 +3,7 @@
 
 pub mod ports;
 
-use nicelibrary_core::{Core, CoverCache, Error, Game, SteamInstallation, Store};
+use nicelibrary_core::{Core, CoverCache, Error, Game, Launch, SteamInstallation, Store};
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
 use tauri::{App, Manager, WebviewWindowBuilder};
@@ -17,6 +17,12 @@ fn library(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
 #[tauri::command]
 async fn read_installed_games(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
     core.read_installed_games()
+}
+
+/// Async, so a slow start of the registered program does not block the window.
+#[tauri::command]
+async fn launch(core: tauri::State<'_, Core>, game_id: String) -> Result<Launch, Error> {
+    core.launch(&game_id)
 }
 
 #[tauri::command]
@@ -55,7 +61,7 @@ const COVERS: &str = "covers";
 
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![library, read_installed_games, steam_installation])
+        .invoke_handler(tauri::generate_handler![library, read_installed_games, launch, steam_installation])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
             let path = request.uri().path().to_owned();

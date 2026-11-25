@@ -5,8 +5,17 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use nicelibrary_core::{Core, CoverCache, Downloader, Game, Ports, Source, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, Source, SteamLocator, Store};
 use tempfile::TempDir;
+
+/// A computer that opens no URL; these tests launch nothing.
+struct NoUrls;
+
+impl Opener for NoUrls {
+    fn open_url(&self, url: &str) -> Result<(), OpenError> {
+        Err(OpenError::Failed(format!("this test opens no URL, not even {url}")))
+    }
+}
 
 /// A substitute for the registry lookup: Steam is where the test says.
 struct SteamAt(Option<PathBuf>);
@@ -119,7 +128,7 @@ impl Profile {
     /// Starts the app: a core over this profile's database.
     fn start(&self, steam: Option<&Path>) -> Core {
         Core::new(
-            Ports { steam_locator: Box::new(SteamAt(steam.map(Path::to_path_buf))), downloader: Box::new(Offline) },
+            Ports { steam_locator: Box::new(SteamAt(steam.map(Path::to_path_buf))), downloader: Box::new(Offline), opener: Box::new(NoUrls) },
             Store::open(&self.database()).expect("database opens"),
             CoverCache::new(self.0.path().join("covers")),
         )

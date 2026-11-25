@@ -26,6 +26,9 @@ export type SteamInstallation =
   | { state: 'notFound' }
   | { state: 'found'; path: string; accounts: SteamAccount[] };
 
+/** How a Launch went, when nothing failed. Mirrors `Launch` in crates/core. */
+export type LaunchOutcome = { outcome: 'launched' } | { outcome: 'steamNotFound' };
+
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
@@ -38,6 +41,11 @@ export interface Operations {
    * and caches it; when the Game has none, the image fails to load.
    */
   coverUrl(game: Game): string;
+  /**
+   * Launches an Installed Game. A Steam Game starts through Steam itself.
+   * Rejects when the Game could not be launched.
+   */
+  launch(game: Game): Promise<LaunchOutcome>;
 }
 
 export const tauriOperations: Operations = {
@@ -46,4 +54,5 @@ export const tauriOperations: Operations = {
   steamInstallation: () => invoke<SteamInstallation>('steam_installation'),
   // The `cover` URL scheme of the desktop shell (COVER_PROTOCOL in src-tauri/src/lib.rs).
   coverUrl: (game) => convertFileSrc(game.id, 'cover'),
+  launch: (game) => invoke<LaunchOutcome>('launch', { gameId: game.id }),
 };
