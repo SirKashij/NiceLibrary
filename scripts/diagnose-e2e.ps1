@@ -14,9 +14,11 @@ function Stop-OwnWebView {
 function Show-WebView {
     Get-CimInstance Win32_Process -Filter "Name = 'msedgewebview2.exe'" |
         Where-Object { $_.CommandLine -NotMatch '--type=' -and $_.CommandLine -Match 'webview-exe-name=nicelibrary' } |
-        ForEach-Object { "webview2 main: $($_.ExecutablePath)"; "  cmd: $($_.CommandLine)" }
+        ForEach-Object { "webview2 main: $($_.ExecutablePath)"; ($_.CommandLine -split ' --') | ForEach-Object { "  --$_" } }
 }
 
+'=== Policies'
+foreach ($k in 'HKLM:\SOFTWARE\Policies\Microsoft\Edge', 'HKCU:\SOFTWARE\Policies\Microsoft\Edge') { "$k"; Get-ItemProperty $k -ErrorAction SilentlyContinue | Out-String; Get-ChildItem $k -Recurse -ErrorAction SilentlyContinue | ForEach-Object { $_.Name; $_ | Get-ItemProperty | Out-String } }
 '=== A: app started directly with remote debugging on 9222'
 $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--remote-debugging-port=9222'
 $p = Start-Process -FilePath $app -PassThru
