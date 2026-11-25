@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { I18nProvider, useT, type Lang, type MessageKey } from './i18n';
-import type { Game, Operations } from './operations';
+import type { Game, Operations, SteamAccount } from './operations';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -184,6 +184,41 @@ function SettingsView({ operations }: { operations: Operations }) {
 function SteamSettings({ operations }: { operations: Operations }) {
   const t = useT();
   const steam = useOperation(operations, (o) => o.steamInstallation());
+  const stored = useOperation(operations, (o) => o.steamAccount());
+  // The account chosen here, once the user chose; until then the stored one.
+  const [chosen, setChosen] = useState<{ value: string | null }>();
+  const account: Loaded<string | null> = chosen ? { state: 'ready', value: chosen.value } : stored;
+  // Why the last choice did not take, if it did not.
+  const [problem, setProblem] = useState<MessageKey>();
+  // Only the answer to the latest choice counts; an earlier one may answer later.
+  const latestChoice = useRef(0);
+
+  const choose = (steamId: string) => {
+    const id = ++latestChoice.current;
+    const before = account.state === 'ready' ? account.value : null;
+    const settle = (value: string | null, message?: MessageKey) => {
+      if (id !== latestChoice.current) return;
+      setChosen({ value });
+      setProblem(message);
+    };
+    // Shown at once; taken back when the core does not accept it.
+    setChosen({ value: steamId });
+    operations.chooseSteamAccount(steamId).then(
+      ({ outcome }) =>
+        outcome === 'chosen'
+          ? // The core decides how a SteamID entered by hand is written.
+            operations.steamAccount().then(settle, () => settle(steamId))
+          : settle(before, 'steam.invalidSteamId'),
+      () => settle(before, 'steam.saveFailed'),
+    );
+  };
+
+  const detected = steam.state === 'ready' && steam.value.state === 'found' ? steam.value.accounts : [];
+  // A SteamID in use that no radio button shows: entered by hand, or an account that left this computer.
+  const inUseElsewhere =
+    account.state === 'ready' && account.value !== null && !detected.some((a) => a.steamId === account.value)
+      ? account.value
+      : undefined;
 
   return (
     <section className="settings-section" aria-labelledby="settings-steam">
@@ -200,21 +235,106 @@ function SteamSettings({ operations }: { operations: Operations }) {
             <span>{t('steam.found')}</span>
             <span className="muted">{steam.value.path}</span>
           </div>
-          {steam.value.accounts.length === 0 ? (
-            <p className="note">{t('steam.noAccounts')}</p>
+          {steam.value.accounts.length === 0 && <p className="note">{t('steam.noAccounts')}</p>}
+        </>
+      )}
+      {account.state === 'failed' && (
+        <p className="note" role="alert">
+          {t('steam.accountLoadFailed')}
+        </p>
+      )}
+      {steam.state === 'ready' && account.state === 'ready' && (
+        <>
+          {detected.length > 0 ? (
+            <AccountChoice accounts={detected} chosen={account.value} onChoose={choose} />
           ) : (
-            <ul className="accounts" aria-label={t('steam.accounts')}>
-              {steam.value.accounts.map((account) => (
-                <li key={account.steamId} className="settings-row">
-                  <span>{account.displayName}</span>
-                  {account.mostRecent && <span className="muted">{t('steam.mostRecent')}</span>}
-                </li>
-              ))}
-            </ul>
+            <SteamIdForm chosen={account.value} onChoose={choose} />
+          )}
+          {inUseElsewhere && (
+            <p className="note" role="status">
+              {t('steam.usesSteamId', { steamId: inUseElsewhere })}
+            </p>
+          )}
+          {problem && (
+            <p className="note" role="alert">
+              {t(problem)}
+            </p>
           )}
         </>
       )}
     </section>
+  );
+}
+
+/** The Steam Accounts on this computer, one of them the account the Library shows. */
+function AccountChoice({
+  accounts,
+  chosen,
+  onChoose,
+}: {
+  accounts: SteamAccount[];
+  chosen: string | null;
+  onChoose: (steamId: string) => void;
+}) {
+  const t = useT();
+  return (
+    <div role="radiogroup" aria-labelledby="steam-account-choice" className="account-choice">
+      <p id="steam-account-choice" className="muted">
+        {t('steam.chooseAccount')}
+      </p>
+      <ul className="accounts" aria-label={t('steam.accounts')}>
+        {accounts.map((account) => (
+          <li key={account.steamId} className="settings-row">
+            <label>
+              <input
+                type="radio"
+                name="steam-account"
+                value={account.steamId}
+                checked={account.steamId === chosen}
+                onChange={() => onChoose(account.steamId)}
+              />
+              {account.displayName}
+            </label>
+            {account.mostRecent && <span className="muted">{t('steam.mostRecent')}</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Entering a SteamID by hand, for when no Steam Account is found on this computer. */
+function SteamIdForm({ chosen, onChoose }: { chosen: string | null; onChoose: (steamId: string) => void }) {
+  const t = useT();
+  const [draft, setDraft] = useState(chosen ?? '');
+  return (
+    <form
+      className="steam-id-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onChoose(draft);
+      }}
+    >
+      <label htmlFor="steam-id">{t('steam.steamId')}</label>
+      <div className="steam-id-row">
+        <input
+          id="steam-id"
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          spellCheck={false}
+          aria-describedby="steam-id-hint"
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+        />
+        <button type="submit" className="button">
+          {t('steam.useSteamId')}
+        </button>
+      </div>
+      <p id="steam-id-hint" className="muted">
+        {t('steam.steamIdHint')}
+      </p>
+    </form>
   );
 }
 

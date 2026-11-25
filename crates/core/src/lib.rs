@@ -16,7 +16,7 @@ use serde::{Serialize, Serializer};
 
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
-pub use steam::{SteamAccount, SteamInstallation, SteamLocator};
+pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use store::Store;
 
 /// The origin a Game is read from.
@@ -99,7 +99,9 @@ impl Core {
     /// All Games in the Library, as last stored, ordered by title. Answers
     /// from the store alone, so a start shows the Library at once.
     pub fn library(&self) -> Result<Vec<Game>, Error> {
-        let mut games = match self.store.steam_account()? {
+        // Until the user chooses, the account read last: it holds the Games.
+        let account = self.chosen_steam_account_or(|| self.store.last_read_steam_account())?;
+        let mut games = match account {
             Some(account) => self.store.steam_games(&account)?,
             None => Vec::new(),
         };
@@ -108,18 +110,55 @@ impl Core {
     }
 
     /// Reads which Steam Games are Installed from Steam's library folders,
-    /// stores that for the current Steam Account and answers the Library.
+    /// stores that for the Steam Account the user chose, or until they choose
+    /// for the most recently used one, and answers the Library.
     ///
-    /// When Steam, its Steam Account or its list of library folders cannot be
+    /// When Steam, a Steam Account or its list of library folders cannot be
     /// found or read, the stored Library is left as it is.
     pub fn read_installed_games(&self) -> Result<Vec<Game>, Error> {
         if let Some(folder) = self.ports.steam_locator.steam_folder()
-            && let Some(account) = steam::current_account(&folder)
+            && let Some(account) = self.chosen_steam_account_or(|| Ok(most_recent_account(&folder)))?
             && let Some(apps) = steam::installed_apps(&folder)
         {
-            self.store.record_installed_steam_games(&account.steam_id, &apps)?;
+            self.store.record_installed_steam_games(&account, &apps)?;
         }
         self.library()
+    }
+
+    /// The SteamID of the Steam Account the app works with: the one the user
+    /// chose; until then the one that logged in most recently on this
+    /// computer, or else the one whose Games were read last.
+    pub fn steam_account(&self) -> Result<Option<String>, Error> {
+        self.chosen_steam_account_or(|| {
+            match self.ports.steam_locator.steam_folder().and_then(|folder| most_recent_account(&folder)) {
+                Some(detected) => Ok(Some(detected)),
+                None => self.store.last_read_steam_account(),
+            }
+        })
+    }
+
+    /// The Steam Account the user chose; until they choose, the one `default`
+    /// answers.
+    fn chosen_steam_account_or(
+        &self,
+        default: impl FnOnce() -> Result<Option<String>, Error>,
+    ) -> Result<Option<String>, Error> {
+        match self.store.chosen_steam_account()? {
+            Some(chosen) => Ok(Some(chosen)),
+            None => default(),
+        }
+    }
+
+    /// Makes `steam_id` the Steam Account the app works with, from now on and
+    /// after every restart: one of the accounts on this computer, or a
+    /// SteamID64 the user entered by hand. Anything that is not a SteamID64
+    /// of a personal account is refused and changes nothing.
+    pub fn choose_steam_account(&self, steam_id: &str) -> Result<SteamAccountChoice, Error> {
+        let Some(steam_id) = steam::personal_steam_id(steam_id) else {
+            return Ok(SteamAccountChoice::InvalidSteamId);
+        };
+        self.store.choose_steam_account(steam_id)?;
+        Ok(SteamAccountChoice::Chosen)
     }
 
     /// The Steam installation on this computer and its Steam Accounts.
@@ -158,6 +197,12 @@ impl Core {
             Err(error) => Err(Error::new(format!("{} could not be launched: {error}", game.title))),
         }
     }
+}
+
+/// The SteamID of the account that logged in most recently to the Steam
+/// installation in `folder`.
+fn most_recent_account(folder: &std::path::Path) -> Option<String> {
+    steam::current_account(folder).map(|account| account.steam_id)
 }
 
 /// Steam's app id in a Steam Game's id (`steam:<app id>`).

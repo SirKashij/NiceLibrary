@@ -3,7 +3,7 @@
 
 pub mod ports;
 
-use nicelibrary_core::{Core, CoverCache, Error, Game, Launch, SteamInstallation, Store};
+use nicelibrary_core::{Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, Store};
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
 use tauri::{App, Manager, WebviewWindowBuilder};
@@ -28,6 +28,16 @@ async fn launch(core: tauri::State<'_, Core>, game_id: String) -> Result<Launch,
 #[tauri::command]
 fn steam_installation(core: tauri::State<'_, Core>) -> SteamInstallation {
     core.steam_installation()
+}
+
+#[tauri::command]
+fn steam_account(core: tauri::State<'_, Core>) -> Result<Option<String>, Error> {
+    core.steam_account()
+}
+
+#[tauri::command]
+fn choose_steam_account(core: tauri::State<'_, Core>, steam_id: String) -> Result<SteamAccountChoice, Error> {
+    core.choose_steam_account(&steam_id)
 }
 
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
@@ -61,7 +71,14 @@ const COVERS: &str = "covers";
 
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![library, read_installed_games, launch, steam_installation])
+        .invoke_handler(tauri::generate_handler![
+            library,
+            read_installed_games,
+            launch,
+            steam_installation,
+            steam_account,
+            choose_steam_account
+        ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
             let path = request.uri().path().to_owned();

@@ -12,6 +12,8 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => steam,
+    steamAccount: async () => null,
+    chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
     launch: async () => ({ outcome: 'launched' }),
   };

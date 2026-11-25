@@ -31,8 +31,12 @@ const MIGRATIONS: &[&str] = &[
      );",
 ];
 
-/// The setting that names the Steam Account whose Games the Library shows.
-const STEAM_ACCOUNT: &str = "steam_account";
+/// The setting that names the Steam Account whose Installed Games were read
+/// last. The Library shows it while the user has chosen no Steam Account.
+const LAST_READ_STEAM_ACCOUNT: &str = "steam_account";
+
+/// The setting that names the Steam Account the user chose.
+const CHOSEN_STEAM_ACCOUNT: &str = "chosen_steam_account";
 
 /// The local store.
 pub struct Store {
@@ -59,24 +63,43 @@ impl Store {
         self.connection.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    /// The Steam Account whose Games the Library shows, once one is known.
-    pub(crate) fn steam_account(&self) -> Result<Option<String>, Error> {
+    fn setting(&self, key: &str) -> Result<Option<String>, Error> {
         let connection = self.connection();
         let mut statement = connection.prepare("SELECT value FROM settings WHERE key = ?1")?;
-        let mut rows = statement.query_map([STEAM_ACCOUNT], |row| row.get(0))?;
+        let mut rows = statement.query_map([key], |row| row.get(0))?;
         Ok(rows.next().transpose()?)
+    }
+
+    /// The Steam Account whose Installed Games were read last, once one is known.
+    pub(crate) fn last_read_steam_account(&self) -> Result<Option<String>, Error> {
+        self.setting(LAST_READ_STEAM_ACCOUNT)
+    }
+
+    /// The Steam Account the user chose, if they chose one.
+    pub(crate) fn chosen_steam_account(&self) -> Result<Option<String>, Error> {
+        self.setting(CHOSEN_STEAM_ACCOUNT)
+    }
+
+    /// Remembers `steam_id` as the Steam Account the user chose.
+    pub(crate) fn choose_steam_account(&self, steam_id: &str) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![CHOSEN_STEAM_ACCOUNT, steam_id],
+        )?;
+        Ok(())
     }
 
     /// Records which Steam apps are Installed for `account`, all at once:
     /// the given apps are Installed with their titles, every other Steam Game
-    /// of the account is not. `account` becomes the account the Library shows.
+    /// of the account is not. `account` becomes the account read last.
     pub(crate) fn record_installed_steam_games(&self, account: &str, apps: &[InstalledApp]) -> Result<(), Error> {
         let mut connection = self.connection();
         let transaction = connection.transaction()?;
         transaction.execute(
             "INSERT INTO settings (key, value) VALUES (?1, ?2)
              ON CONFLICT (key) DO UPDATE SET value = excluded.value",
-            params![STEAM_ACCOUNT, account],
+            params![LAST_READ_STEAM_ACCOUNT, account],
         )?;
         transaction.execute("UPDATE steam_games SET installed = 0 WHERE steam_account = ?1", [account])?;
         for app in apps {

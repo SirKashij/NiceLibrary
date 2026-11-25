@@ -13,7 +13,7 @@ body {
 h1, h2, p, ul { margin: 0; }
 ul { padding: 0; list-style: none; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: left; cursor: pointer; }
-button:focus-visible {
+button:focus-visible, input:focus-visible {
   outline: var(--focus-ring) solid var(--color-accent);
   outline-offset: var(--focus-ring);
   border-radius: var(--radius-control);
@@ -52,6 +52,21 @@ button:focus-visible {
 .settings-row { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); padding: var(--space-2) 0; }
 .accounts { display: grid; }
 .accounts .settings-row + .settings-row { border-top: var(--hairline) solid var(--color-line); }
+.account-choice { display: grid; gap: var(--space-1); }
+.account-choice label { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
+.steam-id-form { display: grid; gap: var(--space-2); }
+.steam-id-form label { color: var(--color-text-muted); font-size: var(--text-size-label); }
+.steam-id-row { display: flex; gap: var(--space-2); }
+.steam-id-row input {
+  flex: 1; min-width: 0; font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
+.button {
+  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control);
+  padding: var(--space-1) var(--space-3); background: var(--color-surface-raised);
+}
+.button:hover { border-color: var(--color-text-muted); }
 .muted { color: var(--color-text-muted); font-size: var(--text-size-label); overflow-wrap: anywhere; }
 
 /* Library: a grid of Covers, each with its title below. The Covers carry the colour (ADR-0007). */
