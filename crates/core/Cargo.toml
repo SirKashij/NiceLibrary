@@ -1,0 +1,12 @@
+[package]
+name = "nicelibrary-core"
+description = "Application core of NiceLibrary. Knows nothing about Tauri."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

@@ -1,0 +1,51 @@
+/* Vitrine design tokens (ADR-0007). The only file with raw colour, type, radius and spacing values.
+   Neutral graphite surfaces, no brand accent: the accent is the text colour itself. */
+:root {
+  color-scheme: dark;
+
+  /* Colour */
+  --color-bg: #121314;
+  --color-surface: #1a1b1d;
+  --color-surface-raised: #242628;
+  --color-line: #2e3033;
+  --color-text: #ecebe8;
+  --color-text-muted: #9b9c98;
+  --color-accent: var(--color-text);
+  --color-accent-ink: var(--color-bg);
+
+  /* Type */
+  --font-display: 'Bricolage Grotesque Variable', sans-serif;
+  --font-text: 'Instrument Sans Variable', sans-serif;
+  --text-size-body: 14px;
+  --text-size-label: 13px;
+  --text-size-brand: 17px;
+  --text-size-page-title: 42px;
+  --line-height-body: 1.45;
+  --line-height-title: 1.05;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-display: 600;
+  --tracking-title: -0.025em;
+
+  /* Shape */
+  --radius-cover: 3px;
+  --radius-control: 4px;
+  --radius-mark: 2px;
+  --hairline: 1px;
+  --focus-ring: 2px;
+  --nav-indicator: 2px;
+
+  /* Space */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 14px;
+  --space-5: 20px;
+  --space-6: 28px;
+  --space-7: 40px;
+  --nav-item-height: 34px;
+  --sidebar-width: 232px;
+  --brand-mark-width: 14px;
+  --brand-mark-height: 20px;
+  --note-max-width: 56ch;
+}
