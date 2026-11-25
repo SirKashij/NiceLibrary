@@ -18,6 +18,7 @@ npm run dev     # starts the app
 npm test        # interface tests
 cargo test      # core tests
 cargo test-contract   # real ports, Windows only
+npm run test:e2e      # the built app, Windows only (setup in CONTRIBUTING.md)
 ```
 
 CI builds and tests every pull request and every push to `main` on Windows and builds the app on Linux, without publishing anything.
@@ -44,6 +45,7 @@ npm run dev     # startet die App
 npm test        # Tests der Oberfläche
 cargo test      # Tests des Core
 cargo test-contract   # echte Ports, nur Windows
+npm run test:e2e      # die gebaute App, nur Windows (Einrichtung in CONTRIBUTING.md)
 ```
 
 Die CI baut und testet jeden Pull Request und jeden Push auf `main` unter Windows und baut die App unter Linux, ohne etwas zu veröffentlichen.

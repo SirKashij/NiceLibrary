@@ -94,6 +94,19 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: npm run tauri -- build --ci -- --locked
 
+      # End-to-end tests drive the binary just built through WebDriver:
+      # tauri-driver in front of the msedgedriver that matches the runner's
+      # WebView2. rust-cache keeps the installed tauri-driver.
+      - name: Install WebDriver tools
+        run: |
+          cargo install tauri-driver --version 2.1.0 --locked
+          pwsh scripts/install-msedgedriver.ps1
+
+      - name: End-to-end tests
+        run: npm run test:e2e
+        env:
+          NICELIBRARY_APP: target/${{ github.ref == 'refs/heads/main' && 'release' || 'debug' }}/nicelibrary.exe
+
   linux:
     name: Linux (build only)
     runs-on: ubuntu-latest
