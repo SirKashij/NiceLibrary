@@ -83,4 +83,16 @@ describe('the built app', () => {
     const answer = await app.text('.settings-section > :not(h2)');
     expect(answer === t['steam.notFound'] || answer.startsWith(t['steam.found']), answer).toBe(true);
   });
+
+  it('shows in the settings whether a Steam Web API key is saved in the secret store', async () => {
+    const t = await app.messages();
+    await app.execute(
+      'Array.from(document.querySelectorAll("nav button")).find((b) => b.textContent === arguments[0]).click()',
+      t['nav.settings'],
+    );
+
+    // The row only appears once the `steam_web_api_key_stored` command answered from the Credential Manager.
+    const answer = await app.text('[aria-labelledby="settings-key"] .settings-row > span');
+    expect([t['key.stored'], t['key.notStored']]).toContain(answer);
+  });
 });

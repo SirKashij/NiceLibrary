@@ -31,6 +31,33 @@ export const en = {
   'steam.useSteamId': 'Use SteamID',
   'steam.invalidSteamId': 'This is not a SteamID. A SteamID has 17 digits and starts with 7656119.',
   'steam.usesSteamId': 'Your library uses the SteamID {steamId}.',
+  'settings.key': 'Steam Web API key',
+  'key.why':
+    'With your own Steam Web API key, NiceLibrary reads all your Steam games with their playtime and achievements. Without a key, it shows only the games installed on this computer.',
+  'key.notStored': 'No key is saved.',
+  'key.stored': 'A key is saved.',
+  'key.steps': 'How to get your key',
+  'key.step1': 'Open the Steam page for Web API keys and sign in with your Steam account.',
+  'key.step2': 'Enter any domain name, for example localhost, accept the terms and register.',
+  'key.step3': 'Copy the key Steam shows and paste it below.',
+  'key.openPage': 'Open the Steam page',
+  'key.pageFailed': 'The Steam page could not be opened. Go to steamcommunity.com/dev/apikey in your browser.',
+  'key.field': 'Your key',
+  'key.check': 'Check and save',
+  'key.checking': 'Checking your key with Steam…',
+  'key.confirmed': 'Steam confirmed your key. It is saved.',
+  'key.invalid': 'This key is invalid. Copy the whole key from the Steam page and try again.',
+  'key.steamUnreachable': 'Steam could not be reached, so your key could not be checked. It was not saved. Try again later.',
+  'key.saveFailed': 'Your key could not be saved.',
+  'key.replace': 'Replace key',
+  'key.cancel': 'Cancel',
+  'key.remove': 'Remove key',
+  'key.removed': 'Your key was removed.',
+  'key.removeFailed': 'Your key could not be removed.',
+  'key.loadFailed': 'Whether a key is saved could not be checked.',
+  'key.dataTitle': 'What NiceLibrary stores',
+  'key.data':
+    'NiceLibrary keeps this Steam data only on this computer: your SteamID, the games you own, their playtime and when you last played them, your achievements with their unlock dates, names, descriptions, icons and rarity, and the games’ covers. Your key is kept in the Windows Credential Manager and is sent to no one but Steam.',
 } as const;
 
 export type MessageKey = keyof typeof en;

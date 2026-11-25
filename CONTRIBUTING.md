@@ -15,7 +15,7 @@ NiceLibrary is MIT licensed (ADR-0004). By contributing, you agree that your con
 
 CI runs all of them on Windows for every pull request.
 
-`cargo test-contract` writes temporary registry values under `HKEY_CURRENT_USER\Software\NiceLibraryContractTests` and removes them when it finishes. It only reads Steam's own registry keys. To check how URLs are opened, it registers URL schemes of its own under `HKEY_CURRENT_USER\Software\Classes\nicelibrary-contract-*`, opens them (a console window flashes briefly) and removes them again; it never opens a `steam://` URL. It also starts small web servers on `127.0.0.1` and downloads one Cover from Steam's artwork host, so it needs a network connection.
+`cargo test-contract` writes temporary registry values under `HKEY_CURRENT_USER\Software\NiceLibraryContractTests` and removes them when it finishes. It only reads Steam's own registry keys. To check how URLs are opened, it registers URL schemes of its own under `HKEY_CURRENT_USER\Software\Classes\nicelibrary-contract-*`, opens them (a console window flashes briefly) and removes them again; it never opens a `steam://` URL. To check the secret store, it writes test entries to the Windows Credential Manager under `NiceLibraryContractTests/` and deletes them again; it never touches the app's own entries (`io.github.sirkashij.nicelibrary/`). It also starts small web servers on `127.0.0.1`, downloads one Cover from Steam's artwork host and asks the Steam Web API once with a made-up key, so it needs a network connection.
 
 ### End-to-end tests
 
@@ -62,3 +62,5 @@ If a check needs another WebDriver command, add a method to the handle in `e2e/a
 The app keeps its data in one SQLite database in the user profile, `%APPDATA%\io.github.sirkashij.nicelibrary\nicelibrary.db`. The end-to-end tests start the real app, so they use that file too. The core tests use a temporary database each.
 
 The schema changes only through migrations, the list `MIGRATIONS` in `crates/core/src/store.rs`. To change the schema, append an entry; never edit or reorder one that has been released. A database written by a newer version of the app is refused, not changed.
+
+The Steam Web API key is never kept in the database, a file or a log. It lives only in the Windows Credential Manager, as the generic credential `io.github.sirkashij.nicelibrary/steam-web-api-key` (ADR-0002). Error messages never repeat it, nor a URL that carries it.

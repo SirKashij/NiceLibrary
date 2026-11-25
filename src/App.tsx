@@ -177,6 +177,7 @@ function SettingsView({ operations }: { operations: Operations }) {
   return (
     <Page title="nav.settings">
       <SteamSettings operations={operations} />
+      <SteamWebApiKeySettings operations={operations} />
     </Page>
   );
 }
@@ -316,7 +317,7 @@ function SteamIdForm({ chosen, onChoose }: { chosen: string | null; onChoose: (s
       }}
     >
       <label htmlFor="steam-id">{t('steam.steamId')}</label>
-      <div className="steam-id-row">
+      <div className="field-row">
         <input
           id="steam-id"
           type="text"
@@ -335,6 +336,154 @@ function SteamIdForm({ chosen, onChoose }: { chosen: string | null; onChoose: (s
         {t('steam.steamIdHint')}
       </p>
     </form>
+  );
+}
+
+/** A message under a setting: `status` for what went well, `alert` for what did not. */
+type Notice = { role: 'status' | 'alert'; message: MessageKey };
+
+/**
+ * The Steam Web API key: a guided step for creating and entering one, and
+ * whether one is saved, with replacing and removing it. The key itself
+ * never comes back from the core.
+ */
+function SteamWebApiKeySettings({ operations }: { operations: Operations }) {
+  const t = useT();
+  const loaded = useOperation(operations, (o) => o.steamWebApiKeyStored());
+  // Whether a key is saved after a change made here; until then what the core answered.
+  const [changed, setChanged] = useState<boolean>();
+  const stored = changed ?? (loaded.state === 'ready' ? loaded.value : undefined);
+  const [replacing, setReplacing] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [notice, setNotice] = useState<Notice>();
+  const [draft, setDraft] = useState('');
+
+  const settle = (saved: boolean, message: MessageKey) => {
+    setChanged(saved);
+    setReplacing(false);
+    setDraft('');
+    setNotice({ role: 'status', message });
+  };
+
+  const check = () => {
+    if (checking) return;
+    setChecking(true);
+    setNotice(undefined);
+    operations
+      .storeSteamWebApiKey(draft)
+      .then(
+        ({ outcome }) =>
+          outcome === 'stored'
+            ? settle(true, 'key.confirmed')
+            : setNotice({ role: 'alert', message: outcome === 'invalid' ? 'key.invalid' : 'key.steamUnreachable' }),
+        () => setNotice({ role: 'alert', message: 'key.saveFailed' }),
+      )
+      .finally(() => setChecking(false));
+  };
+
+  const remove = () => {
+    setNotice(undefined);
+    operations.removeSteamWebApiKey().then(
+      () => settle(false, 'key.removed'),
+      () => setNotice({ role: 'alert', message: 'key.removeFailed' }),
+    );
+  };
+
+  const openPage = () => {
+    operations.openSteamWebApiKeyPage().catch(() => setNotice({ role: 'alert', message: 'key.pageFailed' }));
+  };
+
+  const cancel = () => {
+    setReplacing(false);
+    setDraft('');
+    setNotice(undefined);
+  };
+
+  return (
+    <section className="settings-section" aria-labelledby="settings-key">
+      <h2 id="settings-key">{t('settings.key')}</h2>
+      <p className="note">{t('key.why')}</p>
+      {loaded.state === 'failed' && stored === undefined && (
+        <p className="note" role="alert">
+          {t('key.loadFailed')}
+        </p>
+      )}
+      {stored !== undefined && (
+        <div className="settings-row">
+          <span>{t(stored ? 'key.stored' : 'key.notStored')}</span>
+          {stored && !replacing && (
+            <span className="settings-actions">
+              <button type="button" className="button" onClick={() => setReplacing(true)}>
+                {t('key.replace')}
+              </button>
+              <button type="button" className="button" onClick={remove}>
+                {t('key.remove')}
+              </button>
+            </span>
+          )}
+        </div>
+      )}
+      {stored !== undefined && (!stored || replacing) && (
+        <form
+          className="key-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            check();
+          }}
+        >
+          <p id="key-steps" className="muted">
+            {t('key.steps')}
+          </p>
+          <ol className="key-steps" aria-labelledby="key-steps">
+            <li>
+              {t('key.step1')}
+              <span className="key-page">
+                <button type="button" className="button" onClick={openPage}>
+                  {t('key.openPage')}
+                </button>
+                <span className="muted">steamcommunity.com/dev/apikey</span>
+              </span>
+            </li>
+            <li>{t('key.step2')}</li>
+            <li>{t('key.step3')}</li>
+          </ol>
+          <label htmlFor="steam-web-api-key">{t('key.field')}</label>
+          <div className="field-row">
+            <input
+              id="steam-web-api-key"
+              type="password"
+              autoComplete="off"
+              spellCheck={false}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+            />
+            <button type="submit" className="button" disabled={checking}>
+              {t('key.check')}
+            </button>
+            {replacing && (
+              <button type="button" className="button" onClick={cancel}>
+                {t('key.cancel')}
+              </button>
+            )}
+          </div>
+        </form>
+      )}
+      {checking ? (
+        <p className="note" role="status">
+          {t('key.checking')}
+        </p>
+      ) : (
+        notice && (
+          <p className="note" role={notice.role}>
+            {t(notice.message)}
+          </p>
+        )
+      )}
+      <div className="key-data" role="note" aria-labelledby="key-data-title">
+        <h3 id="key-data-title">{t('key.dataTitle')}</h3>
+        <p className="muted">{t('key.data')}</p>
+      </div>
+    </section>
   );
 }
 

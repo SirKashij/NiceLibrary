@@ -9,6 +9,30 @@ use std::sync::{Arc, Mutex};
 use nicelibrary_core::{Core, CoverCache, Downloader, Launch, OpenError, Opener, Ports, SteamLocator, Store};
 use tempfile::TempDir;
 
+/// A computer whose secret store holds nothing and whose network reaches no
+/// Web API; these tests need neither.
+struct NoSecretsNoWebApi;
+
+impl nicelibrary_core::SecretStore for NoSecretsNoWebApi {
+    fn read(&self, _name: &str) -> Result<Option<String>, String> {
+        Ok(None)
+    }
+
+    fn write(&self, _name: &str, _secret: &str) -> Result<(), String> {
+        Err("this test stores no secret".into())
+    }
+
+    fn delete(&self, _name: &str) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+impl nicelibrary_core::WebApi for NoSecretsNoWebApi {
+    fn get(&self, _url: &str) -> Result<nicelibrary_core::WebAnswer, String> {
+        Err("this test asks no Web API".into())
+    }
+}
+
 /// A substitute for the registry lookup: Steam is where the test says.
 #[derive(Clone, Default)]
 struct SteamAt(Arc<Mutex<Option<PathBuf>>>);
@@ -118,6 +142,8 @@ impl App {
                 steam_locator: Box::new(locator.clone()),
                 downloader: Box::new(Offline),
                 opener: Box::new(opener.clone()),
+                secrets: Box::new(NoSecretsNoWebApi),
+                web_api: Box::new(NoSecretsNoWebApi),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),

@@ -8,6 +8,7 @@ mod covers;
 pub mod keyvalues;
 mod launch;
 mod steam;
+mod steam_web_api;
 mod store;
 
 use std::fmt;
@@ -17,6 +18,7 @@ use serde::{Serialize, Serializer};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
+pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
 
 /// The origin a Game is read from.
@@ -82,6 +84,8 @@ pub struct Ports {
     pub steam_locator: Box<dyn SteamLocator>,
     pub downloader: Box<dyn Downloader>,
     pub opener: Box<dyn Opener>,
+    pub secrets: Box<dyn SecretStore>,
+    pub web_api: Box<dyn WebApi>,
 }
 
 /// The application core. Each public method is one operation.
@@ -197,6 +201,47 @@ impl Core {
             Err(error) => Err(Error::new(format!("{} could not be launched: {error}", game.title))),
         }
     }
+
+    /// Whether a Steam Web API key is stored. The key itself never leaves
+    /// the core.
+    pub fn steam_web_api_key_stored(&self) -> Result<bool, Error> {
+        let stored = self.ports.secrets.read(steam_web_api::KEY_SECRET).map_err(secret_store_error)?;
+        Ok(stored.is_some())
+    }
+
+    /// Checks the Steam Web API key the user pasted with Steam and, when
+    /// Steam accepts it, stores it in the operating system's secret store in
+    /// place of any earlier one. A key that is refused or cannot be checked
+    /// changes nothing.
+    pub fn store_steam_web_api_key(&self, key: &str) -> Result<SteamWebApiKeyCheck, Error> {
+        let Some(key) = steam_web_api::key_in(key) else {
+            return Ok(SteamWebApiKeyCheck::Invalid);
+        };
+        let check = steam_web_api::check_key(self.ports.web_api.as_ref(), &key);
+        if check == SteamWebApiKeyCheck::Stored {
+            self.ports.secrets.write(steam_web_api::KEY_SECRET, &key).map_err(secret_store_error)?;
+        }
+        Ok(check)
+    }
+
+    /// Removes the stored Steam Web API key, if there is one.
+    pub fn remove_steam_web_api_key(&self) -> Result<(), Error> {
+        self.ports.secrets.delete(steam_web_api::KEY_SECRET).map_err(secret_store_error)
+    }
+
+    /// Opens the Steam page where the user creates their Steam Web API key,
+    /// in the browser.
+    pub fn open_steam_web_api_key_page(&self) -> Result<(), Error> {
+        self.ports
+            .opener
+            .open_url(steam_web_api::KEY_PAGE)
+            .map_err(|error| Error::new(format!("{} could not be opened: {error}", steam_web_api::KEY_PAGE)))
+    }
+}
+
+/// The secret store's reason, which never contains the secret (see [`SecretStore`]).
+fn secret_store_error(reason: String) -> Error {
+    Error::new(format!("secret store: {reason}"))
 }
 
 /// The SteamID of the account that logged in most recently to the Steam

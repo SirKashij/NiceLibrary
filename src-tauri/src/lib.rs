@@ -3,7 +3,9 @@
 
 pub mod ports;
 
-use nicelibrary_core::{Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, Store};
+use nicelibrary_core::{
+    Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
+};
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
 use tauri::{App, Manager, WebviewWindowBuilder};
@@ -38,6 +40,28 @@ fn steam_account(core: tauri::State<'_, Core>) -> Result<Option<String>, Error> 
 #[tauri::command]
 fn choose_steam_account(core: tauri::State<'_, Core>, steam_id: String) -> Result<SteamAccountChoice, Error> {
     core.choose_steam_account(&steam_id)
+}
+
+#[tauri::command]
+fn steam_web_api_key_stored(core: tauri::State<'_, Core>) -> Result<bool, Error> {
+    core.steam_web_api_key_stored()
+}
+
+/// Async, so asking Steam runs off the main thread.
+#[tauri::command]
+async fn store_steam_web_api_key(core: tauri::State<'_, Core>, key: String) -> Result<SteamWebApiKeyCheck, Error> {
+    core.store_steam_web_api_key(&key)
+}
+
+#[tauri::command]
+fn remove_steam_web_api_key(core: tauri::State<'_, Core>) -> Result<(), Error> {
+    core.remove_steam_web_api_key()
+}
+
+/// Async, so a slow start of the browser does not block the window.
+#[tauri::command]
+async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(), Error> {
+    core.open_steam_web_api_key_page()
 }
 
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
@@ -77,7 +101,11 @@ pub fn run() {
             launch,
             steam_installation,
             steam_account,
-            choose_steam_account
+            choose_steam_account,
+            steam_web_api_key_stored,
+            store_steam_web_api_key,
+            remove_steam_web_api_key,
+            open_steam_web_api_key_page
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

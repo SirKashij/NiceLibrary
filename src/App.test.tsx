@@ -15,6 +15,10 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
+    steamWebApiKeyStored: async () => false,
+    storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
+    removeSteamWebApiKey: async () => {},
+    openSteamWebApiKeyPage: async () => {},
     launch: async () => ({ outcome: 'launched' }),
   };
 }
