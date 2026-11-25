@@ -1,0 +1,31 @@
+# Dependency license policy (ADR-0004). NiceLibrary is MIT, so every dependency
+# must be usable in an MIT project: permissive licenses are allowed, copyleft
+# licenses such as GPL, LGPL and AGPL are not.
+#
+# This is the one list for both dependency trees. cargo-deny checks the Rust
+# crates against it (`cargo deny check licenses`), scripts/check-npm-licenses.ts
+# checks the npm packages in package-lock.json against the same `allow` list.
+# Adding a license here needs a reviewed pull request that says why it fits MIT.
+
+[licenses]
+allow = [
+  "MIT",
+  "MIT-0",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "ISC",
+  "0BSD",
+  "Zlib",
+  "BlueOak-1.0.0",
+  "Unicode-3.0",
+  # File-level copyleft: unmodified MPL code may ship in an MIT project
+  # (cssparser, selectors and option-ext under Tauri; lightningcss under Vite).
+  "MPL-2.0",
+  # Fonts bundled with the interface (ADR-0007).
+  "OFL-1.1",
+]
+confidence-threshold = 0.93
+# The list is shared with npm, so a license only one tree uses is no warning.
+unused-allowed-license = "allow"
