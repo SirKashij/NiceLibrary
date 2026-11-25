@@ -1,16 +1,21 @@
 # Builds and tests every pull request and every push to main.
 # Windows is the platform version 1 ships for; Linux is only built, to keep
-# the cross-platform door open (ADR-0001). Nothing is published or uploaded.
+# the cross-platform door open (ADR-0001). Nothing is published; only the
+# diagnostics of failed end-to-end tests are kept as a workflow artifact.
 #
 # Pull requests build a debug binary to stay fast; main builds the release
 # and the installer. Only main saves the Rust cache, so pull requests restore
 # main's cache instead of filling the quota with their own.
+#
+# To try CI changes on a scratch branch without a pull request:
+#   gh workflow run CI --ref <branch>
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -104,9 +109,24 @@ jobs:
           pwsh scripts/install-msedgedriver.ps1
 
       - name: End-to-end tests
+        id: e2e
         run: npm run test:e2e
         env:
           NICELIBRARY_APP: target/${{ github.ref == 'refs/heads/main' && 'release' || 'debug' }}/nicelibrary.exe
+
+      - name: Collect end-to-end diagnostics
+        if: failure() && steps.e2e.outcome == 'failure'
+        run: pwsh scripts/collect-e2e-diagnostics.ps1
+        env:
+          NICELIBRARY_APP: target/${{ github.ref == 'refs/heads/main' && 'release' || 'debug' }}/nicelibrary.exe
+
+      - name: Upload end-to-end diagnostics
+        if: failure() && steps.e2e.outcome == 'failure'
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-diagnostics
+          path: target/e2e/diagnostics/
+          retention-days: 7
 
   linux:
     name: Linux (build only)
