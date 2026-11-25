@@ -9,6 +9,7 @@ export default defineConfig({
     // Every test file starts its own tauri-driver on the same fixed port.
     fileParallelism: false,
     testTimeout: 30_000,
-    hookTimeout: 180_000,
+    // Above msedgedriver's own 60 s, so its error shows instead of a timeout.
+    hookTimeout: 90_000,
   },
 });
