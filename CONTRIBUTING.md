@@ -15,6 +15,8 @@ NiceLibrary is MIT licensed (ADR-0004). By contributing, you agree that your con
 
 CI runs all of them on Windows for every pull request.
 
+`cargo test-contract` writes temporary registry values under `HKEY_CURRENT_USER\Software\NiceLibraryContractTests` and removes them when it finishes. It only reads Steam's own registry keys.
+
 ### End-to-end tests
 
 The end-to-end tests in `e2e/` start the built app and check what no lower test can see: that the window opens and the interface reaches the core through the real Tauri commands. They are slow, so keep them few and leave everything else to the tests above.

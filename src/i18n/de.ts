@@ -10,5 +10,11 @@ export const de: Record<MessageKey, string> = {
   'library.empty': 'Deine Bibliothek ist leer. Spiele aus Steam und Spiele, die du selbst hinzufügst, erscheinen hier.',
   'library.loadFailed': 'Die Bibliothek konnte nicht geladen werden.',
   'statistics.empty': 'Statistiken erscheinen, sobald du gespielt hast.',
-  'settings.empty': 'Noch gibt es nichts einzustellen.',
+  'settings.steam': 'Steam',
+  'steam.found': 'Steam-Installation gefunden',
+  'steam.notFound': 'Steam wurde auf diesem Computer nicht gefunden.',
+  'steam.loadFailed': 'Steam konnte nicht geprüft werden.',
+  'steam.accounts': 'Steam-Konten auf diesem Computer',
+  'steam.noAccounts': 'Auf diesem Computer hat sich noch kein Steam-Konto angemeldet.',
+  'steam.mostRecent': 'Zuletzt verwendet',
 };

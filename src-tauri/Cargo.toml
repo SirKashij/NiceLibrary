@@ -23,3 +23,9 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 nicelibrary-core = { path = "../crates/core" }
 tauri = { version = "2", features = [] }
+
+[target.'cfg(windows)'.dependencies]
+winreg = "0.56"
+
+[dev-dependencies]
+tempfile = { workspace = true }

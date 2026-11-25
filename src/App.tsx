@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { I18nProvider, useT, type Lang, type MessageKey } from './i18n';
-import type { Game, Operations } from './operations';
+import type { Operations } from './operations';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -45,40 +45,91 @@ function Shell({ operations }: { operations: Operations }) {
       <main className="main">
         {view === 'library' && <LibraryView operations={operations} />}
         {view === 'statistics' && <PlaceholderPage title="nav.statistics" note="statistics.empty" />}
-        {view === 'settings' && <PlaceholderPage title="nav.settings" note="settings.empty" />}
+        {view === 'settings' && <SettingsView operations={operations} />}
       </main>
     </div>
   );
 }
 
-type LibraryState = { state: 'loading' } | { state: 'ready'; games: Game[] } | { state: 'failed' };
+type Loaded<T> = { state: 'loading' } | { state: 'ready'; value: T } | { state: 'failed' };
 
-function LibraryView({ operations }: { operations: Operations }) {
-  const t = useT();
-  const [libraryState, setLibraryState] = useState<LibraryState>({ state: 'loading' });
+/** Calls one operation when the view appears and tracks its answer. */
+function useOperation<T>(operations: Operations, call: (operations: Operations) => Promise<T>): Loaded<T> {
+  const [loaded, setLoaded] = useState<Loaded<T>>({ state: 'loading' });
 
   useEffect(() => {
     let active = true;
-    operations.library().then(
-      (games) => active && setLibraryState({ state: 'ready', games }),
-      () => active && setLibraryState({ state: 'failed' }),
+    call(operations).then(
+      (value) => active && setLoaded({ state: 'ready', value }),
+      () => active && setLoaded({ state: 'failed' }),
     );
     return () => {
       active = false;
     };
+    // `call` only names which operation to run and is the same for the life of a view.
   }, [operations]);
+
+  return loaded;
+}
+
+function LibraryView({ operations }: { operations: Operations }) {
+  const t = useT();
+  const library = useOperation(operations, (o) => o.library());
 
   return (
     <Page title="nav.library">
-      {libraryState.state === 'ready' && libraryState.games.length === 0 && (
-        <p className="note">{t('library.empty')}</p>
-      )}
-      {libraryState.state === 'failed' && (
+      {library.state === 'ready' && library.value.length === 0 && <p className="note">{t('library.empty')}</p>}
+      {library.state === 'failed' && (
         <p className="note" role="alert">
           {t('library.loadFailed')}
         </p>
       )}
     </Page>
+  );
+}
+
+function SettingsView({ operations }: { operations: Operations }) {
+  return (
+    <Page title="nav.settings">
+      <SteamSettings operations={operations} />
+    </Page>
+  );
+}
+
+function SteamSettings({ operations }: { operations: Operations }) {
+  const t = useT();
+  const steam = useOperation(operations, (o) => o.steamInstallation());
+
+  return (
+    <section className="settings-section" aria-labelledby="settings-steam">
+      <h2 id="settings-steam">{t('settings.steam')}</h2>
+      {steam.state === 'failed' && (
+        <p className="note" role="alert">
+          {t('steam.loadFailed')}
+        </p>
+      )}
+      {steam.state === 'ready' && steam.value.state === 'notFound' && <p className="note">{t('steam.notFound')}</p>}
+      {steam.state === 'ready' && steam.value.state === 'found' && (
+        <>
+          <div className="settings-row">
+            <span>{t('steam.found')}</span>
+            <span className="muted">{steam.value.path}</span>
+          </div>
+          {steam.value.accounts.length === 0 ? (
+            <p className="note">{t('steam.noAccounts')}</p>
+          ) : (
+            <ul className="accounts" aria-label={t('steam.accounts')}>
+              {steam.value.accounts.map((account) => (
+                <li key={account.steamId} className="settings-row">
+                  <span>{account.displayName}</span>
+                  {account.mostRecent && <span className="muted">{t('steam.mostRecent')}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
+    </section>
   );
 }
 
