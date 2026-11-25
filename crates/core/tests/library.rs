@@ -10,7 +10,7 @@ fn a_fresh_core_has_an_empty_library() {
 #[test]
 fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
     let game = Game {
-        id: "steam:620".into(),
+        id: "620".into(),
         title: "Portal 2".into(),
         source: Source::Steam,
         installed: true,
@@ -19,7 +19,7 @@ fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
     assert_eq!(
         serde_json::to_value(&game).unwrap(),
         serde_json::json!({
-            "id": "steam:620",
+            "id": "620",
             "title": "Portal 2",
             "source": "steam",
             "installed": true

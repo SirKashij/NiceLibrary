@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { I18nProvider, useT, type Lang, type MessageKey } from './i18n';
 import type { Game, Operations } from './operations';
 
@@ -44,45 +44,59 @@ function Shell({ operations }: { operations: Operations }) {
       </aside>
       <main className="main">
         {view === 'library' && <LibraryView operations={operations} />}
-        {view === 'statistics' && <Page title="nav.statistics" note="statistics.empty" />}
-        {view === 'settings' && <Page title="nav.settings" note="settings.empty" />}
+        {view === 'statistics' && <PlaceholderPage title="nav.statistics" note="statistics.empty" />}
+        {view === 'settings' && <PlaceholderPage title="nav.settings" note="settings.empty" />}
       </main>
     </div>
   );
 }
 
-type Loaded = { state: 'loading' } | { state: 'ready'; games: Game[] } | { state: 'failed' };
+type LibraryState = { state: 'loading' } | { state: 'ready'; games: Game[] } | { state: 'failed' };
 
 function LibraryView({ operations }: { operations: Operations }) {
   const t = useT();
-  const [library, setLibrary] = useState<Loaded>({ state: 'loading' });
+  const [libraryState, setLibraryState] = useState<LibraryState>({ state: 'loading' });
 
   useEffect(() => {
-    let current = true;
+    let active = true;
     operations.library().then(
-      (games) => current && setLibrary({ state: 'ready', games }),
-      () => current && setLibrary({ state: 'failed' }),
+      (games) => active && setLibraryState({ state: 'ready', games }),
+      () => active && setLibraryState({ state: 'failed' }),
     );
     return () => {
-      current = false;
+      active = false;
     };
   }, [operations]);
 
   return (
-    <section className="page">
-      <h1>{t('nav.library')}</h1>
-      {library.state === 'ready' && library.games.length === 0 && <p className="note">{t('library.empty')}</p>}
-      {library.state === 'failed' && <p className="note" role="alert">{t('library.loadFailed')}</p>}
-    </section>
+    <Page title="nav.library">
+      {libraryState.state === 'ready' && libraryState.games.length === 0 && (
+        <p className="note">{t('library.empty')}</p>
+      )}
+      {libraryState.state === 'failed' && (
+        <p className="note" role="alert">
+          {t('library.loadFailed')}
+        </p>
+      )}
+    </Page>
   );
 }
 
-function Page({ title, note }: { title: MessageKey; note: MessageKey }) {
+function PlaceholderPage({ title, note }: { title: MessageKey; note: MessageKey }) {
+  const t = useT();
+  return (
+    <Page title={title}>
+      <p className="note">{t(note)}</p>
+    </Page>
+  );
+}
+
+function Page({ title, children }: { title: MessageKey; children: ReactNode }) {
   const t = useT();
   return (
     <section className="page">
       <h1>{t(title)}</h1>
-      <p className="note">{t(note)}</p>
+      {children}
     </section>
   );
 }
