@@ -4,7 +4,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use nicelibrary_core::{Core, Ports, SteamAccount, SteamInstallation, SteamLocator};
+use nicelibrary_core::{Core, Ports, SteamAccount, SteamInstallation, SteamLocator, Store};
 use tempfile::TempDir;
 
 /// A substitute for the registry lookup: Steam is where the test says.
@@ -16,8 +16,27 @@ impl SteamLocator for SteamAt {
     }
 }
 
-fn core_with_steam_at(folder: Option<&Path>) -> Core {
-    Core::new(Ports { steam_locator: Box::new(SteamAt(folder.map(Path::to_path_buf))) })
+/// A core with a database of its own, removed after the test.
+struct TestCore {
+    core: Core,
+    _profile: TempDir,
+}
+
+impl std::ops::Deref for TestCore {
+    type Target = Core;
+
+    fn deref(&self) -> &Core {
+        &self.core
+    }
+}
+
+fn core_with_steam_at(folder: Option<&Path>) -> TestCore {
+    let profile = tempfile::tempdir().unwrap();
+    let store = Store::open(&profile.path().join("nicelibrary.db")).unwrap();
+    TestCore {
+        core: Core::new(Ports { steam_locator: Box::new(SteamAt(folder.map(Path::to_path_buf))) }, store),
+        _profile: profile,
+    }
 }
 
 /// A Steam folder on disk with the given `config/loginusers.vdf`.

@@ -6,6 +6,7 @@ export type Source = 'steam' | 'local';
 
 /** One playable title in the Library. Mirrors `Game` in crates/core. */
 export interface Game {
+  /** Unique across Sources: `steam:<app id>` for a Steam Game. */
   id: string;
   title: string;
   source: Source;
@@ -26,13 +27,16 @@ export type SteamInstallation =
   | { state: 'found'; path: string; accounts: SteamAccount[] };
 
 export interface Operations {
-  /** All Games in the Library. */
+  /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
+  /** Reads which Steam Games are Installed, stores it and answers the Library. */
+  refreshInstalledGames(): Promise<Game[]>;
   /** The Steam installation and its Steam Accounts, the most recently used first. */
   steamInstallation(): Promise<SteamInstallation>;
 }
 
 export const tauriOperations: Operations = {
   library: () => invoke<Game[]>('library'),
+  refreshInstalledGames: () => invoke<Game[]>('refresh_installed_games'),
   steamInstallation: () => invoke<SteamInstallation>('steam_installation'),
 };

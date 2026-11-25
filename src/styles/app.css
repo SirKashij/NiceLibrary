@@ -53,3 +53,10 @@ button:focus-visible {
 .accounts { display: grid; }
 .accounts .settings-row + .settings-row { border-top: var(--hairline) solid var(--color-line); }
 .muted { color: var(--color-text-muted); font-size: var(--text-size-label); overflow-wrap: anywhere; }
+
+/* Library: one Game per row, separated by hairlines, until the cover grid (#8). */
+.games { display: grid; max-width: var(--note-max-width); }
+.game { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); padding: var(--space-2) 0; }
+.game + .game { border-top: var(--hairline) solid var(--color-line); }
+.game-title { font-size: var(--text-size-body); font-weight: var(--weight-medium); }
+.game[data-installed='false'] .game-title { color: var(--color-text-muted); }

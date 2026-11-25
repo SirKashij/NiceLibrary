@@ -3,12 +3,18 @@
 
 pub mod ports;
 
-use nicelibrary_core::{Core, Game, SteamInstallation};
-use tauri::{App, WebviewWindowBuilder};
+use nicelibrary_core::{Core, Error, Game, SteamInstallation, Store};
+use tauri::{App, Manager, WebviewWindowBuilder};
 
 #[tauri::command]
-fn library(core: tauri::State<'_, Core>) -> Vec<Game> {
+fn library(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
     core.library()
+}
+
+/// Async, so reading Steam's folders runs off the main thread.
+#[tauri::command]
+async fn refresh_installed_games(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
+    core.refresh_installed_games()
 }
 
 #[tauri::command]
@@ -16,11 +22,18 @@ fn steam_installation(core: tauri::State<'_, Core>) -> SteamInstallation {
     core.steam_installation()
 }
 
+/// The database's file name in the app's data folder in the user profile
+/// (`%APPDATA%\<identifier>` on Windows).
+const DATABASE: &str = "nicelibrary.db";
+
 pub fn run() {
     tauri::Builder::default()
-        .manage(Core::new(ports::real_ports()))
-        .invoke_handler(tauri::generate_handler![library, steam_installation])
-        .setup(|app| create_main_window(app))
+        .invoke_handler(tauri::generate_handler![library, refresh_installed_games, steam_installation])
+        .setup(|app| {
+            let store = Store::open(&app.path().app_data_dir()?.join(DATABASE))?;
+            app.manage(Core::new(ports::real_ports(), store));
+            create_main_window(app)
+        })
         .run(tauri::generate_context!())
         .expect("error while running NiceLibrary");
 }
