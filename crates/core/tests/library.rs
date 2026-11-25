@@ -57,7 +57,7 @@ fn a_fresh_core_has_an_empty_library() {
     let profile = tempfile::tempdir().unwrap();
     let store = Store::open(&profile.path().join("nicelibrary.db")).unwrap();
     let core = Core::new(
-        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi) },
+        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock) },
         store,
         CoverCache::new(profile.path().join("covers")),
     );
@@ -81,6 +81,8 @@ fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
         title: "Portal 2".into(),
         source: Source::Steam,
         installed: true,
+        playtime_minutes: Some(1_234),
+        last_played: Some(1_795_205_700),
     };
 
     assert_eq!(
@@ -89,7 +91,35 @@ fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
             "id": "steam:620",
             "title": "Portal 2",
             "source": "steam",
-            "installed": true
+            "installed": true,
+            "playtimeMinutes": 1234,
+            "lastPlayed": 1795205700
         })
     );
+}
+
+#[test]
+fn a_game_without_playtime_and_last_played_reaches_the_interface_with_null() {
+    let game = Game {
+        id: "steam:620".into(),
+        title: "Portal 2".into(),
+        source: Source::Steam,
+        installed: true,
+        playtime_minutes: None,
+        last_played: None,
+    };
+
+    let json = serde_json::to_value(&game).unwrap();
+
+    assert_eq!(json["playtimeMinutes"], serde_json::Value::Null);
+    assert_eq!(json["lastPlayed"], serde_json::Value::Null);
+}
+
+/// A clock that stands still; these tests do not depend on the time.
+struct StoppedClock;
+
+impl nicelibrary_core::Clock for StoppedClock {
+    fn now(&self) -> std::time::SystemTime {
+        std::time::UNIX_EPOCH
+    }
 }

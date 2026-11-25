@@ -77,7 +77,7 @@ fn core_with_steam_at(folder: Option<&Path>) -> TestCore {
     let store = Store::open(&profile.path().join("nicelibrary.db")).unwrap();
     TestCore {
         core: Core::new(
-            Ports { steam_locator: Box::new(SteamAt(folder.map(Path::to_path_buf))), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi) },
+            Ports { steam_locator: Box::new(SteamAt(folder.map(Path::to_path_buf))), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock) },
             store,
             CoverCache::new(profile.path().join("covers")),
         ),
@@ -237,4 +237,13 @@ fn reaches_the_interface_in_the_shape_the_interface_expects() {
         serde_json::to_value(SteamInstallation::NotFound).unwrap(),
         serde_json::json!({ "state": "notFound" })
     );
+}
+
+/// A clock that stands still; these tests do not depend on the time.
+struct StoppedClock;
+
+impl nicelibrary_core::Clock for StoppedClock {
+    fn now(&self) -> std::time::SystemTime {
+        std::time::UNIX_EPOCH
+    }
 }

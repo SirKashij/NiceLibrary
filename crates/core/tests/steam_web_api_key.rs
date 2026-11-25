@@ -169,6 +169,7 @@ impl Profile {
                 opener: Box::new(self.browser.clone()),
                 secrets,
                 web_api: Box::new(api.clone()),
+                clock: Box::new(StoppedClock),
             },
             Store::open(&self.folder.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.folder.path().join("covers")),
@@ -377,5 +378,14 @@ fn a_check_reaches_the_interface_in_the_shape_the_interface_expects() {
         (SteamWebApiKeyCheck::SteamUnreachable, "steamUnreachable"),
     ] {
         assert_eq!(serde_json::to_value(check).unwrap(), serde_json::json!({ "outcome": outcome }));
+    }
+}
+
+/// A clock that stands still; these tests do not depend on the time.
+struct StoppedClock;
+
+impl nicelibrary_core::Clock for StoppedClock {
+    fn now(&self) -> std::time::SystemTime {
+        std::time::UNIX_EPOCH
     }
 }

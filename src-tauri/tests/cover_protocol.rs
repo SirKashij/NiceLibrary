@@ -68,7 +68,7 @@ impl Downloader for FakeSteam {
 fn core(online: bool) -> (Core, TempDir) {
     let profile = tempfile::tempdir().unwrap();
     let core = Core::new(
-        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(FakeSteam { online }), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi) },
+        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(FakeSteam { online }), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock) },
         Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.path().join("covers")),
     );
@@ -98,4 +98,13 @@ fn a_cover_that_cannot_be_downloaded_is_unavailable() {
     let (core, _profile) = core(false);
 
     assert_eq!(cover_response(&core, "/steam%3A620").status(), 503);
+}
+
+/// A clock that stands still; these tests do not depend on the time.
+struct StoppedClock;
+
+impl nicelibrary_core::Clock for StoppedClock {
+    fn now(&self) -> std::time::SystemTime {
+        std::time::UNIX_EPOCH
+    }
 }

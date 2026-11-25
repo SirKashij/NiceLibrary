@@ -131,7 +131,7 @@ impl Profile {
     /// Starts the app over this profile, reaching Steam's artwork through `steam`.
     fn start(&self, steam: &FakeSteam) -> Core {
         Core::new(
-            Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(steam.clone()), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi) },
+            Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(steam.clone()), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock) },
             Store::open(&self.0.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(self.covers().join("covers")),
         )
@@ -266,4 +266,13 @@ fn a_cover_steam_serves_as_jpeg_is_served_as_jpeg() {
     let profile = Profile::new();
 
     assert_eq!(profile.start(&steam).cover("steam:620").unwrap().expect("a Cover").media_type, "image/jpeg");
+}
+
+/// A clock that stands still; these tests do not depend on the time.
+struct StoppedClock;
+
+impl nicelibrary_core::Clock for StoppedClock {
+    fn now(&self) -> std::time::SystemTime {
+        std::time::UNIX_EPOCH
+    }
 }

@@ -19,6 +19,8 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    sync: async () => ({ outcome: 'noKey' }),
+    lastSync: async () => null,
     launch: async () => ({ outcome: 'launched' }),
   };
 }
@@ -27,7 +29,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
 const pending = <T,>() => new Promise<T>(() => {});
 
 function steamGame(appId: number, title: string, installed = true): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null };
 }
 
 function gameTitles() {

@@ -375,6 +375,48 @@ mod web_api {
 
         assert!(matches!(answer.status, 401 | 403), "Steam answered HTTP {}", answer.status);
     }
+
+    #[test]
+    fn steam_answers_a_sync_with_a_made_up_key_with_forbidden_over_https() {
+        // The core reads 401 and 403 during a Sync as a rejected key (crates/core/src/sync.rs).
+        let url = "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=0123456789ABCDEF0123456789ABCDEF&steamid=76561197960287930&include_appinfo=1&include_played_free_games=1&format=json";
+
+        let answer = HttpWebApi::new().get(url).expect("Steam reachable");
+
+        assert!(matches!(answer.status, 401 | 403), "Steam answered HTTP {}", answer.status);
+    }
+}
+
+/// `Clock` (crates/core): `now` is the operating system's current time of
+/// day, in UTC.
+mod clock {
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+    use nicelibrary_core::Clock;
+    use nicelibrary_lib::ports::SystemClock;
+
+    #[test]
+    fn now_is_the_time_of_day_of_the_operating_system() {
+        let before = SystemTime::now();
+
+        let now = SystemClock.now();
+
+        let after = SystemTime::now();
+        assert!(before <= now && now <= after, "{now:?} is not between {before:?} and {after:?}");
+    }
+
+    #[test]
+    fn now_is_after_this_clock_was_written_and_moves_on() {
+        // 2026-11-25 00:00:00 UTC.
+        let written = UNIX_EPOCH + Duration::from_secs(1_795_564_800);
+
+        let first = SystemClock.now();
+        std::thread::sleep(Duration::from_millis(20));
+        let second = SystemClock.now();
+
+        assert!(first > written, "{first:?}");
+        assert!(second > first, "{second:?} is not after {first:?}");
+    }
 }
 
 /// `SecretStore` (crates/core): `read` answers what the last `write` under

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { I18nProvider, useT, type Lang, type MessageKey } from './i18n';
-import type { Game, Operations, SteamAccount } from './operations';
+import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
+import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -21,6 +21,8 @@ export function App({ operations, lang }: { operations: Operations; lang: Lang }
 function Shell({ operations }: { operations: Operations }) {
   const t = useT();
   const [view, setView] = useState<View>('library');
+  // How many Syncs succeeded while the app runs; each one changes the stored Library.
+  const [syncs, setSyncs] = useState(0);
 
   return (
     <div className="shell">
@@ -41,9 +43,10 @@ function Shell({ operations }: { operations: Operations }) {
             </button>
           ))}
         </nav>
+        <SyncStatus operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
       </aside>
       <main className="main">
-        {view === 'library' && <LibraryView operations={operations} />}
+        {view === 'library' && <LibraryView operations={operations} syncs={syncs} />}
         {view === 'statistics' && <PlaceholderPage title="nav.statistics" note="statistics.empty" />}
         {view === 'settings' && <SettingsView operations={operations} />}
       </main>
@@ -72,14 +75,85 @@ function useOperation<T>(operations: Operations, call: (operations: Operations) 
   return loaded;
 }
 
-function LibraryView({ operations }: { operations: Operations }) {
+/** What a Sync that did not bring the Library answers, for the user. */
+const SYNC_PROBLEMS: Record<Exclude<SyncOutcome['outcome'], 'synced'>, MessageKey> = {
+  noKey: 'sync.noKey',
+  noSteamAccount: 'sync.noSteamAccount',
+  keyRejected: 'sync.keyRejected',
+  gameDetailsPrivate: 'sync.gameDetailsPrivate',
+  steamUnreachable: 'sync.steamUnreachable',
+};
+
+/** At the bottom of the sidebar: when the last successful Sync happened, and Sync now. */
+function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced: () => void }) {
+  const t = useT();
+  const format = useFormat();
+  const loaded = useOperation(operations, (o) => o.lastSync());
+  // The time of a Sync made here; until then what the core answered.
+  const [syncedAt, setSyncedAt] = useState<number>();
+  const last = syncedAt ?? (loaded.state === 'ready' ? loaded.value : null);
+  const [syncing, setSyncing] = useState(false);
+  const [problem, setProblem] = useState<MessageKey>();
+
+  const sync = () => {
+    if (syncing) return;
+    setSyncing(true);
+    setProblem(undefined);
+    operations
+      .sync()
+      .then(
+        (answer) => {
+          if (answer.outcome === 'synced') {
+            setSyncedAt(answer.at);
+            onSynced();
+          } else {
+            setProblem(SYNC_PROBLEMS[answer.outcome]);
+          }
+        },
+        () => setProblem('sync.failed'),
+      )
+      .finally(() => setSyncing(false));
+  };
+
+  return (
+    <section className="sync" aria-label={t('sync.title')}>
+      <p className="muted">{last === null ? t('sync.never') : t('sync.last', { time: format.dateTime(last) })}</p>
+      <button type="button" className="button" disabled={syncing} onClick={sync}>
+        {t(syncing ? 'sync.syncing' : 'sync.now')}
+      </button>
+      {problem && (
+        <p className="note" role="alert">
+          {t(problem)}
+        </p>
+      )}
+    </section>
+  );
+}
+
+function LibraryView({ operations, syncs }: { operations: Operations; syncs: number }) {
   const t = useT();
   // The stored Library answers at once; reading Steam again replaces it.
   const stored = useOperation(operations, (o) => o.library());
   const fromSteam = useOperation(operations, (o) => o.readInstalledGames());
+  // The Library as answered last after reading Steam or after a Sync, whichever came later.
+  const [fresh, setFresh] = useState<Game[]>();
+  useEffect(() => {
+    if (fromSteam.state === 'ready') setFresh(fromSteam.value);
+  }, [fromSteam]);
+  useEffect(() => {
+    if (syncs === 0) return;
+    let active = true;
+    // A Library that cannot be loaded now stays as shown; the next answer replaces it.
+    operations.library().then(
+      (games) => active && setFresh(games),
+      () => {},
+    );
+    return () => {
+      active = false;
+    };
+  }, [operations, syncs]);
 
-  const games =
-    fromSteam.state === 'ready' ? fromSteam.value : stored.state === 'ready' ? stored.value : undefined;
+  const games = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
   const failure: MessageKey | undefined =
     fromSteam.state !== 'failed'
       ? undefined
@@ -114,7 +188,7 @@ function LibraryView({ operations }: { operations: Operations }) {
           {t(launchProblem.message, { title: launchProblem.title })}
         </p>
       )}
-      {fromSteam.state === 'ready' && fromSteam.value.length === 0 && <p className="note">{t('library.empty')}</p>}
+      {fromSteam.state === 'ready' && games?.length === 0 && <p className="note">{t('library.empty')}</p>}
       {games && games.length > 0 && <CoverGrid games={games} coverUrl={operations.coverUrl} onPlay={launch} />}
     </Page>
   );
@@ -148,11 +222,27 @@ function CoverGrid({
             )}
           </div>
           <h2 className="game-title">{game.title}</h2>
+          <Played game={game} />
           {!game.installed && <span className="muted">{t('library.notInstalled')}</span>}
         </li>
       ))}
     </ul>
   );
+}
+
+/** A Game's Playtime and Last Played, once they are known. */
+function Played({ game }: { game: Game }) {
+  const t = useT();
+  const format = useFormat();
+  const { playtimeMinutes: minutes, lastPlayed } = game;
+  if (minutes === null) return null;
+  const text =
+    lastPlayed !== null
+      ? t('library.playtimeAndLastPlayed', { time: format.playtime(minutes), date: format.date(lastPlayed) })
+      : minutes > 0
+        ? t('library.playtime', { time: format.playtime(minutes) })
+        : t('library.neverPlayed');
+  return <span className="game-played muted">{text}</span>;
 }
 
 /** A Game's Cover, or a neutral placeholder with its title when there is none or it cannot be loaded. */

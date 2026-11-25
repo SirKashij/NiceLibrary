@@ -4,22 +4,26 @@
 //! about Tauri; the desktop shell is a thin adapter over these operations, and
 //! everything that varies by machine or OS reaches the core through ports.
 
+mod clock;
 mod covers;
 pub mod keyvalues;
 mod launch;
 mod steam;
 mod steam_web_api;
 mod store;
+mod sync;
 
 use std::fmt;
 
 use serde::{Serialize, Serializer};
 
+pub use clock::Clock;
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
+pub use sync::SyncOutcome;
 
 /// The origin a Game is read from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -38,12 +42,26 @@ pub struct Game {
     pub title: String,
     pub source: Source,
     pub installed: bool,
+    /// Playtime in minutes; for a Steam Game Steam's figure. `None` while
+    /// it is not known, before the first Sync.
+    pub playtime_minutes: Option<u32>,
+    /// Last Played, in seconds since the Unix epoch; `None` for never or
+    /// not known.
+    pub last_played: Option<u64>,
 }
 
 impl Game {
-    /// The Steam Game with Steam's app id `app_id`.
+    /// The Steam Game with Steam's app id `app_id`, without Playtime and
+    /// Last Played.
     pub(crate) fn steam(app_id: u32, title: String, installed: bool) -> Self {
-        Self { id: format!("steam:{app_id}"), title, source: Source::Steam, installed }
+        Self {
+            id: format!("steam:{app_id}"),
+            title,
+            source: Source::Steam,
+            installed,
+            playtime_minutes: None,
+            last_played: None,
+        }
     }
 }
 
@@ -86,6 +104,7 @@ pub struct Ports {
     pub opener: Box<dyn Opener>,
     pub secrets: Box<dyn SecretStore>,
     pub web_api: Box<dyn WebApi>,
+    pub clock: Box<dyn Clock>,
 }
 
 /// The application core. Each public method is one operation.
@@ -199,6 +218,40 @@ impl Core {
             Ok(()) => Ok(Launch::Launched),
             Err(OpenError::NoProgram) => Ok(Launch::SteamNotFound),
             Err(error) => Err(Error::new(format!("{} could not be launched: {error}", game.title))),
+        }
+    }
+
+    /// Syncs: fetches every Steam Game the Steam Account owns, Installed or
+    /// not, with Steam's Playtime and Last Played, and merges it into the
+    /// store. A Steam Game the account no longer owns leaves the Library
+    /// unless it is Installed.
+    ///
+    /// Every outcome but `Synced`, and every error, leaves the stored data as
+    /// it was.
+    pub fn sync(&self) -> Result<SyncOutcome, Error> {
+        let Some(key) = self.ports.secrets.read(steam_web_api::KEY_SECRET).map_err(secret_store_error)? else {
+            return Ok(SyncOutcome::NoKey);
+        };
+        // Only a SteamID64 may reach the URL.
+        let Some(account) = self.steam_account()?.filter(|id| steam::personal_steam_id(id).is_some()) else {
+            return Ok(SyncOutcome::NoSteamAccount);
+        };
+        let games = match sync::owned_games(self.ports.web_api.as_ref(), &key, &account) {
+            Ok(games) => games,
+            Err(failed) => return Ok(failed),
+        };
+        let at = clock::seconds_since_epoch(self.ports.clock.now());
+        self.store.record_steam_sync(&account, &games, at)?;
+        Ok(SyncOutcome::Synced { at })
+    }
+
+    /// When the last successful Sync of the Steam Account whose Library is
+    /// shown happened, in seconds since the Unix epoch; `None` before the
+    /// first.
+    pub fn last_sync(&self) -> Result<Option<u64>, Error> {
+        match self.chosen_steam_account_or(|| self.store.last_read_steam_account())? {
+            Some(account) => self.store.last_steam_sync(&account),
+            None => Ok(None),
         }
     }
 

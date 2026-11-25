@@ -5,6 +5,7 @@ pub mod ports;
 
 use nicelibrary_core::{
     Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
+    SyncOutcome,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -58,6 +59,17 @@ fn remove_steam_web_api_key(core: tauri::State<'_, Core>) -> Result<(), Error> {
     core.remove_steam_web_api_key()
 }
 
+/// Async, so asking Steam runs off the main thread.
+#[tauri::command]
+async fn sync(core: tauri::State<'_, Core>) -> Result<SyncOutcome, Error> {
+    core.sync()
+}
+
+#[tauri::command]
+fn last_sync(core: tauri::State<'_, Core>) -> Result<Option<u64>, Error> {
+    core.last_sync()
+}
+
 /// Async, so a slow start of the browser does not block the window.
 #[tauri::command]
 async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(), Error> {
@@ -105,7 +117,9 @@ pub fn run() {
             steam_web_api_key_stored,
             store_steam_web_api_key,
             remove_steam_web_api_key,
-            open_steam_web_api_key_page
+            open_steam_web_api_key_page,
+            sync,
+            last_sync
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
