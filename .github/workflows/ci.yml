@@ -12,7 +12,8 @@ permissions:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # Every commit on main keeps its own run; superseded branch runs are cancelled.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 defaults:
   run:
@@ -52,7 +53,7 @@ jobs:
         run: cargo test --workspace --locked
 
       - name: Contract tests for the real ports
-        run: cargo test -p nicelibrary --features contract-tests --test contract --locked
+        run: cargo test-contract --locked
 
       - name: Build app and installer
         run: npm run tauri -- build --ci -- --locked
