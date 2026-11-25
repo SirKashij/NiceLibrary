@@ -12,6 +12,7 @@ export const de: Record<MessageKey, string> = {
   'library.readFailed': 'Deine installierten Spiele konnten nicht aus Steam gelesen werden.',
   'library.games': 'Spiele',
   'library.notInstalled': 'Nicht installiert',
+  'library.cover': 'Cover von {title}',
   'statistics.empty': 'Statistiken erscheinen, sobald du gespielt hast.',
   'settings.steam': 'Steam',
   'steam.found': 'Steam-Installation gefunden',

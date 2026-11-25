@@ -1,6 +1,6 @@
 // The interface talks to the application core only through these operations.
 // In the app they are Tauri commands; tests hand the interface a fake.
-import { invoke } from '@tauri-apps/api/core';
+import { convertFileSrc, invoke } from '@tauri-apps/api/core';
 
 export type Source = 'steam' | 'local';
 
@@ -33,10 +33,17 @@ export interface Operations {
   readInstalledGames(): Promise<Game[]>;
   /** The Steam installation and its Steam Accounts, the most recently used first. */
   steamInstallation(): Promise<SteamInstallation>;
+  /**
+   * The address an `<img>` loads the Game's Cover from. The core downloads
+   * and caches it; when the Game has none, the image fails to load.
+   */
+  coverUrl(game: Game): string;
 }
 
 export const tauriOperations: Operations = {
   library: () => invoke<Game[]>('library'),
   readInstalledGames: () => invoke<Game[]>('read_installed_games'),
   steamInstallation: () => invoke<SteamInstallation>('steam_installation'),
+  // The `cover` URL scheme of the desktop shell (COVER_PROTOCOL in src-tauri/src/lib.rs).
+  coverUrl: (game) => convertFileSrc(game.id, 'cover'),
 };

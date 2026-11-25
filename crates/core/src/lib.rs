@@ -4,6 +4,7 @@
 //! about Tauri; the desktop shell is a thin adapter over these operations, and
 //! everything that varies by machine or OS reaches the core through ports.
 
+mod covers;
 pub mod keyvalues;
 mod steam;
 mod store;
@@ -12,6 +13,7 @@ use std::fmt;
 
 use serde::{Serialize, Serializer};
 
+pub use covers::{Cover, CoverCache, Downloader};
 pub use steam::{SteamAccount, SteamInstallation, SteamLocator};
 pub use store::Store;
 
@@ -76,17 +78,19 @@ impl Serialize for Error {
 /// Everything that varies by machine or OS, handed to the core.
 pub struct Ports {
     pub steam_locator: Box<dyn SteamLocator>,
+    pub downloader: Box<dyn Downloader>,
 }
 
 /// The application core. Each public method is one operation.
 pub struct Core {
     ports: Ports,
     store: Store,
+    covers: CoverCache,
 }
 
 impl Core {
-    pub fn new(ports: Ports, store: Store) -> Self {
-        Self { ports, store }
+    pub fn new(ports: Ports, store: Store, covers: CoverCache) -> Self {
+        Self { ports, store, covers }
     }
 
     /// All Games in the Library, as last stored, ordered by title. Answers
@@ -118,5 +122,14 @@ impl Core {
     /// The Steam installation on this computer and its Steam Accounts.
     pub fn steam_installation(&self) -> SteamInstallation {
         steam::read_installation(self.ports.steam_locator.as_ref())
+    }
+
+    /// The Cover of the Game `game_id`; `None` when it has none and the
+    /// interface shows a placeholder instead.
+    pub fn cover(&self, game_id: &str) -> Result<Option<Cover>, Error> {
+        let Some(app_id) = game_id.strip_prefix("steam:").and_then(|id| id.parse().ok()) else {
+            return Ok(None);
+        };
+        self.covers.steam_cover(self.ports.downloader.as_ref(), app_id)
     }
 }

@@ -13,13 +13,21 @@ export function systemLang(locale: string = navigator.language): Lang {
   return locale.toLowerCase().startsWith('de') ? 'de' : 'en';
 }
 
-type Translate = (key: MessageKey) => string;
+/** Values for the `{name}` placeholders in a text. */
+type Params = Record<string, string>;
 
-const I18nContext = createContext<Translate>((key) => en[key]);
+type Translate = (key: MessageKey, params?: Params) => string;
+
+/** `text` with each `{name}` replaced by `params[name]`. */
+function fill(text: string, params: Params = {}): string {
+  return text.replace(/\{(\w+)\}/g, (placeholder, name: string) => params[name] ?? placeholder);
+}
+
+const I18nContext = createContext<Translate>((key, params) => fill(en[key], params));
 
 export function I18nProvider({ lang, children }: { lang: Lang; children: ReactNode }) {
   const table = messages[lang];
-  return <I18nContext.Provider value={(key) => table[key]}>{children}</I18nContext.Provider>;
+  return <I18nContext.Provider value={(key, params) => fill(table[key], params)}>{children}</I18nContext.Provider>;
 }
 
 export function useT(): Translate {

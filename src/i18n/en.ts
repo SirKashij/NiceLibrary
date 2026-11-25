@@ -10,6 +10,7 @@ export const en = {
   'library.readFailed': 'Your installed games could not be read from Steam.',
   'library.games': 'Games',
   'library.notInstalled': 'Not installed',
+  'library.cover': 'Cover of {title}',
   'statistics.empty': 'Statistics appear once you have played.',
   'settings.steam': 'Steam',
   'steam.found': 'Steam installation found',

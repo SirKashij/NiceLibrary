@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use nicelibrary_core::{Core, Game, Ports, Source, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, Game, Ports, Source, SteamLocator, Store};
 
 struct NoSteam;
 
@@ -10,11 +10,24 @@ impl SteamLocator for NoSteam {
     }
 }
 
+/// A computer without a network connection.
+struct Offline;
+
+impl Downloader for Offline {
+    fn download(&self, _url: &str) -> Result<Option<Vec<u8>>, String> {
+        Err("no network connection".into())
+    }
+}
+
 #[test]
 fn a_fresh_core_has_an_empty_library() {
     let profile = tempfile::tempdir().unwrap();
     let store = Store::open(&profile.path().join("nicelibrary.db")).unwrap();
-    let core = Core::new(Ports { steam_locator: Box::new(NoSteam) }, store);
+    let core = Core::new(
+        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(Offline) },
+        store,
+        CoverCache::new(profile.path().join("covers")),
+    );
 
     assert!(core.library().unwrap().is_empty());
 }
