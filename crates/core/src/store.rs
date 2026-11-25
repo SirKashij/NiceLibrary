@@ -33,7 +33,7 @@ const MIGRATIONS: &[&str] = &[
 
 /// The setting that names the Steam Account whose Installed Games were read
 /// last. The Library shows it while the user has chosen no Steam Account.
-const STEAM_ACCOUNT: &str = "steam_account";
+const LAST_READ_STEAM_ACCOUNT: &str = "steam_account";
 
 /// The setting that names the Steam Account the user chose.
 const CHOSEN_STEAM_ACCOUNT: &str = "chosen_steam_account";
@@ -71,8 +71,8 @@ impl Store {
     }
 
     /// The Steam Account whose Installed Games were read last, once one is known.
-    pub(crate) fn steam_account(&self) -> Result<Option<String>, Error> {
-        self.setting(STEAM_ACCOUNT)
+    pub(crate) fn last_read_steam_account(&self) -> Result<Option<String>, Error> {
+        self.setting(LAST_READ_STEAM_ACCOUNT)
     }
 
     /// The Steam Account the user chose, if they chose one.
@@ -99,7 +99,7 @@ impl Store {
         transaction.execute(
             "INSERT INTO settings (key, value) VALUES (?1, ?2)
              ON CONFLICT (key) DO UPDATE SET value = excluded.value",
-            params![STEAM_ACCOUNT, account],
+            params![LAST_READ_STEAM_ACCOUNT, account],
         )?;
         transaction.execute("UPDATE steam_games SET installed = 0 WHERE steam_account = ?1", [account])?;
         for app in apps {

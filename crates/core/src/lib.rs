@@ -100,10 +100,7 @@ impl Core {
     /// from the store alone, so a start shows the Library at once.
     pub fn library(&self) -> Result<Vec<Game>, Error> {
         // Until the user chooses, the account read last: it holds the Games.
-        let account = match self.store.chosen_steam_account()? {
-            Some(chosen) => Some(chosen),
-            None => self.store.steam_account()?,
-        };
+        let account = self.chosen_steam_account_or(|| self.store.last_read_steam_account())?;
         let mut games = match account {
             Some(account) => self.store.steam_games(&account)?,
             None => Vec::new(),
@@ -120,7 +117,7 @@ impl Core {
     /// found or read, the stored Library is left as it is.
     pub fn read_installed_games(&self) -> Result<Vec<Game>, Error> {
         if let Some(folder) = self.ports.steam_locator.steam_folder()
-            && let Some(account) = self.steam_account_in(&folder)?
+            && let Some(account) = self.chosen_steam_account_or(|| Ok(most_recent_account(&folder)))?
             && let Some(apps) = steam::installed_apps(&folder)
         {
             self.store.record_installed_steam_games(&account, &apps)?;
@@ -132,23 +129,24 @@ impl Core {
     /// chose; until then the one that logged in most recently on this
     /// computer, or else the one whose Games were read last.
     pub fn steam_account(&self) -> Result<Option<String>, Error> {
-        let in_steam = match self.ports.steam_locator.steam_folder() {
-            Some(folder) => self.steam_account_in(&folder)?,
-            None => self.store.chosen_steam_account()?,
-        };
-        Ok(match in_steam {
-            Some(account) => Some(account),
-            None => self.store.steam_account()?,
+        self.chosen_steam_account_or(|| {
+            match self.ports.steam_locator.steam_folder().and_then(|folder| most_recent_account(&folder)) {
+                Some(detected) => Ok(Some(detected)),
+                None => self.store.last_read_steam_account(),
+            }
         })
     }
 
-    /// The Steam Account the user chose, else the one that logged in most
-    /// recently to the Steam installation in `folder`.
-    fn steam_account_in(&self, folder: &std::path::Path) -> Result<Option<String>, Error> {
-        Ok(match self.store.chosen_steam_account()? {
-            Some(chosen) => Some(chosen),
-            None => steam::current_account(folder).map(|account| account.steam_id),
-        })
+    /// The Steam Account the user chose; until they choose, the one `default`
+    /// answers.
+    fn chosen_steam_account_or(
+        &self,
+        default: impl FnOnce() -> Result<Option<String>, Error>,
+    ) -> Result<Option<String>, Error> {
+        match self.store.chosen_steam_account()? {
+            Some(chosen) => Ok(Some(chosen)),
+            None => default(),
+        }
     }
 
     /// Makes `steam_id` the Steam Account the app works with, from now on and
@@ -199,6 +197,12 @@ impl Core {
             Err(error) => Err(Error::new(format!("{} could not be launched: {error}", game.title))),
         }
     }
+}
+
+/// The SteamID of the account that logged in most recently to the Steam
+/// installation in `folder`.
+fn most_recent_account(folder: &std::path::Path) -> Option<String> {
+    steam::current_account(folder).map(|account| account.steam_id)
 }
 
 /// Steam's app id in a Steam Game's id (`steam:<app id>`).

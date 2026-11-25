@@ -202,13 +202,23 @@ function SteamSettings({ operations }: { operations: Operations }) {
       setProblem(message);
     };
     // Shown at once; taken back when the core does not accept it.
-    setChosen({ value: steamId.trim() });
+    setChosen({ value: steamId });
     operations.chooseSteamAccount(steamId).then(
       ({ outcome }) =>
-        outcome === 'chosen' ? settle(steamId.trim()) : settle(before, 'steam.invalidSteamId'),
+        outcome === 'chosen'
+          ? // The core decides how a SteamID entered by hand is written.
+            operations.steamAccount().then(settle, () => settle(steamId))
+          : settle(before, 'steam.invalidSteamId'),
       () => settle(before, 'steam.saveFailed'),
     );
   };
+
+  const detected = steam.state === 'ready' && steam.value.state === 'found' ? steam.value.accounts : [];
+  // A SteamID in use that no radio button shows: entered by hand, or an account that left this computer.
+  const inUseElsewhere =
+    account.state === 'ready' && account.value !== null && !detected.some((a) => a.steamId === account.value)
+      ? account.value
+      : undefined;
 
   return (
     <section className="settings-section" aria-labelledby="settings-steam">
@@ -228,12 +238,22 @@ function SteamSettings({ operations }: { operations: Operations }) {
           {steam.value.accounts.length === 0 && <p className="note">{t('steam.noAccounts')}</p>}
         </>
       )}
+      {account.state === 'failed' && (
+        <p className="note" role="alert">
+          {t('steam.accountLoadFailed')}
+        </p>
+      )}
       {steam.state === 'ready' && account.state === 'ready' && (
         <>
-          {steam.value.state === 'found' && steam.value.accounts.length > 0 ? (
-            <AccountChoice accounts={steam.value.accounts} chosen={account.value} onChoose={choose} />
+          {detected.length > 0 ? (
+            <AccountChoice accounts={detected} chosen={account.value} onChoose={choose} />
           ) : (
             <SteamIdForm chosen={account.value} onChoose={choose} />
+          )}
+          {inUseElsewhere && (
+            <p className="note" role="status">
+              {t('steam.usesSteamId', { steamId: inUseElsewhere })}
+            </p>
           )}
           {problem && (
             <p className="note" role="alert">
@@ -314,11 +334,6 @@ function SteamIdForm({ chosen, onChoose }: { chosen: string | null; onChoose: (s
       <p id="steam-id-hint" className="muted">
         {t('steam.steamIdHint')}
       </p>
-      {chosen && (
-        <p className="note" role="status">
-          {t('steam.usesSteamId', { steamId: chosen })}
-        </p>
-      )}
     </form>
   );
 }

@@ -153,7 +153,7 @@ fn installed_games_are_read_for_the_chosen_account_and_do_not_replace_the_choice
 }
 
 #[test]
-fn choosing_another_account_shows_that_accounts_library_at_once() {
+fn after_choosing_another_account_the_library_shows_its_games_once_they_are_read() {
     let steam = Steam::new();
     steam.logged_in(&[PLAYER_TWO, PLAYER_ONE]);
     steam.install(620, "Portal 2");
@@ -204,6 +204,7 @@ fn anything_but_a_steamid64_of_a_personal_account_is_refused_and_changes_nothing
         "[U:1:22202]",                                   // SteamID3
         "7656119796028793",                                 // one digit short
         "765611979602879300",                               // one digit too many
+        "076561197960287930",                               // a leading zero
         "7656119796028793a",
         "76561197960265728",                                // account number 0
         "103582791429521412",                               // a Steam group, not a person
