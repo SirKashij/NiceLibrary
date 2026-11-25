@@ -12,6 +12,7 @@ export interface VProps {
   gameId: string | null;
   openGame: (id: string | null) => void;
   t: T;
+  look: string;
   lang: Lang;
   setLang: (l: Lang) => void;
   theme: 'dark' | 'light';
@@ -150,6 +151,9 @@ export function AchievementList({ game, t, lang }: { game: Game; t: T; lang: Lan
           <input type="checkbox" checked={reveal} onChange={(e) => setReveal(e.target.checked)} /> {t('reveal')}
         </label>
       )}
+      <div className="ach-blocks" aria-hidden="true">
+        {sorted.map((a) => <i key={a.id} className={a.unlocked ? 'on' : ''} />)}
+      </div>
       <ul>
         {sorted.map((a) => {
           const masked = a.hidden && !reveal;

@@ -16,10 +16,19 @@ const VARIANTS = [
   { key: 'C', name: 'Kompakte Liste + Detailspalte', C: VariantC },
 ];
 
+// Round 2: the layout is settled (A). The bar now flips between visual languages via ?look=.
+const LOOKS = [
+  { key: '1', name: 'Vitrine' },
+  { key: '2', name: 'Hülle' },
+  { key: '3', name: 'Konsole' },
+  { key: '0', name: 'Ausgangsoptik (Runde 1)' },
+];
+
 function read() {
   const p = new URLSearchParams(location.search);
   return {
     variant: VARIANTS.some((v) => v.key === p.get('variant')) ? p.get('variant')! : 'A',
+    look: LOOKS.some((l) => l.key === p.get('look')) ? p.get('look')! : '1',
     view: (['library', 'stats', 'settings'].includes(p.get('view') ?? '') ? p.get('view') : 'library') as View,
     game: p.get('game'),
     theme: (p.get('theme') === 'light' ? 'light' : 'dark') as 'dark' | 'light',
@@ -36,6 +45,7 @@ export function App() {
       const next = { ...prev, ...patch };
       const p = new URLSearchParams();
       p.set('variant', next.variant);
+      p.set('look', next.look);
       p.set('view', next.view);
       if (next.game) p.set('game', next.game);
       p.set('theme', next.theme);
@@ -47,8 +57,9 @@ export function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = s.theme;
+    document.documentElement.dataset.look = s.look;
     document.documentElement.lang = s.lang;
-  }, [s.theme, s.lang]);
+  }, [s.theme, s.lang, s.look]);
 
   useEffect(() => {
     if (!toast) return;
@@ -64,6 +75,7 @@ export function App() {
     gameId: s.game,
     openGame: (game) => update({ game }),
     t,
+    look: s.look,
     lang: s.lang,
     setLang: (lang) => update({ lang }),
     theme: s.theme,
@@ -79,9 +91,9 @@ export function App() {
       {toast && <div className="toast" role="status">{toast}</div>}
       {import.meta.env.DEV && (
         <PrototypeSwitcher
-          variants={VARIANTS}
-          current={s.variant}
-          onChange={(variant) => update({ variant })}
+          variants={LOOKS}
+          current={s.look}
+          onChange={(look) => update({ look })}
           state={`${s.view}${s.game ? ` · ${GAMES.find((g) => g.id === s.game)?.title ?? ''}` : ''}`}
           theme={s.theme}
           lang={s.lang}

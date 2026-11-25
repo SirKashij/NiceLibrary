@@ -1,5 +1,6 @@
 // PROTOTYPE - Variant A: classic launcher shell. Fixed sidebar with navigation and collections,
 // toolbar on top, cover grid as the main surface, game detail as its own full page.
+import { useState } from 'react';
 import { COLLECTIONS, computeStats, percent } from '../data';
 import {
   AchievementList, Bar, Cover, Icon, PlayButton, SessionList, SettingsSections, SORTS, STATUSES, SourceTag, StatusBadge,
@@ -7,10 +8,17 @@ import {
 } from '../shared';
 
 export function VariantA(p: VProps) {
-  const { games, view, go, gameId, openGame, t, lang, launch } = p;
+  const { games, view, go, gameId, openGame, t, lang, launch, look } = p;
   const lib = useLibrary(games);
   const game = games.find((g) => g.id === gameId) ?? null;
   const nav = (v: typeof view) => { openGame(null); go(v); };
+  // Look 3 (Konsole): a selection frame that travels to the hovered or focused cover.
+  const [cur, setCur] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  const moveCursor = (card: HTMLElement) => {
+    const cover = card.querySelector('.cover') as HTMLElement;
+    setCur({ x: card.offsetLeft + cover.offsetLeft - 7, y: card.offsetTop + cover.offsetTop - 7, w: cover.offsetWidth + 14, h: cover.offsetHeight + 14 });
+  };
+  const tinted = view === 'library' && game;
 
   return (
     <div className="a-root">
@@ -37,7 +45,7 @@ export function VariantA(p: VProps) {
         <div className="a-sync"><Icon name="sync" size={14} /> {t('lastSync')}</div>
       </aside>
 
-      <main className="a-main">
+      <main className={`a-main ${tinted ? 'tinted' : ''}`} style={tinted ? ({ '--gh': game.hue } as any) : undefined}>
         {view === 'library' && !game && (
           <>
             <div className="a-toolbar">
@@ -74,16 +82,35 @@ export function VariantA(p: VProps) {
               <div className="empty-state"><p>{t('noResults')}</p><button className="btn" onClick={lib.reset}>{t('resetFilters')}</button></div>
             )}
             {lib.mode === 'grid' ? (
-              <div className="a-grid">
+              <div className="a-grid" onMouseLeave={() => setCur(null)}>
                 {lib.result.map((g) => (
-                  <button key={g.id} className={`a-card ${g.installed ? '' : 'dim'}`} onClick={() => openGame(g.id)}>
+                  <button key={g.id} className={`a-card ${g.installed ? '' : 'dim'}`} onClick={() => openGame(g.id)} onMouseEnter={(e) => moveCursor(e.currentTarget)} onFocus={(e) => moveCursor(e.currentTarget)}>
                     <Cover game={g} />
+                    <span className={`sticker st-${g.status}`}>{t(g.status)}</span>
+                    <i className="board" />
                     {g.favorite && <span className="fav"><Icon name="star" size={14} fill /></span>}
                     <b>{g.title}</b>
-                    <small>{fmtTime(g.minutes, lang)} · {percent(g) === null ? '–' : `${percent(g)} %`}</small>
+                    <small className="a-meta"><span>{fmtTime(g.minutes, lang)}</span><span>{percent(g) === null ? '–' : `${percent(g)} %`}</span></small>
                     <Bar value={percent(g)} />
                   </button>
                 ))}
+                <span className="k-cursor" style={cur ? { width: cur.w, height: cur.h, transform: `translate(${cur.x}px, ${cur.y}px)` } : { opacity: 0 }} />
+              </div>
+            ) : look === '2' ? (
+              <div className="shelf">
+                {lib.result.map((g) => (
+                  <button
+                    key={g.id}
+                    className={`spine ${g.installed ? '' : 'dim'}`}
+                    title={`${g.title} – ${fmtTime(g.minutes, lang)}`}
+                    onClick={() => openGame(g.id)}
+                    style={{ width: g.minutes > 1500 ? 62 : 48, height: 200 + (g.hue % 56), background: `linear-gradient(90deg, hsl(${g.hue} 55% 27%), hsl(${g.hue} 60% 42%) 35%, hsl(${(g.hue + 30) % 360} 55% 24%))` }}
+                  >
+                    <span>{g.title}</span>
+                    <em>{percent(g) === null ? '–' : `${percent(g)}%`}</em>
+                  </button>
+                ))}
+                <i className="shelf-end" />
               </div>
             ) : (
               <table className="a-table">
