@@ -108,6 +108,11 @@ jobs:
         env:
           NICELIBRARY_APP: target/${{ github.ref == 'refs/heads/main' && 'release' || 'debug' }}/nicelibrary.exe
 
+      - name: Processes after failed end-to-end tests
+        if: failure()
+        shell: pwsh
+        run: Get-Process | Where-Object Name -Match 'nicelibrary|msedge|tauri' | Format-Table Name, Id, StartTime, MainWindowTitle -AutoSize
+
   linux:
     name: Linux (build only)
     runs-on: ubuntu-latest
