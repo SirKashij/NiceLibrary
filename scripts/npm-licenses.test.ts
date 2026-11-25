@@ -71,6 +71,12 @@ describe('findViolations', () => {
     expect(findViolations(lockfile, allow)).toEqual([{ name: '@scope/silent', version: '1.0.0', license: undefined }]);
   });
 
+  it('reports a package whose license is not an SPDX string, such as the legacy object form', () => {
+    const lockfile = { packages: { 'node_modules/old': { version: '0.0.1', license: { type: 'MIT' } } } };
+
+    expect(findViolations(lockfile, allow)).toEqual([{ name: 'old', version: '0.0.1', license: '{"type":"MIT"}' }]);
+  });
+
   it('skips links to local workspace packages, which are checked at their own entry', () => {
     const lockfile = {
       packages: {

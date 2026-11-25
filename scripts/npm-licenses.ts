@@ -15,12 +15,12 @@ export function isAllowed(expression: string, allow: readonly string[]): boolean
   const peek = (): string | undefined => tokens[position]?.toLowerCase();
   const next = (): string | undefined => tokens[position++];
 
-  function expect(token: string): void {
+  function expectToken(token: string): void {
     if (peek() !== token) throw new SyntaxError(`expected "${token}" in "${expression}"`);
     next();
   }
 
-  function id(): string {
+  function readLicenseId(): string {
     const token = next();
     if (token === undefined || token === '(' || token === ')' || OPERATORS.has(token.toLowerCase())) {
       throw new SyntaxError(`expected a license id in "${expression}"`);
@@ -52,13 +52,13 @@ export function isAllowed(expression: string, allow: readonly string[]): boolean
     if (peek() === '(') {
       next();
       const result = parseOr();
-      expect(')');
+      expectToken(')');
       return result;
     }
-    let license = id();
+    let license = readLicenseId();
     if (peek() === 'with') {
       next();
-      license = `${license} WITH ${id()}`;
+      license = `${license} WITH ${readLicenseId()}`;
     }
     return allowed.has(normalize(license));
   }
@@ -81,16 +81,19 @@ export interface Lockfile {
 interface LockedPackage {
   name?: string;
   version?: string;
-  license?: string;
+  /** An SPDX expression; very old packages may carry a legacy object instead. */
+  license?: unknown;
   link?: boolean;
 }
 
 export interface Violation {
   name: string;
   version: string | undefined;
-  /** The declared SPDX expression, or `undefined` if the package declares none. */
+  /** The declared license as written (objects as JSON), or `undefined` if the package declares none. */
   license: string | undefined;
 }
+
+const NODE_MODULES = 'node_modules/';
 
 /**
  * Lists every locked dependency, on every platform and including dev
@@ -100,11 +103,12 @@ export interface Violation {
 export function findViolations(lockfile: Lockfile, allow: readonly string[]): Violation[] {
   return Object.entries(lockfile.packages)
     .filter(([path, entry]) => path !== '' && !entry.link)
-    .filter(([, entry]) => entry.license === undefined || !isAllowed(entry.license, allow))
+    .filter(([, entry]) => typeof entry.license !== 'string' || !isAllowed(entry.license, allow))
     .map(([path, entry]) => ({
-      name: entry.name ?? path.slice(path.lastIndexOf('node_modules/') + 'node_modules/'.length),
+      name: entry.name ?? path.slice(path.lastIndexOf(NODE_MODULES) + NODE_MODULES.length),
       version: entry.version,
-      license: entry.license,
+      license:
+        entry.license === undefined || typeof entry.license === 'string' ? entry.license : JSON.stringify(entry.license),
     }));
 }
 
