@@ -25,4 +25,11 @@ export const de: Record<MessageKey, string> = {
   'steam.accounts': 'Steam-Konten auf diesem Computer',
   'steam.noAccounts': 'Auf diesem Computer hat sich noch kein Steam-Konto angemeldet.',
   'steam.mostRecent': 'Zuletzt verwendet',
+  'steam.chooseAccount': 'Konto für deine Bibliothek',
+  'steam.saveFailed': 'Das Steam-Konto konnte nicht gespeichert werden.',
+  'steam.steamId': 'SteamID',
+  'steam.steamIdHint': 'Deine SteamID ist die 17-stellige Zahl in der Adresse deines Steam-Profils.',
+  'steam.useSteamId': 'SteamID verwenden',
+  'steam.invalidSteamId': 'Das ist keine SteamID. Eine SteamID hat 17 Ziffern und beginnt mit 7656119.',
+  'steam.usesSteamId': 'Deine Bibliothek verwendet die SteamID {steamId}.',
 };

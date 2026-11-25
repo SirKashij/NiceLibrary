@@ -50,6 +50,31 @@ pub struct SteamAccount {
     pub most_recent: bool,
 }
 
+/// How choosing the Steam Account went, when nothing failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(tag = "outcome", rename_all = "camelCase")]
+pub enum SteamAccountChoice {
+    /// The app works with the chosen Steam Account from now on.
+    Chosen,
+    /// What was entered is not the SteamID64 of a personal Steam Account;
+    /// nothing changed.
+    InvalidSteamId,
+}
+
+/// The SteamID64 in `text` if it is one of a personal Steam Account, without
+/// surrounding spaces: 17 digits that encode the public universe, an
+/// individual account, the desktop instance and an account number above 0.
+pub(crate) fn personal_steam_id(text: &str) -> Option<&str> {
+    /// Universe 1 (public), account type 1 (individual), instance 1.
+    const PERSONAL: u64 = 0x0110_0001;
+    let text = text.trim();
+    if !text.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+    let id = text.parse::<u64>().ok()?;
+    (id >> 32 == PERSONAL && id & 0xFFFF_FFFF != 0).then_some(text)
+}
+
 pub(crate) fn read_installation(locator: &dyn SteamLocator) -> SteamInstallation {
     match locator.steam_folder() {
         None => SteamInstallation::NotFound,

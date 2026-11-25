@@ -23,6 +23,13 @@ export const en = {
   'steam.accounts': 'Steam accounts on this computer',
   'steam.noAccounts': 'No Steam account has logged in on this computer yet.',
   'steam.mostRecent': 'Most recently used',
+  'steam.chooseAccount': 'Account for your library',
+  'steam.saveFailed': 'The Steam account could not be saved.',
+  'steam.steamId': 'SteamID',
+  'steam.steamIdHint': 'Your SteamID is the 17-digit number in the address of your Steam profile.',
+  'steam.useSteamId': 'Use SteamID',
+  'steam.invalidSteamId': 'This is not a SteamID. A SteamID has 17 digits and starts with 7656119.',
+  'steam.usesSteamId': 'Your library uses the SteamID {steamId}.',
 } as const;
 
 export type MessageKey = keyof typeof en;
