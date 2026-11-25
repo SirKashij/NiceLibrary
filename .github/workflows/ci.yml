@@ -98,6 +98,16 @@ jobs:
       # tauri-driver in front of the msedgedriver that matches the runner's
       # WebView2. rust-cache keeps the installed tauri-driver; keep its version
       # in step with e2e/app.ts and CONTRIBUTING.md.
+      # The runner image can ship an outdated WebView2 runtime that ignores
+      # WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS once the app sets its own
+      # browser arguments, so msedgedriver never gets a DevTools port.
+      - name: Update WebView2 runtime
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile "$env:RUNNER_TEMP\webview2-setup.exe" -UseBasicParsing
+          Start-Process "$env:RUNNER_TEMP\webview2-setup.exe" -ArgumentList '/silent', '/install' -Wait
+          Get-ChildItem 'C:\Program Files (x86)\Microsoft\EdgeWebView\Application' -Directory | Select-Object Name
+
       - name: Install WebDriver tools
         run: |
           cargo install tauri-driver --version 2.1.0 --locked
