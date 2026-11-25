@@ -111,16 +111,7 @@ jobs:
       - name: Processes after failed end-to-end tests
         if: failure()
         shell: pwsh
-        run: |
-          Get-Process | Where-Object Name -Match 'nicelibrary|msedge|tauri' | Format-Table Name, Id, StartTime, MainWindowTitle -AutoSize
-          $p = Start-Process -FilePath $env:NICELIBRARY_APP -PassThru -RedirectStandardOutput out.txt -RedirectStandardError err.txt
-          Start-Sleep -Seconds 15
-          "exited: $($p.HasExited) code: $($p.ExitCode)"
-          Get-Process | Where-Object Name -Match 'nicelibrary|msedgewebview2' | Format-Table Name, Id, MainWindowTitle -AutoSize
-          Get-Content out.txt, err.txt
-          Get-ChildItem "$env:LOCALAPPDATA\io.github.sirkashij.nicelibrary" -Recurse -Depth 1 -ErrorAction SilentlyContinue | Select-Object -First 20 FullName
-          Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' | Select-Object pv, location
-          if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force }
+        run: ./scripts/diagnose-e2e.ps1
         env:
           NICELIBRARY_APP: target/${{ github.ref == 'refs/heads/main' && 'release' || 'debug' }}/nicelibrary.exe
 
