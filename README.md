@@ -20,7 +20,7 @@ cargo test      # core tests
 cargo test-contract   # real ports, Windows only
 ```
 
-CI builds and tests every push and pull request on Windows and builds the app on Linux, without publishing anything.
+CI builds and tests every pull request and every push to `main` on Windows and builds the app on Linux, without publishing anything.
 
 ## License
 
@@ -46,7 +46,7 @@ cargo test      # Tests des Core
 cargo test-contract   # echte Ports, nur Windows
 ```
 
-Die CI baut und testet jeden Push und Pull Request unter Windows und baut die App unter Linux, ohne etwas zu veröffentlichen.
+Die CI baut und testet jeden Pull Request und jeden Push auf `main` unter Windows und baut die App unter Linux, ohne etwas zu veröffentlichen.
 
 ### Lizenz
 
