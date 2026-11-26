@@ -3,13 +3,15 @@
 
 pub mod ports;
 
+use std::ops::ControlFlow;
+
 use nicelibrary_core::{
-    Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
+    AutomaticSync, Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
     SyncOutcome,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
-use tauri::{App, Manager, WebviewWindowBuilder};
+use tauri::{App, Emitter, Manager, WebviewWindowBuilder};
 
 #[tauri::command]
 fn library(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
@@ -133,10 +135,31 @@ pub fn run() {
             let store = Store::open(&app.path().app_data_dir()?.join(DATABASE))?;
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
             app.manage(Core::new(ports::real_ports(), store, covers));
+            start_automatic_syncs(app)?;
             create_main_window(app)
         })
         .run(tauri::generate_context!())
         .expect("error while running NiceLibrary");
+}
+
+/// The event the interface hears the automatic Syncs through (`onAutomaticSync`
+/// in src/operations.ts). A round without a key tells the interface nothing.
+const AUTOMATIC_SYNC_EVENT: &str = "automatic-sync";
+
+/// Runs the core's automatic Syncs on a thread of their own for as long as
+/// the app runs.
+fn start_automatic_syncs(app: &App) -> std::io::Result<()> {
+    let app = app.handle().clone();
+    std::thread::Builder::new().name("automatic-sync".into()).spawn(move || {
+        app.state::<Core>().sync_automatically(|event| {
+            if event != AutomaticSync::Skipped {
+                // No window to tell is no reason to stop syncing.
+                let _ = app.emit(AUTOMATIC_SYNC_EVENT, &event);
+            }
+            ControlFlow::Continue(())
+        });
+    })?;
+    Ok(())
 }
 
 /// Creates the window declared in tauri.conf.json (`"create": false` there).

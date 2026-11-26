@@ -95,24 +95,39 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
   const [syncing, setSyncing] = useState(false);
   const [problem, setProblem] = useState<MessageKey>();
 
-  const sync = () => {
-    if (syncing) return;
+  const begin = () => {
     setSyncing(true);
     setProblem(undefined);
-    operations
-      .sync()
-      .then(
-        (answer) => {
-          if (answer.outcome === 'synced') {
-            setSyncedAt(answer.at);
-            onSynced();
-          } else {
-            setProblem(SYNC_PROBLEMS[answer.outcome]);
-          }
-        },
-        () => setProblem('sync.failed'),
-      )
-      .finally(() => setSyncing(false));
+  };
+  /** Shows how a Sync ended, started here or by the core on its own. */
+  const settle = (answer: SyncOutcome | 'failed') => {
+    setSyncing(false);
+    if (answer === 'failed') {
+      setProblem('sync.failed');
+    } else if (answer.outcome === 'synced') {
+      setSyncedAt(answer.at);
+      onSynced();
+    } else {
+      setProblem(SYNC_PROBLEMS[answer.outcome]);
+    }
+  };
+  // The latest render's handlers, for the listener that lives as long as the view.
+  const handlers = useRef({ begin, settle });
+  handlers.current = { begin, settle };
+
+  useEffect(
+    () =>
+      operations.onAutomaticSync((event) => {
+        if (event.state === 'started') handlers.current.begin();
+        else handlers.current.settle(event.state === 'failed' ? 'failed' : event);
+      }),
+    [operations],
+  );
+
+  const sync = () => {
+    if (syncing) return;
+    begin();
+    operations.sync().then(settle, () => settle('failed'));
   };
 
   return (

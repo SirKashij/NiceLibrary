@@ -4,12 +4,13 @@
 
 use std::collections::HashMap;
 use std::fs;
+use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
-    Clock, Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, SteamLocator, Store,
+    AutomaticSync, Clock, Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, SteamLocator, Store,
     SyncOutcome, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
@@ -182,6 +183,11 @@ impl Clock for TestClock {
     fn now(&self) -> SystemTime {
         *self.0.lock().unwrap()
     }
+
+    /// The time passes at once.
+    fn sleep(&self, duration: Duration) {
+        *self.0.lock().unwrap() += duration;
+    }
 }
 
 /// A substitute for the registry lookup: Steam is where the test says.
@@ -283,13 +289,22 @@ impl Computer {
     }
 
     fn start_with_steam(&self, api: &SteamWebApi, steam: Option<&Path>) -> Core {
+        self.start_with(Box::new(api.clone()), steam)
+    }
+
+    /// Starts the app with Steam's Web API answering through `api`.
+    fn start_with_web_api(&self, api: Box<dyn WebApi>) -> Core {
+        self.start_with(api, Some(self.steam.path()))
+    }
+
+    fn start_with(&self, api: Box<dyn WebApi>, steam: Option<&Path>) -> Core {
         Core::new(
             Ports {
                 steam_locator: Box::new(SteamAt(steam.map(Path::to_path_buf))),
                 downloader: Box::new(Offline),
                 opener: Box::new(NoUrls),
                 secrets: Box::new(self.secrets.clone()),
-                web_api: Box::new(api.clone()),
+                web_api: api,
                 clock: Box::new(self.clock.clone()),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
@@ -521,5 +536,223 @@ fn a_sync_outcome_reaches_the_interface_in_the_shape_the_interface_expects() {
         (SyncOutcome::SteamUnreachable, serde_json::json!({ "outcome": "steamUnreachable" })),
     ] {
         assert_eq!(serde_json::to_value(outcome).unwrap(), json);
+    }
+}
+
+/// Runs the automatic Syncs until `rounds` of them have ended, and answers
+/// how each ended.
+fn automatic_syncs(core: &Core, rounds: usize) -> Vec<AutomaticSync> {
+    let mut ended = Vec::new();
+    core.sync_automatically(|event| {
+        if !matches!(event, AutomaticSync::Started) {
+            ended.push(event);
+        }
+        if ended.len() == rounds { ControlFlow::Break(()) } else { ControlFlow::Continue(()) }
+    });
+    ended
+}
+
+#[test]
+fn the_app_syncs_shortly_after_it_starts_and_then_every_30_minutes() {
+    let computer = Computer::new();
+    let steam = SteamWebApi::owning(vec![owned(400, "Portal", 95, LAST_WEEK)]);
+    let core = computer.start(&steam);
+
+    let ended = automatic_syncs(&core, 3);
+
+    assert_eq!(
+        ended,
+        [
+            AutomaticSync::Finished(SyncOutcome::Synced { at: NOW + 5 }),
+            AutomaticSync::Finished(SyncOutcome::Synced { at: NOW + 5 + 1_800 }),
+            AutomaticSync::Finished(SyncOutcome::Synced { at: NOW + 5 + 3_600 }),
+        ]
+    );
+    assert_eq!(core.library().unwrap(), [steam_game(400, "Portal", false, 95, Some(LAST_WEEK))]);
+}
+
+#[test]
+fn without_a_key_no_automatic_sync_starts_until_one_is_stored() {
+    let computer = Computer::new().without_key();
+    let steam = SteamWebApi::owning(vec![owned(400, "Portal", 95, LAST_WEEK)]);
+    let core = computer.start(&steam);
+    let mut ended = Vec::new();
+
+    core.sync_automatically(|event| {
+        if matches!(event, AutomaticSync::Started) {
+            return ControlFlow::Continue(());
+        }
+        ended.push(event);
+        if ended.len() == 2 {
+            assert_eq!(steam.asked(), Vec::<String>::new());
+            the_user_stores_the_key(&computer);
+        }
+        if ended.len() == 3 { ControlFlow::Break(()) } else { ControlFlow::Continue(()) }
+    });
+
+    assert_eq!(
+        ended,
+        [
+            AutomaticSync::Skipped,
+            AutomaticSync::Skipped,
+            AutomaticSync::Finished(SyncOutcome::Synced { at: NOW + 5 + 1_800 + 1_800 }),
+        ]
+    );
+}
+
+/// The user stores the key while the app runs.
+fn the_user_stores_the_key(computer: &Computer) {
+    computer.secrets.write("steam-web-api-key", KEY).unwrap();
+}
+
+#[test]
+fn a_failed_automatic_sync_changes_nothing_and_the_next_one_follows_30_minutes_later() {
+    let computer = Computer::new();
+    let steam = SteamWebApi::new(Network::Offline);
+    let core = computer.start(&steam);
+    let mut ended = Vec::new();
+
+    core.sync_automatically(|event| {
+        if matches!(event, AutomaticSync::Started) {
+            return ControlFlow::Continue(());
+        }
+        ended.push(event);
+        steam.becomes(Network::Online(HashMap::from([(PLAYER_ONE, vec![owned(400, "Portal", 95, LAST_WEEK)])])));
+        if ended.len() == 2 { ControlFlow::Break(()) } else { ControlFlow::Continue(()) }
+    });
+
+    assert_eq!(
+        ended,
+        [
+            AutomaticSync::Finished(SyncOutcome::SteamUnreachable),
+            AutomaticSync::Finished(SyncOutcome::Synced { at: NOW + 5 + 1_800 }),
+        ]
+    );
+}
+
+#[test]
+fn an_automatic_sync_reports_that_it_starts_before_it_asks_steam() {
+    let computer = Computer::new();
+    let steam = SteamWebApi::owning(vec![owned(400, "Portal", 95, LAST_WEEK)]);
+    let core = computer.start(&steam);
+    let mut asked_when_started = None;
+
+    core.sync_automatically(|event| match event {
+        AutomaticSync::Started => {
+            asked_when_started = Some(steam.asked().len());
+            ControlFlow::Continue(())
+        }
+        _ => ControlFlow::Break(()),
+    });
+
+    assert_eq!(asked_when_started, Some(0));
+    assert_eq!(steam.asked().len(), 1);
+}
+
+#[test]
+fn two_syncs_never_run_at_the_same_time() {
+    let computer = Computer::new();
+    let steam = SteamWebApi::owning(vec![owned(400, "Portal", 95, LAST_WEEK)]);
+    let slow = SlowSteam { steam: steam.clone(), running: Arc::default(), most_at_once: Arc::default() };
+    let core = computer.start_with_web_api(Box::new(slow.clone()));
+    let together = std::sync::Barrier::new(3);
+
+    std::thread::scope(|threads| {
+        for _ in 0..3 {
+            threads.spawn(|| {
+                together.wait();
+                core.sync().unwrap()
+            });
+        }
+    });
+
+    assert_eq!(steam.asked().len(), 3);
+    assert_eq!(*slow.most_at_once.lock().unwrap(), 1);
+}
+
+#[test]
+fn what_happens_in_an_automatic_sync_reaches_the_interface_in_the_shape_the_interface_expects() {
+    for (event, json) in [
+        (AutomaticSync::Skipped, serde_json::json!({ "state": "skipped" })),
+        (AutomaticSync::Started, serde_json::json!({ "state": "started" })),
+        (
+            AutomaticSync::Finished(SyncOutcome::Synced { at: NOW }),
+            serde_json::json!({ "state": "finished", "outcome": "synced", "at": NOW }),
+        ),
+        (
+            AutomaticSync::Finished(SyncOutcome::KeyRejected),
+            serde_json::json!({ "state": "finished", "outcome": "keyRejected" }),
+        ),
+    ] {
+        assert_eq!(serde_json::to_value(event).unwrap(), json);
+    }
+}
+
+#[test]
+fn an_automatic_sync_that_fails_in_the_app_reaches_the_interface_with_its_reason() {
+    let computer = Computer::new();
+    let core = Core::new(
+        Ports {
+            steam_locator: Box::new(SteamAt(Some(computer.steam.path().to_path_buf()))),
+            downloader: Box::new(Offline),
+            opener: Box::new(NoUrls),
+            secrets: Box::new(LockedSecrets),
+            web_api: Box::new(SteamWebApi::owning(vec![])),
+            clock: Box::new(computer.clock.clone()),
+        },
+        Store::open(&computer.profile.path().join("nicelibrary.db")).unwrap(),
+        CoverCache::new(computer.profile.path().join("covers")),
+    );
+    let mut ended = None;
+
+    core.sync_automatically(|event| {
+        ended = Some(event);
+        ControlFlow::Break(())
+    });
+
+    assert_eq!(
+        serde_json::to_value(ended.unwrap()).unwrap(),
+        serde_json::json!({ "state": "failed", "reason": "secret store: locked" })
+    );
+}
+
+/// A secret store that cannot be read.
+struct LockedSecrets;
+
+impl SecretStore for LockedSecrets {
+    fn read(&self, _name: &str) -> Result<Option<String>, String> {
+        Err("locked".into())
+    }
+
+    fn write(&self, _name: &str, _secret: &str) -> Result<(), String> {
+        Err("locked".into())
+    }
+
+    fn delete(&self, _name: &str) -> Result<(), String> {
+        Err("locked".into())
+    }
+}
+
+/// Steam as `steam`, but each answer takes a while; remembers how many
+/// questions were open at the same time at most.
+#[derive(Clone)]
+struct SlowSteam {
+    steam: SteamWebApi,
+    running: Arc<Mutex<u32>>,
+    most_at_once: Arc<Mutex<u32>>,
+}
+
+impl WebApi for SlowSteam {
+    fn get(&self, url: &str) -> Result<WebAnswer, String> {
+        {
+            let mut running = self.running.lock().unwrap();
+            *running += 1;
+            let mut most = self.most_at_once.lock().unwrap();
+            *most = (*most).max(*running);
+        }
+        std::thread::sleep(Duration::from_millis(50));
+        let answer = self.steam.get(url);
+        *self.running.lock().unwrap() -= 1;
+        answer
     }
 }

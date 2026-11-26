@@ -24,6 +24,7 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    onAutomaticSync: () => () => {},
     launch: (game) => {
       requested.push(game.id);
       return launch(game);
