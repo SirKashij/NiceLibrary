@@ -80,7 +80,8 @@ describe('the built app', () => {
     );
 
     // The first line under the Steam heading only appears once the `steam_installation` command answered.
-    const answer = await app.text('.settings-section > :not(h2)');
+    // Only the Steam section: the key section below has a line from the start.
+    const answer = await app.text('[aria-labelledby="settings-steam"] > :not(h2)');
     expect(answer === t['steam.notFound'] || answer.startsWith(t['steam.found']), answer).toBe(true);
   });
 

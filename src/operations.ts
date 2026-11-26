@@ -92,7 +92,8 @@ export interface Operations {
    * Checks a pasted Steam Web API key with Steam and stores it in the
    * operating system's secret store in place of any earlier one. A key that
    * is `invalid`, or that cannot be checked because Steam is unreachable,
-   * changes nothing. Rejects when the key could not be stored.
+   * changes nothing. Rejects when the key could not be stored. A stored key
+   * starts an automatic Sync right away (`onAutomaticSync`).
    */
   storeSteamWebApiKey(key: string): Promise<SteamWebApiKeyCheck>;
   /** Removes the stored Steam Web API key, if there is one. */
@@ -109,7 +110,8 @@ export interface Operations {
   lastSync(): Promise<number | null>;
   /**
    * Hears the automatic Syncs the core runs on its own, shortly after the
-   * start and then every 30 minutes. Answers the function that stops listening.
+   * start, right after a key is stored, and then every 30 minutes. Answers
+   * the function that stops listening.
    */
   onAutomaticSync(listener: (event: AutomaticSync) => void): () => void;
 }

@@ -276,5 +276,5 @@ impl nicelibrary_core::Clock for StoppedClock {
         std::time::UNIX_EPOCH
     }
 
-    fn sleep(&self, _duration: std::time::Duration) {}
+    fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
 }

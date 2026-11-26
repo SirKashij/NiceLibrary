@@ -10,8 +10,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
-    AutomaticSync, Clock, Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, SteamLocator, Store,
-    SyncOutcome, WebAnswer, WebApi,
+    AutomaticSync, Clock, Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, SteamLocator,
+    SteamWebApiKeyCheck, Store, SyncOutcome, Wakeup, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
 
@@ -104,6 +104,10 @@ impl WebApi for SteamWebApi {
                 if query_value(url, "key") != Some(KEY) {
                     return answer(403, "<html><body>Forbidden</body></html>".into());
                 }
+                // The smallest request that needs a key, with which the app checks a key.
+                if url.starts_with("https://api.steampowered.com/IStoreService/GetAppList/v1/?") {
+                    return answer(200, r#"{"response":{"apps":[{"appid":10,"name":"Counter-Strike"}],"have_more_results":true,"last_appid":10}}"#.into());
+                }
                 if !url.starts_with("https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?") {
                     return answer(404, "<html><body>Not Found</body></html>".into());
                 }
@@ -184,9 +188,11 @@ impl Clock for TestClock {
         *self.0.lock().unwrap()
     }
 
-    /// The time passes at once.
-    fn sleep(&self, duration: Duration) {
-        *self.0.lock().unwrap() += duration;
+    /// The time passes at once, unless the wakeup has rung.
+    fn sleep(&self, duration: Duration, wakeup: &Wakeup) {
+        if !wakeup.take() {
+            *self.0.lock().unwrap() += duration;
+        }
     }
 }
 
@@ -603,6 +609,95 @@ fn without_a_key_no_automatic_sync_starts_until_one_is_stored() {
 /// The user stores the key while the app runs.
 fn the_user_stores_the_key(computer: &Computer) {
     computer.secrets.write("steam-web-api-key", KEY).unwrap();
+}
+
+/// The time on `clock`, in seconds since the Unix epoch.
+fn seconds(clock: &TestClock) -> u64 {
+    clock.now().duration_since(UNIX_EPOCH).unwrap().as_secs()
+}
+
+#[test]
+fn storing_a_key_that_steam_accepts_starts_a_sync_right_away() {
+    let computer = Computer::new().without_key();
+    let steam = SteamWebApi::owning(vec![owned(400, "Portal", 95, LAST_WEEK)]);
+    let core = computer.start(&steam);
+    let mut ended = Vec::new();
+
+    core.sync_automatically(|event| {
+        if matches!(event, AutomaticSync::Started) {
+            return ControlFlow::Continue(());
+        }
+        ended.push(event);
+        if ended.len() == 1 {
+            // Between two rounds, as the user does it.
+            assert_eq!(core.store_steam_web_api_key(KEY), Ok(SteamWebApiKeyCheck::Stored));
+        }
+        if ended.len() == 3 { ControlFlow::Break(()) } else { ControlFlow::Continue(()) }
+    });
+
+    assert_eq!(
+        ended,
+        [
+            AutomaticSync::Skipped,
+            AutomaticSync::Finished(SyncOutcome::Synced { at: NOW + 5 }),
+            AutomaticSync::Finished(SyncOutcome::Synced { at: NOW + 5 + 1_800 }),
+        ]
+    );
+    assert_eq!(core.library().unwrap(), [steam_game(400, "Portal", false, 95, Some(LAST_WEEK))]);
+}
+
+#[test]
+fn a_key_that_is_refused_or_cannot_be_checked_starts_no_sync() {
+    for (network, check) in [
+        (Network::Online(HashMap::new()), SteamWebApiKeyCheck::Invalid),
+        (Network::KeyRejected, SteamWebApiKeyCheck::Invalid),
+        (Network::Offline, SteamWebApiKeyCheck::SteamUnreachable),
+        (Network::SignInPage, SteamWebApiKeyCheck::SteamUnreachable),
+    ] {
+        let computer = Computer::new().without_key();
+        let steam = SteamWebApi::new(network);
+        let core = computer.start(&steam);
+        let mut ended = Vec::new();
+
+        core.sync_automatically(|event| {
+            ended.push((event, seconds(&computer.clock)));
+            if ended.len() == 1 {
+                // A key Steam does not know, or one it cannot be asked about.
+                assert_eq!(core.store_steam_web_api_key("FEDCBA9876543210FEDCBA9876543210"), Ok(check));
+            }
+            if ended.len() == 2 { ControlFlow::Break(()) } else { ControlFlow::Continue(()) }
+        });
+
+        assert_eq!(ended, [(AutomaticSync::Skipped, NOW + 5), (AutomaticSync::Skipped, NOW + 5 + 1_800)], "{check:?}");
+        assert!(steam.asked().iter().all(|url| !url.contains("GetOwnedGames")), "{check:?}");
+    }
+}
+
+#[test]
+fn a_key_stored_while_a_sync_runs_starts_another_once_it_ends() {
+    let computer = Computer::new();
+    let steam = SteamWebApi::owning(vec![owned(400, "Portal", 95, LAST_WEEK)]);
+    let core = computer.start(&steam);
+    let mut events = Vec::new();
+
+    core.sync_automatically(|event| {
+        if events.is_empty() {
+            // The user replaces the key while the first Sync runs.
+            assert_eq!(core.store_steam_web_api_key(KEY), Ok(SteamWebApiKeyCheck::Stored));
+        }
+        events.push(event);
+        if events.len() == 4 { ControlFlow::Break(()) } else { ControlFlow::Continue(()) }
+    });
+
+    assert_eq!(
+        events,
+        [
+            AutomaticSync::Started,
+            AutomaticSync::Finished(SyncOutcome::Synced { at: NOW + 5 }),
+            AutomaticSync::Started,
+            AutomaticSync::Finished(SyncOutcome::Synced { at: NOW + 5 }),
+        ]
+    );
 }
 
 #[test]
