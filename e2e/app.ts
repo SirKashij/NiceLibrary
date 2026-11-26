@@ -19,6 +19,11 @@ const ELEMENT_KEY = 'element-6066-11e4-a52e-4f735466cecf';
 export interface App {
   /** Text of the first element matching the CSS selector, waiting until it appears. */
   text(selector: string): Promise<string>;
+  /**
+   * Like `text`, but only inside the region labelled `labelId`, the element
+   * with `aria-labelledby="<labelId>"`. `:scope` in the selector is the region.
+   */
+  textIn(labelId: string, selector: string): Promise<string>;
   /** The interface texts in the language the app chose. */
   messages(): Promise<Record<MessageKey, string>>;
   /** Runs a script in the app's window and returns its result. */
@@ -34,6 +39,11 @@ class WebDriverError extends Error {
   ) {
     super(message);
   }
+}
+
+/** Whether a WebDriver error means the element is not, or no longer, in the page. */
+function notThereYet(error: unknown): boolean {
+  return error instanceof WebDriverError && (error.code === 'no such element' || error.code === 'stale element reference');
 }
 
 /** Registers hooks that launch the app for the tests of the calling file. */
@@ -66,15 +76,27 @@ export function useApp(): App {
 
   const execute = <T>(script: string, ...args: unknown[]) => inSession<T>('POST', '/execute/sync', { script, args });
 
+  /** The first element matching `selector`, searched from the page or, with `from`, inside that element. */
+  const find = async (selector: string, from?: string) => {
+    const path = from === undefined ? '/element' : `/element/${from}/element`;
+    const element = await inSession<Record<string, string>>('POST', path, { using: 'css selector', value: selector });
+    return element[ELEMENT_KEY];
+  };
+
+  const textOf = (element: string) => inSession<string>('GET', `/element/${element}/text`);
+
   return {
     execute,
 
     async text(selector) {
-      const element = await poll(
-        () => inSession<Record<string, string>>('POST', '/element', { using: 'css selector', value: selector }),
-        (error) => error instanceof WebDriverError && error.code === 'no such element',
-      );
-      return inSession<string>('GET', `/element/${element[ELEMENT_KEY]}/text`);
+      return textOf(await poll(() => find(selector), notThereYet));
+    },
+
+    async textIn(labelId, selector) {
+      // Region and element are looked up together, so a region the interface
+      // rendered anew in between is simply found again.
+      const element = await poll(async () => find(selector, await find(`[aria-labelledby="${labelId}"]`)), notThereYet);
+      return textOf(element);
     },
 
     async messages() {
