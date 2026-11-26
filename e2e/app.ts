@@ -42,7 +42,7 @@ class WebDriverError extends Error {
 }
 
 /** The app has not chosen its interface language yet. */
-class LangNotSet extends Error {
+class LangNotSetError extends Error {
   constructor() {
     super(`The app did not set its interface language (document.documentElement.lang) within ${WAIT_MS / 1000} s.`);
   }
@@ -108,10 +108,10 @@ export function useApp(): App {
     async messages() {
       // `lang` is empty until the app's script has chosen the language.
       const lang = await poll(async () => {
-        const lang = await execute<string>('return document.documentElement.lang');
-        if (!lang) throw new LangNotSet();
-        return lang;
-      }, (error) => error instanceof LangNotSet);
+        const current = await execute<string>('return document.documentElement.lang');
+        if (!current) throw new LangNotSetError();
+        return current;
+      }, (error) => error instanceof LangNotSetError);
       return messages[lang as Lang] ?? messages.en;
     },
   };
