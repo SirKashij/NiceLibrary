@@ -10,7 +10,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 /// knows it, in UTC. `sleep` blocks the calling thread, and only that thread,
 /// until at least `duration` has passed or `wakeup` rings, whichever comes
 /// first; a ring before `sleep` began ends it at once. Either way the ring is
-/// used up. A real clock waits with [`Wakeup::wait`].
+/// used up.
 pub trait Clock: Send + Sync {
     fn now(&self) -> SystemTime;
 
@@ -21,7 +21,7 @@ pub trait Clock: Send + Sync {
 #[derive(Debug, Default)]
 pub struct Wakeup {
     rung: Mutex<bool>,
-    rang: Condvar,
+    rung_changed: Condvar,
 }
 
 impl Wakeup {
@@ -32,16 +32,18 @@ impl Wakeup {
     /// Ends the current or next sleep on this wakeup.
     pub fn ring(&self) {
         *self.rung.lock().unwrap_or_else(PoisonError::into_inner) = true;
-        self.rang.notify_all();
+        self.rung_changed.notify_all();
     }
 
     /// Blocks until this wakeup rings or `timeout` has passed, and uses up
-    /// the ring. Answers whether it rang.
-    pub fn wait(&self, timeout: Duration) -> bool {
+    /// the ring: a clock that really waits sleeps with this.
+    pub fn wait(&self, timeout: Duration) {
         let rung = self.rung.lock().unwrap_or_else(PoisonError::into_inner);
-        let (mut rung, _) =
-            self.rang.wait_timeout_while(rung, timeout, |rung| !*rung).unwrap_or_else(PoisonError::into_inner);
-        std::mem::take(&mut *rung)
+        let (mut rung, _) = self
+            .rung_changed
+            .wait_timeout_while(rung, timeout, |rung| !*rung)
+            .unwrap_or_else(PoisonError::into_inner);
+        *rung = false;
     }
 
     /// Uses up a ring without waiting, for a clock whose time passes at

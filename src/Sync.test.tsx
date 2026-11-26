@@ -60,7 +60,8 @@ function fakeOperations({
     launch: async () => ({ outcome: 'launched' }),
     steamWebApiKeyStored: async () => keyStored,
     storeSteamWebApiKey: async () => {
-      if (keyCheck.outcome === 'stored') calls.afterKeyStored = automaticSync();
+      // As in the app, the Sync is heard only after the answer: it runs on a thread of its own.
+      if (keyCheck.outcome === 'stored') setTimeout(() => (calls.afterKeyStored = automaticSync()));
       return keyCheck;
     },
     removeSteamWebApiKey: async () => {},
@@ -299,7 +300,7 @@ describe('Storing a Steam Web API key', () => {
     const section = await storeKey();
 
     expect(await within(section).findByRole('status')).toHaveTextContent('Steam confirmed your key. It is saved.');
-    expect(within(syncRegion()).getByRole('button', { name: 'Syncing…' })).toBeDisabled();
+    expect(await within(syncRegion()).findByRole('button', { name: 'Syncing…' })).toBeDisabled();
     act(() => calls.afterKeyStored!.finish());
     expect(await within(syncRegion()).findByText('Last synced Nov 25, 2026, 12:00 PM')).toBeInTheDocument();
     expect(within(syncRegion()).getByRole('button', { name: 'Sync now' })).toBeEnabled();
@@ -311,6 +312,7 @@ describe('Storing a Steam Web API key', () => {
     await within(syncRegion()).findByText('Not synced yet');
 
     await storeKey();
+    await within(syncRegion()).findByRole('button', { name: 'Syncing…' });
     act(() => calls.afterKeyStored!.finish());
 
     expect(await within(syncRegion()).findByRole('alert')).toBeInTheDocument();
