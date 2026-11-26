@@ -53,7 +53,7 @@ Add one `it(...)` to `e2e/smoke.e2e.ts`, or create a new `e2e/<topic>.e2e.ts` th
 
 - `text(selector)`: the text of the first element that matches a CSS selector, waiting until it appears;
 - `textIn(labelId, selector)`: the same, but only inside the region labelled `labelId`, the element with `aria-labelledby="<labelId>"`, such as a settings section. `:scope` in the selector stands for the region, so `textIn('settings-steam', ':scope > :not(h2)')` is the first line under the Steam heading. Use it whenever a check looks inside a section: a selector over the whole page can match an element of another section and pass by luck;
-- `messages()`: the interface texts in the language the app chose, so assertions work on German and English systems;
+- `messages()`: the interface texts in the language the app chose, waiting until it has chosen one, so assertions work on German and English systems;
 - `execute(script, ...args)`: runs a script in the app's window and returns its result.
 
 If a check needs another WebDriver command, add a method to the handle in `e2e/app.ts`, not raw requests to a test.

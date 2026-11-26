@@ -24,7 +24,7 @@ export interface App {
    * with `aria-labelledby="<labelId>"`. `:scope` in the selector is the region.
    */
   textIn(labelId: string, selector: string): Promise<string>;
-  /** The interface texts in the language the app chose. */
+  /** The interface texts in the language the app chose, waiting until it has chosen one. */
   messages(): Promise<Record<MessageKey, string>>;
   /** Runs a script in the app's window and returns its result. */
   execute<T>(script: string, ...args: unknown[]): Promise<T>;
@@ -38,6 +38,13 @@ class WebDriverError extends Error {
     readonly code: string,
   ) {
     super(message);
+  }
+}
+
+/** The app has not chosen its interface language yet. */
+class LangNotSetError extends Error {
+  constructor() {
+    super(`The app did not set its interface language (document.documentElement.lang) within ${WAIT_MS / 1000} s.`);
   }
 }
 
@@ -99,7 +106,12 @@ export function useApp(): App {
     },
 
     async messages() {
-      const lang = await execute<string>('return document.documentElement.lang');
+      // `lang` is empty until the app's script has chosen the language.
+      const lang = await poll(async () => {
+        const current = await execute<string>('return document.documentElement.lang');
+        if (!current) throw new LangNotSetError();
+        return current;
+      }, (error) => error instanceof LangNotSetError);
       return messages[lang as Lang] ?? messages.en;
     },
   };
