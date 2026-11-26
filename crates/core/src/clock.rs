@@ -1,13 +1,17 @@
-//! The clock, for everything that records when something happened.
+//! The clock, for everything that records when something happened or waits
+//! for its time.
 
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 /// Port: the clock.
 ///
 /// Contract: `now` answers the current time of day as the operating system
-/// knows it, in UTC.
+/// knows it, in UTC. `sleep` blocks the calling thread until at least
+/// `duration` has passed, and only that thread.
 pub trait Clock: Send + Sync {
     fn now(&self) -> SystemTime;
+
+    fn sleep(&self, duration: Duration);
 }
 
 /// `time` in whole seconds since the Unix epoch; 0 for a clock set before it.

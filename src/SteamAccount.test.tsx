@@ -52,6 +52,7 @@ function fakeOperations(steam: SteamInstallation, choose?: Operations['chooseSte
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    onAutomaticSync: () => () => {},
     launch: async () => ({ outcome: 'launched' }),
   };
   return { operations, chosen };

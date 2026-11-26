@@ -107,4 +107,6 @@ impl nicelibrary_core::Clock for StoppedClock {
     fn now(&self) -> std::time::SystemTime {
         std::time::UNIX_EPOCH
     }
+
+    fn sleep(&self, _duration: std::time::Duration) {}
 }

@@ -1,8 +1,11 @@
 //! Sync: one round of fetching the Steam Account's Games, with Steam's
 //! Playtime and Last Played, through the Steam Web API.
 
+use std::time::Duration;
+
 use serde::{Deserialize, Serialize};
 
+use crate::Error;
 use crate::steam_web_api::WebApi;
 
 /// How a Sync went, when nothing failed in the app itself. Every outcome but
@@ -23,6 +26,27 @@ pub enum SyncOutcome {
     GameDetailsPrivate,
     /// Steam could not be asked or gave no usable answer.
     SteamUnreachable,
+}
+
+/// How long after the app starts the first automatic Sync begins: long
+/// enough that the window shows the stored Library first.
+pub(crate) const FIRST_AUTOMATIC_SYNC_AFTER: Duration = Duration::from_secs(5);
+
+/// How long after one automatic Sync ends the next begins.
+pub(crate) const AUTOMATIC_SYNC_EVERY: Duration = Duration::from_secs(30 * 60);
+
+/// What happens in a round of the automatic Syncs, as it happens.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "state", rename_all = "camelCase")]
+pub enum AutomaticSync {
+    /// No Steam Web API key is stored, so no Sync begins this round.
+    Skipped,
+    /// A Sync begins.
+    Started,
+    /// The Sync ended with this outcome.
+    Finished(SyncOutcome),
+    /// The Sync failed in the app itself and changed nothing.
+    Failed { reason: Error },
 }
 
 /// A Steam Game the account owns, as Steam reports it.

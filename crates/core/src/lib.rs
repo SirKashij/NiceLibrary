@@ -14,6 +14,8 @@ mod store;
 mod sync;
 
 use std::fmt;
+use std::ops::ControlFlow;
+use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use serde::{Serialize, Serializer};
 
@@ -23,7 +25,7 @@ pub use launch::{Launch, OpenError, Opener};
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
-pub use sync::SyncOutcome;
+pub use sync::{AutomaticSync, SyncOutcome};
 
 /// The origin a Game is read from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -112,11 +114,13 @@ pub struct Core {
     ports: Ports,
     store: Store,
     covers: CoverCache,
+    /// Held for the whole of a Sync, so two never run at the same time.
+    syncing: Mutex<()>,
 }
 
 impl Core {
     pub fn new(ports: Ports, store: Store, covers: CoverCache) -> Self {
-        Self { ports, store, covers }
+        Self { ports, store, covers, syncing: Mutex::new(()) }
     }
 
     /// All Games in the Library, as last stored, ordered by title. Answers
@@ -227,8 +231,20 @@ impl Core {
     /// unless it is Installed.
     ///
     /// Every outcome but `Synced`, and every error, leaves the stored data as
-    /// it was.
+    /// it was. A Sync asked for while another runs begins once that one ends.
     pub fn sync(&self) -> Result<SyncOutcome, Error> {
+        let _syncing = self.wait_until_no_sync_runs();
+        self.sync_now()
+    }
+
+    /// Blocks until no other Sync runs; no other begins until the answer is dropped.
+    fn wait_until_no_sync_runs(&self) -> MutexGuard<'_, ()> {
+        // Nothing a panicking Sync left half done reaches the store: the guard holds no data.
+        self.syncing.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// One Sync; the caller holds [`Self::wait_until_no_sync_runs`].
+    fn sync_now(&self) -> Result<SyncOutcome, Error> {
         let Some(key) = self.ports.secrets.read(steam_web_api::KEY_SECRET).map_err(secret_store_error)? else {
             return Ok(SyncOutcome::NoKey);
         };
@@ -243,6 +259,36 @@ impl Core {
         let at = clock::seconds_since_epoch(self.ports.clock.now());
         self.store.record_steam_sync(&account, &games, at)?;
         Ok(SyncOutcome::Synced { at })
+    }
+
+    /// Syncs on its own while the app runs: shortly after the start, then
+    /// every 30 minutes, each time as long after the previous Sync ended,
+    /// waiting on the clock. A round without a stored Steam Web API key
+    /// starts no Sync. `report` hears what happens in each round as it
+    /// happens; the Syncs go on until it answers `Break`, otherwise for good.
+    pub fn sync_automatically(&self, mut report: impl FnMut(AutomaticSync) -> ControlFlow<()>) {
+        self.ports.clock.sleep(sync::FIRST_AUTOMATIC_SYNC_AFTER);
+        loop {
+            if self.automatic_sync_round(&mut report).is_break() {
+                return;
+            }
+            self.ports.clock.sleep(sync::AUTOMATIC_SYNC_EVERY);
+        }
+    }
+
+    fn automatic_sync_round(&self, report: &mut impl FnMut(AutomaticSync) -> ControlFlow<()>) -> ControlFlow<()> {
+        match self.steam_web_api_key_stored() {
+            Ok(false) => return report(AutomaticSync::Skipped),
+            Ok(true) => {}
+            Err(reason) => return report(AutomaticSync::Failed { reason }),
+        }
+        // Started only once a Sync begun elsewhere has ended, so the interface shows the one that runs.
+        let _syncing = self.wait_until_no_sync_runs();
+        report(AutomaticSync::Started)?;
+        report(match self.sync_now() {
+            Ok(outcome) => AutomaticSync::Finished(outcome),
+            Err(reason) => AutomaticSync::Failed { reason },
+        })
     }
 
     /// When the last successful Sync of the Steam Account whose Library is

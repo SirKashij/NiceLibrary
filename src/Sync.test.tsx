@@ -1,8 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
-import type { Game, Operations, SyncOutcome } from './operations';
+import type { AutomaticSync, Game, Operations, SyncOutcome } from './operations';
 
 /** 2026-11-25 12:00 UTC, in seconds since the Unix epoch. */
 const NOW = 1_795_608_000;
@@ -30,6 +30,23 @@ function fakeOperations({
   const calls = { syncs: 0 };
   let library = before;
   let last = lastSync;
+  const listeners = new Set<(event: AutomaticSync) => void>();
+  /** The core runs an automatic Sync: it starts, and `finish` ends it with `outcome`, as `sync` would. */
+  const automaticSync = () => {
+    listeners.forEach((listener) => listener({ state: 'started' }));
+    return {
+      finish(answer: SyncOutcome = outcome) {
+        if (answer.outcome === 'synced') {
+          library = synced;
+          last = answer.at;
+        }
+        listeners.forEach((listener) => listener({ state: 'finished', ...answer }));
+      },
+      fail() {
+        listeners.forEach((listener) => listener({ state: 'failed', reason: 'database: disk full' }));
+      },
+    };
+  };
   const operations: Operations = {
     library: async () => library,
     readInstalledGames: async () => library,
@@ -51,8 +68,12 @@ function fakeOperations({
       return outcome;
     },
     lastSync: async () => last,
+    onAutomaticSync: (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
   };
-  return { operations, calls };
+  return { operations, calls, automaticSync, listeners };
 }
 
 function syncRegion(name = 'Sync') {
@@ -183,6 +204,70 @@ describe('Sync now', () => {
 
     expect(await within(syncRegion()).findByText('Last synced Nov 25, 2026, 12:00 PM')).toBeInTheDocument();
     expect(within(syncRegion()).queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('An automatic Sync', () => {
+  it('says that it is running, then brings the Library and the new time', async () => {
+    const { operations, automaticSync } = fakeOperations({
+      before: [steamGame(620, 'Portal 2', true, null, null)],
+      synced: [steamGame(400, 'Portal', false, 95, LAST_WEEK), steamGame(620, 'Portal 2', true, 1234, NOW - 3600)],
+      lastSync: LAST_WEEK,
+    });
+    render(<App operations={operations} lang="en" />);
+    await screen.findByRole('list', { name: 'Games' });
+
+    let sync!: ReturnType<typeof automaticSync>;
+    act(() => {
+      sync = automaticSync();
+    });
+
+    expect(within(syncRegion()).getByRole('button', { name: 'Syncing…' })).toBeDisabled();
+    act(() => sync.finish());
+    expect(await within(syncRegion()).findByText('Last synced Nov 25, 2026, 12:00 PM')).toBeInTheDocument();
+    expect(within(syncRegion()).getByRole('button', { name: 'Sync now' })).toBeEnabled();
+    await screen.findByText('Portal');
+    expect(gameTitles()).toEqual(['Portal', 'Portal 2']);
+  });
+
+  it('says what went wrong when it fails, and changes nothing', async () => {
+    const { operations, automaticSync } = fakeOperations({
+      before: [steamGame(620, 'Portal 2', true, 1234, LAST_WEEK)],
+      lastSync: LAST_WEEK,
+      outcome: { outcome: 'steamUnreachable' },
+    });
+    render(<App operations={operations} lang="en" />);
+    await screen.findByRole('list', { name: 'Games' });
+
+    act(() => automaticSync().finish());
+
+    expect(await within(syncRegion()).findByRole('alert')).toHaveTextContent(
+      'Steam could not be reached. Nothing was changed. Try again later.',
+    );
+    expect(within(syncRegion()).getByText('Last synced Nov 20, 2026, 8:15 PM')).toBeInTheDocument();
+    expect(gameTitles()).toEqual(['Portal 2']);
+  });
+
+  it('says that the Sync failed when the core reports an error', async () => {
+    const { operations, automaticSync } = fakeOperations({ lastSync: LAST_WEEK });
+    render(<App operations={operations} lang="en" />);
+    await within(syncRegion()).findByText('Last synced Nov 20, 2026, 8:15 PM');
+
+    act(() => automaticSync().fail());
+
+    expect(await within(syncRegion()).findByRole('alert')).toHaveTextContent('The sync failed. Nothing was changed.');
+    expect(within(syncRegion()).getByRole('button', { name: 'Sync now' })).toBeEnabled();
+  });
+
+  it('is no longer listened to once the interface is gone', async () => {
+    const { operations, listeners } = fakeOperations();
+    const { unmount } = render(<App operations={operations} lang="en" />);
+    await within(syncRegion()).findByText('Not synced yet');
+    expect(listeners.size).toBe(1);
+
+    unmount();
+
+    expect(listeners.size).toBe(0);
   });
 });
 

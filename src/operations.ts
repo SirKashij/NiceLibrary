@@ -1,6 +1,7 @@
 // The interface talks to the application core only through these operations.
 // In the app they are Tauri commands; tests hand the interface a fake.
 import { convertFileSrc, invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 
 export type Source = 'steam' | 'local';
 
@@ -25,6 +26,15 @@ export type SyncOutcome =
   | { outcome: 'keyRejected' }
   | { outcome: 'gameDetailsPrivate' }
   | { outcome: 'steamUnreachable' };
+
+/**
+ * What happens in an automatic Sync, as it happens. Mirrors `AutomaticSync`
+ * in crates/core; a round without a key never reaches the interface.
+ */
+export type AutomaticSync =
+  | { state: 'started' }
+  | ({ state: 'finished' } & SyncOutcome)
+  | { state: 'failed'; reason: string };
 
 /** A Steam Account that has logged in on this computer. Mirrors `SteamAccount` in crates/core. */
 export interface SteamAccount {
@@ -97,6 +107,11 @@ export interface Operations {
   sync(): Promise<SyncOutcome>;
   /** When the last successful Sync happened, in seconds since the Unix epoch; `null` before the first. */
   lastSync(): Promise<number | null>;
+  /**
+   * Hears the automatic Syncs the core runs on its own, shortly after the
+   * start and then every 30 minutes. Answers the function that stops listening.
+   */
+  onAutomaticSync(listener: (event: AutomaticSync) => void): () => void;
 }
 
 export const tauriOperations: Operations = {
@@ -114,4 +129,11 @@ export const tauriOperations: Operations = {
   openSteamWebApiKeyPage: () => invoke<void>('open_steam_web_api_key_page'),
   sync: () => invoke<SyncOutcome>('sync'),
   lastSync: () => invoke<number | null>('last_sync'),
+  onAutomaticSync: (listener) => {
+    // AUTOMATIC_SYNC_EVENT in src-tauri/src/lib.rs.
+    const listening = listen<AutomaticSync>('automatic-sync', (event) => listener(event.payload));
+    return () => {
+      void listening.then((stop) => stop());
+    };
+  },
 };

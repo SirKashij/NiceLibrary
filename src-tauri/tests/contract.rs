@@ -388,7 +388,8 @@ mod web_api {
 }
 
 /// `Clock` (crates/core): `now` is the operating system's current time of
-/// day, in UTC.
+/// day, in UTC; `sleep` blocks the calling thread, and only that one, until
+/// at least the duration has passed.
 mod clock {
     use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -416,6 +417,29 @@ mod clock {
 
         assert!(first > written, "{first:?}");
         assert!(second > first, "{second:?} is not after {first:?}");
+    }
+
+    #[test]
+    fn sleep_returns_once_at_least_the_duration_has_passed() {
+        let started = std::time::Instant::now();
+
+        SystemClock.sleep(Duration::from_millis(200));
+
+        let slept = started.elapsed();
+        assert!(slept >= Duration::from_millis(200), "returned after {slept:?}");
+        assert!(slept < Duration::from_secs(5), "returned only after {slept:?}");
+    }
+
+    #[test]
+    fn sleep_blocks_only_the_thread_that_sleeps() {
+        let started = std::time::Instant::now();
+        let sleeper = std::thread::spawn(|| SystemClock.sleep(Duration::from_secs(1)));
+
+        let meanwhile = started.elapsed();
+
+        assert!(meanwhile < Duration::from_millis(500), "the calling thread waited {meanwhile:?}");
+        sleeper.join().unwrap();
+        assert!(started.elapsed() >= Duration::from_secs(1));
     }
 }
 
