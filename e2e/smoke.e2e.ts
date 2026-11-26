@@ -80,8 +80,7 @@ describe('the built app', () => {
     );
 
     // The first line under the Steam heading only appears once the `steam_installation` command answered.
-    // Only the Steam section: the key section below has a line from the start.
-    const answer = await app.text('[aria-labelledby="settings-steam"] > :not(h2)');
+    const answer = await app.textIn('settings-steam', ':scope > :not(h2)');
     expect(answer === t['steam.notFound'] || answer.startsWith(t['steam.found']), answer).toBe(true);
   });
 
@@ -93,7 +92,7 @@ describe('the built app', () => {
     );
 
     // The row only appears once the `steam_web_api_key_stored` command answered from the Credential Manager.
-    const answer = await app.text('[aria-labelledby="settings-key"] .settings-row > span');
+    const answer = await app.textIn('settings-key', '.settings-row > span');
     expect([t['key.stored'], t['key.notStored']]).toContain(answer);
   });
 });

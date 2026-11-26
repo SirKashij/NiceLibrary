@@ -52,6 +52,7 @@ Stop only processes you started, by PID (`taskkill /PID <pid> /T /F`). Stopping 
 Add one `it(...)` to `e2e/smoke.e2e.ts`, or create a new `e2e/<topic>.e2e.ts` that calls `useApp()` the same way. `useApp()` launches the app once for all tests in the file and closes it afterwards. The handle it returns has:
 
 - `text(selector)`: the text of the first element that matches a CSS selector, waiting until it appears;
+- `textIn(labelId, selector)`: the same, but only inside the region labelled `labelId`, the element with `aria-labelledby="<labelId>"`, such as a settings section. `:scope` in the selector stands for the region, so `textIn('settings-steam', ':scope > :not(h2)')` is the first line under the Steam heading. Use it whenever a check looks inside a section: a selector over the whole page can match an element of another section and pass by luck;
 - `messages()`: the interface texts in the language the app chose, so assertions work on German and English systems;
 - `execute(script, ...args)`: runs a script in the app's window and returns its result.
 
