@@ -1,8 +1,8 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
-import type { Operations, SteamAccountChoice, SteamInstallation } from './operations';
+import type { AutomaticSync, Game, Operations, SteamAccountChoice, SteamInstallation, SyncOutcome } from './operations';
 
 const PLAYER_ONE = '76561197960287930';
 const PLAYER_TWO = '76561197960287931';
@@ -25,15 +25,20 @@ const ONE_ACCOUNT: SteamInstallation = {
 /**
  * Fake operations that remember the chosen Steam Account like the core does:
  * until a choice, the most recently used account; only 17-digit IDs starting
- * with 7656119 count as a SteamID.
+ * with 7656119 count as a SteamID. Each account has its own last Sync
+ * (`lastSyncs`) and its own Library (`libraries`).
  */
-function fakeOperations(steam: SteamInstallation, choose?: Operations['chooseSteamAccount']) {
+function fakeOperations(
+  steam: SteamInstallation,
+  choose?: Operations['chooseSteamAccount'],
+  { lastSyncs = {}, libraries = {} }: { lastSyncs?: Record<string, number>; libraries?: Record<string, Game[]> } = {},
+) {
   const chosen: string[] = [];
   let account: string | null =
     steam.state === 'found' ? (steam.accounts.find((a) => a.mostRecent) ?? steam.accounts[0])?.steamId ?? null : null;
   const operations: Operations = {
-    library: async () => [],
-    readInstalledGames: async () => [],
+    library: async () => (account && libraries[account]) || [],
+    readInstalledGames: async () => (account && libraries[account]) || [],
     steamInstallation: async () => steam,
     steamAccount: async () => account,
     chooseSteamAccount:
@@ -51,7 +56,7 @@ function fakeOperations(steam: SteamInstallation, choose?: Operations['chooseSte
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
-    lastSync: async () => null,
+    lastSync: async () => (account && lastSyncs[account]) || null,
     onAutomaticSync: () => () => {},
     launch: async () => ({ outcome: 'launched' }),
   };
@@ -149,6 +154,83 @@ describe('Choosing the Steam Account', () => {
     const { steam } = await openSettings(operations, 'de');
 
     expect(await within(steam).findByRole('radiogroup', { name: 'Konto für deine Bibliothek' })).toBeInTheDocument();
+  });
+});
+
+/** 2026-11-20 20:15 UTC, in seconds since the Unix epoch. */
+const LAST_WEEK = 1_795_205_700;
+
+const portal2: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null };
+const halfLife: Game = { id: 'steam:70', title: 'Half-Life', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null };
+
+function syncRegion() {
+  return within(screen.getByRole('complementary')).getByRole('region', { name: 'Sync' });
+}
+
+describe('After choosing another Steam Account', () => {
+  it("shows that account's last Sync in the sidebar", async () => {
+    const { operations } = fakeOperations(TWO_ACCOUNTS, undefined, { lastSyncs: { [PLAYER_ONE]: LAST_WEEK } });
+    const { user, steam } = await openSettings(operations);
+    await within(syncRegion()).findByText('Not synced yet');
+
+    await user.click(await within(steam).findByRole('radio', { name: 'Player One' }));
+
+    expect(await within(syncRegion()).findByText('Last synced Nov 20, 2026, 8:15 PM')).toBeInTheDocument();
+  });
+
+  it('says in the sidebar when that account has not been synced yet', async () => {
+    const { operations } = fakeOperations(TWO_ACCOUNTS, undefined, { lastSyncs: { [PLAYER_TWO]: LAST_WEEK } });
+    const { user, steam } = await openSettings(operations);
+    await within(syncRegion()).findByText('Last synced Nov 20, 2026, 8:15 PM');
+
+    await user.click(await within(steam).findByRole('radio', { name: 'Player One' }));
+
+    expect(await within(syncRegion()).findByText('Not synced yet')).toBeInTheDocument();
+  });
+
+  it('shows no answer of a Sync made for the account before', async () => {
+    const { operations } = fakeOperations(TWO_ACCOUNTS);
+    let answer!: (outcome: SyncOutcome) => void;
+    operations.sync = () => new Promise((resolve) => (answer = resolve));
+    const { user, steam } = await openSettings(operations);
+    await user.click(within(syncRegion()).getByRole('button', { name: 'Sync now' }));
+
+    await user.click(await within(steam).findByRole('radio', { name: 'Player One' }));
+    await within(syncRegion()).findByRole('button', { name: 'Sync now' });
+    await act(async () => answer({ outcome: 'synced', at: LAST_WEEK }));
+
+    expect(within(syncRegion()).getByText('Not synced yet')).toBeInTheDocument();
+  });
+
+  it('shows no answer of an automatic Sync that started for the account before', async () => {
+    const { operations } = fakeOperations(TWO_ACCOUNTS);
+    const listeners = new Set<(event: AutomaticSync) => void>();
+    const hear = (event: AutomaticSync) => act(() => listeners.forEach((listener) => listener(event)));
+    operations.onAutomaticSync = (listener) => {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    };
+    const { user, steam } = await openSettings(operations);
+    hear({ state: 'started' });
+
+    await user.click(await within(steam).findByRole('radio', { name: 'Player One' }));
+    await within(syncRegion()).findByText('Not synced yet');
+    hear({ state: 'finished', outcome: 'synced', at: LAST_WEEK });
+
+    expect(within(syncRegion()).getByText('Not synced yet')).toBeInTheDocument();
+  });
+
+  it("shows that account's Games in the Library", async () => {
+    const { operations } = fakeOperations(TWO_ACCOUNTS, undefined, {
+      libraries: { [PLAYER_ONE]: [portal2], [PLAYER_TWO]: [halfLife] },
+    });
+    const { user, steam } = await openSettings(operations);
+    await user.click(await within(steam).findByRole('radio', { name: 'Player One' }));
+
+    await user.click(screen.getByRole('button', { name: 'Library' }));
+
+    expect(await screen.findByRole('heading', { name: 'Portal 2' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Half-Life' })).not.toBeInTheDocument();
   });
 });
 
