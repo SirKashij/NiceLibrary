@@ -42,7 +42,7 @@ class WebDriverError extends Error {
 }
 
 /** Whether a WebDriver error means the element is not, or no longer, in the page. */
-function notThereYet(error: unknown): boolean {
+function notInPage(error: unknown): boolean {
   return error instanceof WebDriverError && (error.code === 'no such element' || error.code === 'stale element reference');
 }
 
@@ -88,15 +88,14 @@ export function useApp(): App {
   return {
     execute,
 
-    async text(selector) {
-      return textOf(await poll(() => find(selector), notThereYet));
+    text(selector) {
+      return poll(async () => textOf(await find(selector)), notInPage);
     },
 
-    async textIn(labelId, selector) {
-      // Region and element are looked up together, so a region the interface
-      // rendered anew in between is simply found again.
-      const element = await poll(async () => find(selector, await find(`[aria-labelledby="${labelId}"]`)), notThereYet);
-      return textOf(element);
+    textIn(labelId, selector) {
+      // Region, element and text are read in one attempt, so a region the
+      // interface rendered anew in between is simply found again.
+      return poll(async () => textOf(await find(selector, await find(`[aria-labelledby="${labelId}"]`))), notInPage);
     },
 
     async messages() {
