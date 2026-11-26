@@ -2,7 +2,7 @@
 
 use std::time::{Duration, SystemTime};
 
-use nicelibrary_core::Clock;
+use nicelibrary_core::{Clock, Wakeup};
 
 /// The operating system's clock, in UTC.
 pub struct SystemClock;
@@ -12,7 +12,7 @@ impl Clock for SystemClock {
         SystemTime::now()
     }
 
-    fn sleep(&self, duration: Duration) {
-        std::thread::sleep(duration);
+    fn sleep(&self, duration: Duration, wakeup: &Wakeup) {
+        wakeup.wait(duration);
     }
 }

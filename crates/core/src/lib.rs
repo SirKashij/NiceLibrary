@@ -19,7 +19,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use serde::{Serialize, Serializer};
 
-pub use clock::Clock;
+pub use clock::{Clock, Wakeup};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
@@ -116,11 +116,13 @@ pub struct Core {
     covers: CoverCache,
     /// Held for the whole of a Sync, so two never run at the same time.
     syncing: Mutex<()>,
+    /// Rung when a key is stored, so the automatic Syncs do not wait for their next round.
+    sync_soon: Wakeup,
 }
 
 impl Core {
     pub fn new(ports: Ports, store: Store, covers: CoverCache) -> Self {
-        Self { ports, store, covers, syncing: Mutex::new(()) }
+        Self { ports, store, covers, syncing: Mutex::new(()), sync_soon: Wakeup::new() }
     }
 
     /// All Games in the Library, as last stored, ordered by title. Answers
@@ -264,15 +266,17 @@ impl Core {
     /// Syncs on its own while the app runs: shortly after the start, then
     /// every 30 minutes, each time as long after the previous Sync ended,
     /// waiting on the clock. A round without a stored Steam Web API key
-    /// starts no Sync. `report` hears what happens in each round as it
-    /// happens; the Syncs go on until it answers `Break`, otherwise for good.
+    /// starts no Sync. Storing a key that Steam accepts starts the next
+    /// round right away, or once the Sync that runs has ended. `report`
+    /// hears what happens in each round as it happens; the Syncs go on until
+    /// it answers `Break`, otherwise for good.
     pub fn sync_automatically(&self, mut report: impl FnMut(AutomaticSync) -> ControlFlow<()>) {
-        self.ports.clock.sleep(sync::FIRST_AUTOMATIC_SYNC_AFTER);
+        self.ports.clock.sleep(sync::FIRST_AUTOMATIC_SYNC_AFTER, &self.sync_soon);
         loop {
             if self.automatic_sync_round(&mut report).is_break() {
                 return;
             }
-            self.ports.clock.sleep(sync::AUTOMATIC_SYNC_EVERY);
+            self.ports.clock.sleep(sync::AUTOMATIC_SYNC_EVERY, &self.sync_soon);
         }
     }
 
@@ -310,8 +314,9 @@ impl Core {
 
     /// Checks the Steam Web API key the user pasted with Steam and, when
     /// Steam accepts it, stores it in the operating system's secret store in
-    /// place of any earlier one. A key that is refused or cannot be checked
-    /// changes nothing.
+    /// place of any earlier one; the automatic Syncs then sync right away
+    /// (see [`Self::sync_automatically`]). A key that is refused or cannot
+    /// be checked changes nothing.
     pub fn store_steam_web_api_key(&self, key: &str) -> Result<SteamWebApiKeyCheck, Error> {
         let Some(key) = steam_web_api::key_in(key) else {
             return Ok(SteamWebApiKeyCheck::Invalid);
@@ -319,6 +324,7 @@ impl Core {
         let check = steam_web_api::check_key(self.ports.web_api.as_ref(), &key);
         if check == SteamWebApiKeyCheck::Stored {
             self.ports.secrets.write(steam_web_api::KEY_SECRET, &key).map_err(secret_store_error)?;
+            self.sync_soon.ring();
         }
         Ok(check)
     }

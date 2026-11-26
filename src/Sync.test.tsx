@@ -2,7 +2,7 @@ import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
-import type { AutomaticSync, Game, Operations, SyncOutcome } from './operations';
+import type { AutomaticSync, Game, Operations, SteamWebApiKeyCheck, SyncOutcome } from './operations';
 
 /** 2026-11-25 12:00 UTC, in seconds since the Unix epoch. */
 const NOW = 1_795_608_000;
@@ -19,15 +19,18 @@ function steamGame(appId: number, title: string, installed: boolean, minutes: nu
 /**
  * Fake operations that behave like the core: a Sync answers `outcome`, and
  * only a successful one replaces the stored Library with `synced` and
- * remembers when.
+ * remembers when. Storing a key answers `keyCheck`; a stored key starts an
+ * automatic Sync right away, which `calls.afterKeyStored` holds.
  */
 function fakeOperations({
   before = [] as Game[],
   synced = [] as Game[],
   lastSync = null as number | null,
   outcome = { outcome: 'synced', at: NOW } as SyncOutcome,
+  keyCheck = { outcome: 'stored' } as SteamWebApiKeyCheck,
+  keyStored = false,
 } = {}) {
-  const calls = { syncs: 0 };
+  const calls: { syncs: number; afterKeyStored?: ReturnType<typeof automaticSync> } = { syncs: 0 };
   let library = before;
   let last = lastSync;
   const listeners = new Set<(event: AutomaticSync) => void>();
@@ -55,8 +58,11 @@ function fakeOperations({
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
     launch: async () => ({ outcome: 'launched' }),
-    steamWebApiKeyStored: async () => true,
-    storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
+    steamWebApiKeyStored: async () => keyStored,
+    storeSteamWebApiKey: async () => {
+      if (keyCheck.outcome === 'stored') calls.afterKeyStored = automaticSync();
+      return keyCheck;
+    },
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
     sync: async () => {
@@ -269,6 +275,63 @@ describe('An automatic Sync', () => {
 
     expect(listeners.size).toBe(0);
   });
+});
+
+/** The user enters a Steam Web API key in the settings and has it checked. */
+async function storeKey() {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('button', { name: 'Settings' }));
+  const section = screen.getByRole('region', { name: 'Steam Web API key' });
+  await user.type(await within(section).findByLabelText('Your key'), '0123456789ABCDEF0123456789ABCDEF');
+  await user.click(within(section).getByRole('button', { name: 'Check and save' }));
+  return section;
+}
+
+describe('Storing a Steam Web API key', () => {
+  it('starts a Sync right away, which the sidebar shows like any automatic Sync', async () => {
+    const { operations, calls } = fakeOperations({
+      synced: [steamGame(400, 'Portal', false, 95, LAST_WEEK)],
+      lastSync: null,
+    });
+    render(<App operations={operations} lang="en" />);
+    await within(syncRegion()).findByText('Not synced yet');
+
+    const section = await storeKey();
+
+    expect(await within(section).findByRole('status')).toHaveTextContent('Steam confirmed your key. It is saved.');
+    expect(within(syncRegion()).getByRole('button', { name: 'Syncing…' })).toBeDisabled();
+    act(() => calls.afterKeyStored!.finish());
+    expect(await within(syncRegion()).findByText('Last synced Nov 25, 2026, 12:00 PM')).toBeInTheDocument();
+    expect(within(syncRegion()).getByRole('button', { name: 'Sync now' })).toBeEnabled();
+  });
+
+  it('shows in the sidebar what went wrong in that Sync', async () => {
+    const { operations, calls } = fakeOperations({ outcome: { outcome: 'gameDetailsPrivate' } });
+    render(<App operations={operations} lang="en" />);
+    await within(syncRegion()).findByText('Not synced yet');
+
+    await storeKey();
+    act(() => calls.afterKeyStored!.finish());
+
+    expect(await within(syncRegion()).findByRole('alert')).toBeInTheDocument();
+    expect(within(syncRegion()).getByText('Not synced yet')).toBeInTheDocument();
+  });
+
+  it.each([{ outcome: 'invalid' }, { outcome: 'steamUnreachable' }] as const)(
+    'starts no Sync when the key is $outcome',
+    async (keyCheck) => {
+      const { operations, calls } = fakeOperations({ keyCheck });
+      render(<App operations={operations} lang="en" />);
+      await within(syncRegion()).findByText('Not synced yet');
+
+      const section = await storeKey();
+
+      expect(await within(section).findByRole('alert')).toBeInTheDocument();
+      expect(calls.afterKeyStored).toBeUndefined();
+      expect(calls.syncs).toBe(0);
+      expect(within(syncRegion()).getByRole('button', { name: 'Sync now' })).toBeEnabled();
+    },
+  );
 });
 
 describe('Playtime and Last Played in the Library', () => {

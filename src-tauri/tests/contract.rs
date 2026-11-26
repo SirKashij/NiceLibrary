@@ -389,11 +389,12 @@ mod web_api {
 
 /// `Clock` (crates/core): `now` is the operating system's current time of
 /// day, in UTC; `sleep` blocks the calling thread, and only that one, until
-/// at least the duration has passed.
+/// at least the duration has passed or the wakeup rings, which it uses up.
 mod clock {
-    use std::time::{Duration, SystemTime, UNIX_EPOCH};
+    use std::sync::Arc;
+    use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-    use nicelibrary_core::Clock;
+    use nicelibrary_core::{Clock, Wakeup};
     use nicelibrary_lib::ports::SystemClock;
 
     #[test]
@@ -421,9 +422,9 @@ mod clock {
 
     #[test]
     fn sleep_returns_once_at_least_the_duration_has_passed() {
-        let started = std::time::Instant::now();
+        let started = Instant::now();
 
-        SystemClock.sleep(Duration::from_millis(200));
+        SystemClock.sleep(Duration::from_millis(200), &Wakeup::new());
 
         let slept = started.elapsed();
         assert!(slept >= Duration::from_millis(200), "returned after {slept:?}");
@@ -432,14 +433,48 @@ mod clock {
 
     #[test]
     fn sleep_blocks_only_the_thread_that_sleeps() {
-        let started = std::time::Instant::now();
-        let sleeper = std::thread::spawn(|| SystemClock.sleep(Duration::from_secs(1)));
+        let started = Instant::now();
+        let sleeper = std::thread::spawn(|| SystemClock.sleep(Duration::from_secs(1), &Wakeup::new()));
 
         let meanwhile = started.elapsed();
 
         assert!(meanwhile < Duration::from_millis(500), "the calling thread waited {meanwhile:?}");
         sleeper.join().unwrap();
         assert!(started.elapsed() >= Duration::from_secs(1));
+    }
+
+    #[test]
+    fn a_wakeup_rung_from_another_thread_ends_the_sleep_early() {
+        let wakeup = Arc::new(Wakeup::new());
+        let started = Instant::now();
+        let ringer = {
+            let wakeup = Arc::clone(&wakeup);
+            std::thread::spawn(move || {
+                std::thread::sleep(Duration::from_millis(200));
+                wakeup.ring();
+            })
+        };
+
+        SystemClock.sleep(Duration::from_secs(60), &wakeup);
+
+        let slept = started.elapsed();
+        ringer.join().unwrap();
+        assert!(slept >= Duration::from_millis(200), "returned after {slept:?}, before the ring");
+        assert!(slept < Duration::from_secs(5), "returned only after {slept:?}");
+    }
+
+    #[test]
+    fn a_wakeup_rung_before_the_sleep_ends_it_at_once_and_only_that_one() {
+        let wakeup = Wakeup::new();
+        wakeup.ring();
+        let started = Instant::now();
+
+        SystemClock.sleep(Duration::from_secs(60), &wakeup);
+        let first = started.elapsed();
+        SystemClock.sleep(Duration::from_millis(200), &wakeup);
+
+        assert!(first < Duration::from_secs(1), "the first sleep took {first:?}");
+        assert!(started.elapsed() >= Duration::from_millis(200), "the ring ended the second sleep too");
     }
 }
 
