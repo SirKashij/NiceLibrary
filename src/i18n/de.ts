@@ -288,6 +288,9 @@ export const de: Record<MessageKey, string> = {
   'achievements.none': '{title} hat keine Trophäen.',
   'achievements.notFetchedYet': 'Die Trophäen wurden noch nicht abgerufen. Sie kommen mit einer der nächsten Synchronisierungen.',
   'achievements.loadFailed': 'Die Trophäen konnten nicht geladen werden.',
+  'achievements.secret': 'Geheime Trophäe',
+  'achievements.secretHint': 'Schalte sie frei, um zu sehen, was sie ist.',
+  'achievements.revealSecrets': 'Geheime Trophäen zeigen',
   'launch.executableNotFound':
     '{title} konnte nicht gestartet werden, weil seine ausführbare Datei nicht gefunden wurde. Vielleicht wurde sie verschoben oder gelöscht.',
   'launch.workingDirectoryNotFound':

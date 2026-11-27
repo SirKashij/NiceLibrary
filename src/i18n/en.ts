@@ -286,6 +286,9 @@ export const en = {
   'achievements.none': '{title} has no achievements.',
   'achievements.notFetchedYet': 'The achievements have not been fetched yet. They arrive with one of the next syncs.',
   'achievements.loadFailed': 'The achievements could not be loaded.',
+  'achievements.secret': 'Secret achievement',
+  'achievements.secretHint': 'Unlock it to find out what it is.',
+  'achievements.revealSecrets': 'Show secret achievements',
   'launch.executableNotFound':
     '{title} could not be launched because its executable was not found. It may have been moved or deleted.',
   'launch.workingDirectoryNotFound':

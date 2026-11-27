@@ -237,6 +237,8 @@ export interface Achievement {
   unlockedAt: number | null;
   /** The icon as the Achievement looks now, for `achievementIconUrl`; `null` when Steam has none. */
   icon: string | null;
+  /** A Secret Achievement: its name, description and icon stay concealed while locked, unless revealed. */
+  secret: boolean;
 }
 
 /** The Achievements of one Game. Mirrors `GameAchievements` in crates/core. */

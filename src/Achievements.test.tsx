@@ -23,6 +23,7 @@ function achievement(id: string, name: string, unlockedAt: number | null, detail
     unlocked: unlockedAt !== null,
     unlockedAt,
     icon: `${id.toLowerCase()}${unlockedAt === null ? '-grey' : ''}`,
+    secret: false,
     ...details,
   };
 }

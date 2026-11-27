@@ -41,14 +41,16 @@ struct Defined {
     description: Option<&'static str>,
     /// When the account unlocked it; `Some(0)` for unlocked at an unknown time.
     unlocked_at: Option<u64>,
+    /// Steam marks it hidden: a Secret Achievement.
+    secret: bool,
 }
 
 fn unlocked(api_name: &'static str, name: &'static str, description: &'static str, at: u64) -> Defined {
-    Defined { api_name, name, description: Some(description), unlocked_at: Some(at) }
+    Defined { api_name, name, description: Some(description), unlocked_at: Some(at), secret: false }
 }
 
 fn locked(api_name: &'static str, name: &'static str, description: &'static str) -> Defined {
-    Defined { api_name, name, description: Some(description), unlocked_at: None }
+    Defined { api_name, name, description: Some(description), unlocked_at: None, secret: false }
 }
 
 /// One Steam Game the account owns in the fake Steam.
@@ -199,7 +201,7 @@ impl WebApi for FakeSteam {
                 .iter()
                 .map(|a| {
                     let mut entry = serde_json::json!({
-                        "name": a.api_name, "defaultvalue": 0, "displayName": a.name, "hidden": 0,
+                        "name": a.api_name, "defaultvalue": 0, "displayName": a.name, "hidden": u8::from(a.secret),
                         "icon": image(icon(a.api_name, true)), "icongray": image(icon(a.api_name, false))
                     });
                     if let Some(description) = a.description {
@@ -370,6 +372,7 @@ fn achievement(api_name: &str, name: &str, description: &str, unlocked_at: Optio
         unlocked: unlocked_at.is_some(),
         unlocked_at,
         icon: Some(icon(api_name, unlocked_at.is_some())),
+        secret: false,
     }
 }
 
@@ -710,14 +713,14 @@ fn the_achievements_reach_the_interface_in_the_shape_the_interface_expects() {
         total: 2,
         achievements: vec![
             achievement("ACH_FINISH", "Lunacy", "Finish", Some(LAST_WEEK)),
-            Achievement { description: None, icon: None, ..achievement("ACH_X", "X", "", None) },
+            Achievement { description: None, icon: None, secret: true, ..achievement("ACH_X", "X", "", None) },
         ],
     };
     assert_eq!(
         serde_json::to_value(listed).unwrap(),
         serde_json::json!({ "state": "listed", "unlocked": 1, "total": 2, "achievements": [
-            { "id": "ACH_FINISH", "name": "Lunacy", "description": "Finish", "unlocked": true, "unlockedAt": LAST_WEEK, "icon": icon("ACH_FINISH", true) },
-            { "id": "ACH_X", "name": "X", "description": null, "unlocked": false, "unlockedAt": null, "icon": null }
+            { "id": "ACH_FINISH", "name": "Lunacy", "description": "Finish", "unlocked": true, "unlockedAt": LAST_WEEK, "icon": icon("ACH_FINISH", true), "secret": false },
+            { "id": "ACH_X", "name": "X", "description": null, "unlocked": false, "unlockedAt": null, "icon": null, "secret": true }
         ] })
     );
     for (state, json) in [
@@ -727,6 +730,54 @@ fn the_achievements_reach_the_interface_in_the_shape_the_interface_expects() {
     ] {
         assert_eq!(serde_json::to_value(state).unwrap(), serde_json::json!({ "state": json }));
     }
+}
+
+#[test]
+fn a_secret_achievement_is_marked_secret_and_keeps_its_name_and_description_for_revealing() {
+    let computer = Computer::new();
+    let mut game = portal_2();
+    game.achievements = Some(vec![
+        locked("ACH_SPEED_RUN", "Speed run", "Finish the game in under two hours"),
+        Defined { secret: true, ..locked("ACH_PARTNER", "Partner", "Finish the cooperative campaign") },
+    ]);
+    let steam = FakeSteam::owning(vec![game]);
+    let core = computer.start(&steam);
+    core.sync().unwrap();
+
+    let GameAchievements::Listed { achievements, .. } = core.achievements("steam:620").unwrap() else {
+        panic!("listed");
+    };
+    assert_eq!(
+        achievements,
+        vec![
+            achievement("ACH_SPEED_RUN", "Speed run", "Finish the game in under two hours", None),
+            Achievement { secret: true, ..achievement("ACH_PARTNER", "Partner", "Finish the cooperative campaign", None) },
+        ]
+    );
+}
+
+#[test]
+fn a_secret_achievement_stays_secret_once_unlocked_and_after_a_restart() {
+    let computer = Computer::new();
+    let mut game = portal_2();
+    game.achievements = Some(vec![Defined {
+        secret: true,
+        ..unlocked("ACH_FINISH", "Lunacy", "Finish the single-player campaign", LAST_WEEK)
+    }]);
+    let steam = FakeSteam::owning(vec![game]);
+    computer.start(&steam).sync().unwrap();
+    steam.becomes(Network::Offline);
+
+    let GameAchievements::Listed { achievements, .. } = computer.start(&steam).achievements("steam:620").unwrap() else {
+        panic!("listed");
+    };
+    assert_eq!(
+        achievements,
+        vec![Achievement {
+            secret: true,
+            ..achievement("ACH_FINISH", "Lunacy", "Finish the single-player campaign", Some(LAST_WEEK))
+        }]
+    );
 }
 
 /// A computer where the app does not start with Windows; these tests do not turn it on.
