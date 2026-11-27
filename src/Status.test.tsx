@@ -87,6 +87,10 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
         if (!game) throw new Error(`no such game in the library: ${gameId}`);
         return game;
       }),
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
   };
   return { operations, calls };
 }

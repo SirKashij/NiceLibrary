@@ -61,6 +61,10 @@ function fakeOperations() {
     openLogFolder: async () => {
       calls.logFolderOpened += 1;
     },
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
   };
   return { operations, calls };
 }

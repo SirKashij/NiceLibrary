@@ -6,6 +6,7 @@ import { AddLocalGameButton } from './library/AddLocalGame';
 import { HiddenGamesPage } from './library/HiddenGames';
 import { useSessionChanges } from './library/Sessions';
 import { whyNotLaunched } from './launchProblem';
+import { LocalGameActions } from './library/LocalGameActions';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { ThemeSettings } from './settings/ThemeSettings';
 import { ThemeProvider } from './theme';
@@ -179,13 +180,16 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
 
 function LibraryView({ operations, syncs }: { operations: Operations; syncs: number }) {
   const t = useT();
-  // How many Local Games were added here; each one changes the stored Library.
+  // How many Local Games were added, edited or removed here; each one changes the stored Library.
   const [additions, setAdditions] = useState(0);
   // How often the user set a Status while the app runs; each one changes the stored Library.
   const [statusChanges, setStatusChanges] = useState(0);
   // How often a Game was hidden or unhidden here; each time changes the Library.
   const [hidings, setHidings] = useState(0);
   const changes = syncs + additions + statusChanges + hidings;
+  const changed = () => setAdditions((n) => n + 1);
+  // The title of the Local Game removed last, which the Library then confirms.
+  const [removed, setRemoved] = useState<string>();
   // The stored Library answers at once; reading Steam again replaces it.
   const stored = useOperation(operations, (o) => o.library());
   const fromSteam = useOperation(operations, (o) => o.readInstalledGames());
@@ -263,6 +267,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     left.current = { scrollTop: libraryView.current?.closest('main')?.scrollTop ?? 0, focus: document.activeElement };
     setLaunchProblem(undefined);
     setHiddenLast(undefined);
+    setRemoved(undefined);
   };
   const open = (game: Game) => {
     leave();
@@ -299,7 +304,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
       <div ref={libraryView} hidden={opened !== undefined || showingHidden}>
         <Page title="nav.library">
           <div className="library-actions">
-            <AddLocalGameButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
+            <AddLocalGameButton operations={operations} onAdded={changed} />
             <button type="button" className="button" onClick={showHidden}>
               {t('hidden.title')}
             </button>
@@ -307,6 +312,11 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           {hiddenLast && (
             <p className="note" role="status">
               {t('hidden.hidden', { title: hiddenLast.title })}
+            </p>
+          )}
+          {removed !== undefined && (
+            <p className="note" role="status">
+              {t('editGame.removed', { title: removed })}
             </p>
           )}
           <LibraryToolbar filter={filter} onChange={setFilter}>
@@ -342,7 +352,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           key={opened.id}
           operations={operations}
           game={opened}
-          syncs={syncs}
+          syncs={syncs + additions}
           cover={(game) => <Cover key={game.id} title={game.title} src={coverUrl(game)} />}
           notice={launchNotice}
           onPlay={launch}
@@ -350,6 +360,24 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           onBack={back}
           onHidden={hidden}
           onCoverChanged={coverChanged}
+          actions={(game) =>
+            game.source === 'local' && (
+              <LocalGameActions
+                operations={operations}
+                game={game}
+                onEdited={() => {
+                  changed();
+                  // A new executable may bring a new icon as the Cover.
+                  coverChanged(game);
+                }}
+                onRemoved={(gone) => {
+                  changed();
+                  back();
+                  setRemoved(gone.title);
+                }}
+              />
+            )
+          }
         />
       )}
       {showingHidden && (

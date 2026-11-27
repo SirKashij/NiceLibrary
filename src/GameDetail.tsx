@@ -30,12 +30,15 @@ export function GameDetail({
   onBack,
   onHidden,
   onCoverChanged,
+  actions,
 }: {
   operations: Operations;
   /** The Game as the Library showed it when it was opened. */
   game: Game;
-  /** Changes with each successful Sync, which may change the Game. */
+  /** Changes with each successful Sync or edit, which may change the Game. */
   syncs: number;
+  /** Further actions on the Game as the core answered it, such as editing a Local Game. */
+  actions?: (game: Game) => ReactNode;
   cover: (game: Game) => ReactNode;
   /** Why the last Launch did not start, if it did not. */
   notice?: ReactNode;
@@ -104,7 +107,7 @@ export function GameDetail({
         </div>
         <div className="game-detail-info">
           <h1 id={headingId} ref={heading} tabIndex={-1}>
-            {opened.title}
+            {game?.title ?? opened.title}
           </h1>
           {game === null ? (
             <p className="note">{t('game.gone', { title: opened.title })}</p>
@@ -151,6 +154,7 @@ export function GameDetail({
               )}
               <HideGameButton operations={operations} game={game} onHidden={onHidden} />
               {game.source === 'local' && <LaunchOptionsForm operations={operations} game={game} />}
+              {actions?.(game)}
             </>
           )}
         </div>

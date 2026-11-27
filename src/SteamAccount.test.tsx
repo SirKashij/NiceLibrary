@@ -96,6 +96,10 @@ function fakeOperations(
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     launchOptions: async () => null,
     setLaunchOptions: async () => {},
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
   };
   return { operations, chosen };
 }

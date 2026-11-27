@@ -99,6 +99,10 @@ function fakeOperations({
       await save(next);
       stored = next;
     },
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
   };
   return { operations, saved };
 }

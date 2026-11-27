@@ -67,6 +67,10 @@ function fakeOperations({ startsWithWindows = false } = {}) {
       calls.startWithWindows.push(on);
       entry = on;
     },
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
   };
   const removeOutsideTheApp = () => {
     entry = false;

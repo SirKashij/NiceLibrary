@@ -8,9 +8,9 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
-    CoverImageChoice, Error, ExecutableChoice, Game, GameAchievements, Launch, LaunchOptions, LibraryFilter,
-    LibrarySort, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch, SteamInstallation,
-    SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
+    CoverImageChoice, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Launch, LaunchOptions,
+    LibraryFilter, LibrarySort, LocalGame, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
+    SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -131,6 +131,32 @@ async fn choose_local_game_executable(core: tauri::State<'_, Core>) -> Result<Ex
 #[tauri::command]
 fn add_local_game(core: tauri::State<'_, Core>, executable: String, title: String) -> Result<AddLocalGame, Error> {
     core.add_local_game(&executable, &title)
+}
+
+#[tauri::command]
+fn local_game(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<LocalGame>, Error> {
+    core.local_game(&game_id)
+}
+
+/// Async, so the window stays responsive while the file dialog is open.
+#[tauri::command]
+async fn choose_executable_for(core: tauri::State<'_, Core>, game_id: String) -> Result<ExecutableChoice, Error> {
+    core.choose_executable_for(&game_id)
+}
+
+#[tauri::command]
+fn edit_local_game(
+    core: tauri::State<'_, Core>,
+    game_id: String,
+    title: String,
+    executable: String,
+) -> Result<EditLocalGame, Error> {
+    core.edit_local_game(&game_id, &title, &executable)
+}
+
+#[tauri::command]
+fn remove_local_game(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Error> {
+    core.remove_local_game(&game_id)
 }
 
 #[tauri::command]
@@ -347,7 +373,11 @@ pub fn run() {
             set_launch_options,
             hidden_games,
             hide_game,
-            unhide_game
+            unhide_game,
+            local_game,
+            choose_executable_for,
+            edit_local_game,
+            remove_local_game
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

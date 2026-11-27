@@ -85,6 +85,10 @@ function fakeOperations({
     },
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
     steamAppList: async () => list,
     fetchSteamAppList: () => {
       calls.fetches += 1;

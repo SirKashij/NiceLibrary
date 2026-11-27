@@ -94,6 +94,10 @@ function fakeOperations(
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     launchOptions: async () => null,
     setLaunchOptions: async () => {},
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
   };
   return { operations, calls, change: (next: Game[]) => (games = next) };
 }

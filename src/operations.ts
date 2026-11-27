@@ -99,6 +99,21 @@ export type AddLocalGame =
   | { outcome: 'noTitle' }
   | { outcome: 'notFound' };
 
+/** A Local Game as the user edits it: its title and the path of its executable. Mirrors `LocalGame` in crates/core. */
+export interface LocalGame {
+  /** `local:<number>`. */
+  id: string;
+  title: string;
+  executable: string;
+}
+
+/** How editing a Local Game went, when nothing failed. Every outcome but `edited` changed nothing. Mirrors `EditLocalGame` in crates/core. */
+export type EditLocalGame =
+  | { outcome: 'edited'; game: Game }
+  | { outcome: 'alreadyAdded'; /** The title of the Local Game the executable belongs to. */ title: string }
+  | { outcome: 'noTitle' }
+  | { outcome: 'notFound' };
+
 /** The theme the user chose; `system` follows the operating system's dark or light setting. Mirrors `Theme` in crates/core. */
 export type Theme = 'system' | 'dark' | 'light';
 
@@ -382,6 +397,24 @@ export interface Operations {
   hideGame(gameId: string): Promise<void>;
   /** Brings a Hidden Game back into the Library. */
   unhideGame(gameId: string): Promise<void>;
+  /** A Local Game with its title and executable, for editing; `null` for a Steam Game or one no longer in the Library. */
+  localGame(gameId: string): Promise<LocalGame | null>;
+  /**
+   * Asks the user to choose a new executable for a Local Game in the file
+   * dialog, as `chooseLocalGameExecutable` does; the Game's own executable
+   * does not count as already added. Rejects for a Steam Game.
+   */
+  chooseExecutableFor(gameId: string): Promise<ExecutableChoice>;
+  /**
+   * Gives a Local Game a new title and executable; it keeps everything else.
+   * Refused like `addLocalGame`. Rejects for a Steam Game or one that is gone.
+   */
+  editLocalGame(gameId: string, title: string, executable: string): Promise<EditLocalGame>;
+  /**
+   * Removes a Local Game from the Library with everything the app keeps
+   * about it; its files on disk stay. Rejects for a Steam Game.
+   */
+  removeLocalGame(gameId: string): Promise<void>;
 }
 
 /** How choosing an image as a Local Game's Cover went. Every outcome but `chosen` changed nothing. Mirrors `CoverImageChoice` in crates/core. */
@@ -475,4 +508,9 @@ export const tauriOperations: Operations = {
   hiddenGames: () => invoke<Game[]>('hidden_games'),
   hideGame: (gameId) => invoke<void>('hide_game', { gameId }),
   unhideGame: (gameId) => invoke<void>('unhide_game', { gameId }),
+  localGame: (gameId) => invoke<LocalGame | null>('local_game', { gameId }),
+  chooseExecutableFor: (gameId) => invoke<ExecutableChoice>('choose_executable_for', { gameId }),
+  editLocalGame: (gameId, title, executable) =>
+    invoke<EditLocalGame>('edit_local_game', { gameId, title, executable }),
+  removeLocalGame: (gameId) => invoke<void>('remove_local_game', { gameId }),
 };

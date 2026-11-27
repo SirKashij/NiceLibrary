@@ -89,6 +89,10 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
       chosen.push(sort);
       stored = sort;
     },
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
   };
   return { operations, asked, chosen };
 }

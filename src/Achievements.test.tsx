@@ -101,6 +101,10 @@ function fakeOperations(games: Game[], achievements: Record<string, GameAchievem
     },
     openLogFolder: async () => {},
     onSession: () => () => {},
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
   };
   return { operations, asked };
 }

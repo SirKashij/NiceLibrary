@@ -75,6 +75,10 @@ function fakeOperations(initial: Game[]) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
   };
   const send = (event: SessionEvent) => act(() => listeners.forEach((listener) => listener(event)));
   return { operations, send, listening: () => listeners.size, change: (next: Game[]) => (games = next) };

@@ -73,7 +73,7 @@ impl CoverCache {
     /// Fails when Steam cannot be reached; that says nothing about whether
     /// the Game has a Cover.
     pub(crate) fn steam_cover(&self, downloader: &dyn Downloader, app_id: u32) -> Result<Option<Cover>, Error> {
-        let file = self.folder.join(format!("steam-{app_id}"));
+        let file = self.folder.join(file_name(&format!("steam:{app_id}")));
         if let Some(cover) = fs::read(&file).ok().and_then(Cover::from_bytes) {
             return Ok(Some(cover));
         }
@@ -91,6 +91,15 @@ impl CoverCache {
             }
         }
         Ok(cover)
+    }
+
+    /// Deletes the kept Cover of the Game `game_id` and the image the user
+    /// chose as its Cover (`local-<number>`, see `local_covers`), if there
+    /// are any. A file that cannot be deleted now stays as a file nothing
+    /// reads.
+    pub(crate) fn forget(&self, game_id: &str) {
+        let _ = fs::remove_file(self.folder.join(file_name(game_id)));
+        let _ = fs::remove_file(self.chosen_images.join(file_name(game_id)));
     }
 
     /// The Achievement icon `icon` of the Steam Game `app_id`, kept beside
@@ -127,6 +136,13 @@ pub(crate) fn keep(folder: &Path, file: &Path, bytes: &[u8]) -> std::io::Result<
         let _ = fs::remove_file(&partial);
     }
     kept
+}
+
+/// The name of the file that keeps the Cover of the Game `game_id`: its id
+/// with `-` for the `:`, which Windows does not allow in a file name
+/// (`steam-620`, `local-3`).
+fn file_name(game_id: &str) -> String {
+    game_id.replace(':', "-")
 }
 
 impl Cover {

@@ -506,6 +506,51 @@ fn stored_local_game(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredLocalGam
     })
 }
 
+impl Store {
+    /// Gives the Local Game numbered `id` the title `title` and the
+    /// executable `executable`; fails when there is no such Game.
+    pub(crate) fn edit_local_game(&self, id: i64, title: &str, executable: &str) -> Result<(), Error> {
+        let changed = self.connection().execute(
+            "UPDATE local_games SET title = ?1, executable = ?2 WHERE id = ?3",
+            params![title, executable, id],
+        )?;
+        if changed == 0 {
+            return Err(Error::new(format!("no such local game: {id}")));
+        }
+        Ok(())
+    }
+
+    /// Deletes the Local Game numbered `id` and everything stored about it,
+    /// all at once; nothing when there is no such Game. Its number is never
+    /// given to another Local Game (`AUTOINCREMENT`).
+    pub(crate) fn remove_local_game(&self, id: i64) -> Result<(), Error> {
+        let mut connection = self.connection();
+        let transaction = connection.transaction()?;
+        delete_local_game_data(&transaction, id)?;
+        transaction.execute("DELETE FROM local_games WHERE id = ?1", [id])?;
+        transaction.commit()?;
+        Ok(())
+    }
+}
+
+/// Deletes what every table but `local_games` keeps about the Local Game
+/// numbered `id`. This is the one place that knows which tables keep data
+/// per Game: a migration that adds such a table (Sessions, Status,
+/// Favorites, Hidden Games, ...) adds its `DELETE` here, so that removing a
+/// Local Game leaves nothing behind. Foreign keys are not relied on; SQLite
+/// enforces them only when a connection turns them on.
+fn delete_local_game_data(transaction: &rusqlite::Transaction<'_>, id: i64) -> Result<(), Error> {
+    // Tables keyed by the Game's id (`local:<number>`, see `Game::local`).
+    let game_id = format!("local:{id}");
+    transaction.execute("DELETE FROM collection_games WHERE game_id = ?1", [&game_id])?;
+    transaction.execute("DELETE FROM game_statuses WHERE game_id = ?1", [&game_id])?;
+    transaction.execute("DELETE FROM hidden_games WHERE game_id = ?1", [&game_id])?;
+    // Tables keyed by the Local Game's number.
+    transaction.execute("DELETE FROM local_game_sessions WHERE local_game = ?1", [id])?;
+    // Its Launch Options are columns of `local_games` itself.
+    Ok(())
+}
+
 /// A time in seconds since the Unix epoch, as SQLite stores it.
 fn seconds_column(seconds: u64) -> Result<i64, Error> {
     i64::try_from(seconds).map_err(|_| Error::new(format!("a time out of range: {seconds} seconds since 1970")))

@@ -49,6 +49,38 @@ pub enum AddLocalGame {
     NotFound,
 }
 
+/// A Local Game as the user edits it: its title and the path of its
+/// executable, as stored.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LocalGame {
+    /// The Game's id, `local:<number>`.
+    pub id: String,
+    pub title: String,
+    pub executable: String,
+}
+
+/// How editing a Local Game went, when nothing failed. Every outcome but
+/// `Edited` changed nothing.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(tag = "outcome", rename_all = "camelCase")]
+pub enum EditLocalGame {
+    /// The Game has its new title and executable now.
+    Edited { game: Game },
+    /// The new executable belongs to another Local Game, titled `title`.
+    AlreadyAdded { title: String },
+    /// The title is empty.
+    NoTitle,
+    /// No file is at the new executable's path.
+    NotFound,
+}
+
+/// The number of a Local Game in its id (`local:<number>`); `None` for the
+/// id of a Steam Game or anything else.
+pub(crate) fn local_number(game_id: &str) -> Option<i64> {
+    game_id.strip_prefix("local:")?.parse().ok()
+}
+
 /// A Local Game as the store keeps it.
 pub(crate) struct StoredLocalGame {
     pub id: i64,
