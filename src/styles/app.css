@@ -268,7 +268,8 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .achievement-text { display: grid; gap: var(--space-1); min-width: 0; }
 .achievement-text h3 { font-size: var(--text-size-body); font-weight: var(--weight-medium); }
 .achievement-text p { color: var(--color-text-muted); }
-.achievement-status { font-size: var(--text-size-label); }
+.achievement-status,
+.achievement-rarity { font-size: var(--text-size-label); }
 .achievement[data-unlocked='false'] .achievement-icon,
 .achievement[data-unlocked='false'] .achievement-text { opacity: var(--achievement-locked-opacity); }
 /* Launch Options of a Local Game, on its detail page below the facts. */

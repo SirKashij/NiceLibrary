@@ -291,6 +291,7 @@ export const de: Record<MessageKey, string> = {
   'achievements.secret': 'Geheime Trophäe',
   'achievements.secretHint': 'Schalte sie frei, um zu sehen, was sie ist.',
   'achievements.revealSecrets': 'Geheime Trophäen zeigen',
+  'achievements.rarity': 'Von {percent} der Spieler freigeschaltet',
   'launch.executableNotFound':
     '{title} konnte nicht gestartet werden, weil seine ausführbare Datei nicht gefunden wurde. Vielleicht wurde sie verschoben oder gelöscht.',
   'launch.workingDirectoryNotFound':

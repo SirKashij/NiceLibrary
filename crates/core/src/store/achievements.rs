@@ -91,6 +91,13 @@ impl Store {
                     )?;
                 }
             }
+            transaction.execute("DELETE FROM steam_achievement_rarities WHERE app_id = ?1", [app_id])?;
+            for (api_name, percent) in &game.rarities {
+                transaction.execute(
+                    "INSERT OR REPLACE INTO steam_achievement_rarities (app_id, api_name, percent) VALUES (?1, ?2, ?3)",
+                    params![app_id, api_name, percent],
+                )?;
+            }
             transaction.execute(
                 "DELETE FROM steam_achievements WHERE steam_account = ?1 AND app_id = ?2",
                 params![account, app_id],
@@ -139,9 +146,10 @@ impl Store {
             return Ok(None);
         }
         let mut statement = connection.prepare(
-            "SELECT a.api_name, d.name, d.description, a.unlocked, a.unlocked_at, d.icon, d.icon_locked, d.secret
+            "SELECT a.api_name, d.name, d.description, a.unlocked, a.unlocked_at, d.icon, d.icon_locked, d.secret, r.percent
              FROM steam_achievements a
              LEFT JOIN steam_achievement_definitions d ON d.app_id = a.app_id AND d.api_name = a.api_name
+             LEFT JOIN steam_achievement_rarities r ON r.app_id = a.app_id AND r.api_name = a.api_name
              WHERE a.steam_account = ?1 AND a.app_id = ?2
              ORDER BY a.unlocked DESC, a.unlocked_at IS NULL, a.unlocked_at DESC, d.position IS NULL, d.position, a.api_name",
         )?;
@@ -162,6 +170,7 @@ impl Store {
                     icon,
                     // Without a definition nothing is known to conceal.
                     secret: row.get::<_, Option<bool>>(7)?.unwrap_or(false),
+                    rarity: row.get(8)?,
                 })
             })?
             .collect::<Result<_, _>>()?;

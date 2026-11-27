@@ -239,6 +239,8 @@ export interface Achievement {
   icon: string | null;
   /** A Secret Achievement: its name, description and icon stay concealed while locked, unless revealed. */
   secret: boolean;
+  /** Its Rarity: percent of all players worldwide who have unlocked it; `null` when not known. */
+  rarity: number | null;
 }
 
 /** The Achievements of one Game. Mirrors `GameAchievements` in crates/core. */

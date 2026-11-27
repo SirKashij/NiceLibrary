@@ -154,6 +154,14 @@ const MIGRATIONS: &[&str] = &[
          ended_at      INTEGER NOT NULL
      );
      CREATE INDEX steam_game_sessions_by_game ON steam_game_sessions (app_id);",
+    // 15: The Rarity of Achievements, in percent, per Steam Game; it belongs
+    // to no Steam Account. An Achievement without a row has no known Rarity.
+    "CREATE TABLE steam_achievement_rarities (
+         app_id   INTEGER NOT NULL,
+         api_name TEXT    NOT NULL,
+         percent  REAL    NOT NULL,
+         PRIMARY KEY (app_id, api_name)
+     );",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from

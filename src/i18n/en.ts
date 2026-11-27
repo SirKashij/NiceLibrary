@@ -289,6 +289,7 @@ export const en = {
   'achievements.secret': 'Secret achievement',
   'achievements.secretHint': 'Unlock it to find out what it is.',
   'achievements.revealSecrets': 'Show secret achievements',
+  'achievements.rarity': 'Unlocked by {percent} of players',
   'launch.executableNotFound':
     '{title} could not be launched because its executable was not found. It may have been moved or deleted.',
   'launch.workingDirectoryNotFound':
