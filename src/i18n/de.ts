@@ -185,4 +185,10 @@ export const de: Record<MessageKey, string> = {
   'status.setFailed': 'Der Status von {title} konnte nicht geändert werden.',
   'filter.status': 'Status',
   'filter.anyStatus': 'Jeder Status',
+  'settings.log': 'Protokolldatei',
+  'log.why':
+    'NiceLibrary schreibt Fehler und wichtige Ereignisse in eine Protokolldatei auf diesem Computer. Wenn etwas schiefgeht, öffne den Ordner und hänge die Datei selbst an deine Fehlermeldung an.',
+  'log.private': 'Nichts wird gesendet. Dein Schlüssel und deine SteamIDs landen nie im Protokoll.',
+  'log.openFolder': 'Protokollordner öffnen',
+  'log.openFailed': 'Der Protokollordner konnte nicht geöffnet werden.',
 };

@@ -3,6 +3,7 @@
 //! (ADR-0002).
 
 use std::fmt;
+use std::path::Path;
 
 use serde::Serialize;
 
@@ -15,8 +16,18 @@ use serde::Serialize;
 /// handed the URL. Anything that is not a URL, and every `file://` URL, is
 /// refused with `Failed`, so no program can be started through the opener
 /// by its path. Never shows a dialog of its own.
+///
+/// `open_folder` shows a folder in the operating system's file manager.
+/// Contract: `Ok` once the file manager has been handed the folder;
+/// `Err(Failed)` when it cannot be, and for anything that is not an
+/// existing folder, so no file or program is ever opened through it. An
+/// opener that cannot show folders keeps the refusing default.
 pub trait Opener: Send + Sync {
     fn open_url(&self, url: &str) -> Result<(), OpenError>;
+
+    fn open_folder(&self, folder: &Path) -> Result<(), OpenError> {
+        Err(OpenError::Failed(format!("showing the folder {} is not supported here", folder.display())))
+    }
 }
 
 /// Why the [`Opener`] could not open a URL.
