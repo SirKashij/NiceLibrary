@@ -186,6 +186,8 @@ export interface Achievement {
   unlockedAt: number | null;
   /** The icon as the Achievement looks now, for `achievementIconUrl`; `null` when Steam has none. */
   icon: string | null;
+  /** Its Rarity: percent of all players worldwide who have unlocked it; `null` when not known. */
+  rarity: number | null;
 }
 
 /** The Achievements of one Game. Mirrors `GameAchievements` in crates/core. */

@@ -120,6 +120,14 @@ const MIGRATIONS: &[&str] = &[
     // its Working Directory, NULL for the executable's folder.
     "ALTER TABLE local_games ADD COLUMN launch_arguments TEXT NOT NULL DEFAULT '';
      ALTER TABLE local_games ADD COLUMN working_directory TEXT;",
+    // 10: The Rarity of Achievements, in percent, per Steam Game; it belongs
+    // to no Steam Account. An Achievement without a row has no known Rarity.
+    "CREATE TABLE steam_achievement_rarities (
+         app_id   INTEGER NOT NULL,
+         api_name TEXT    NOT NULL,
+         percent  REAL    NOT NULL,
+         PRIMARY KEY (app_id, api_name)
+     );",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from

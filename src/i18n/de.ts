@@ -205,6 +205,7 @@ export const de: Record<MessageKey, string> = {
   'achievements.none': '{title} hat keine Trophäen.',
   'achievements.notFetchedYet': 'Die Trophäen wurden noch nicht abgerufen. Sie kommen mit einer der nächsten Synchronisierungen.',
   'achievements.loadFailed': 'Die Trophäen konnten nicht geladen werden.',
+  'achievements.rarity': 'Von {percent} der Spieler freigeschaltet',
   'launch.executableNotFound':
     '{title} konnte nicht gestartet werden, weil seine ausführbare Datei nicht gefunden wurde. Vielleicht wurde sie verschoben oder gelöscht.',
   'launch.workingDirectoryNotFound':

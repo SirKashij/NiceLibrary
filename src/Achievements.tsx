@@ -78,6 +78,9 @@ function AchievementItem({ achievement, iconUrl }: { achievement: Achievement; i
         <h3>{achievement.name}</h3>
         {achievement.description !== null && <p>{achievement.description}</p>}
         <p className="achievement-status">{status}</p>
+        {achievement.rarity !== null && (
+          <p className="achievement-rarity">{t('achievements.rarity', { percent: format.percent(achievement.rarity) })}</p>
+        )}
       </div>
     </li>
   );
