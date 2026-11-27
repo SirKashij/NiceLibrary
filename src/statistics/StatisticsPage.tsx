@@ -1,22 +1,28 @@
 import { useEffect, useId, useState } from 'react';
 import { useFormat, useT } from '../i18n';
 import { STATUS_LABELS, STATUSES } from '../library/Status';
-import type { Operations, Statistics } from '../operations';
+import type { Game, Operations, Statistics } from '../operations';
+import { MostPlayed } from './MostPlayed';
+import { WeeklyPlaytime } from './WeeklyPlaytime';
 
 type Answer = { state: 'loading' } | { state: 'ready'; statistics: Statistics } | { state: 'failed' };
 
 /**
- * The Statistics page: the totals over the Library and its Games by Status,
- * as the core works them out, without Hidden Games. Asks the core when it
- * opens and again after each change of the Library, such as a Sync.
+ * The Statistics page: the totals over the Library, the Playtime per week,
+ * its Games by Status and the most played Games, as the core works them out,
+ * without Hidden Games. Asks the core when it opens and again after each
+ * change of the Library, such as a Sync.
  */
 export function StatisticsPage({
   operations,
   syncs,
+  onOpen,
 }: {
   operations: Operations;
   /** Changes with each successful Sync or Session, which may change the figures. */
   syncs: number;
+  /** Opens the detail page of a most played Game. */
+  onOpen: (game: Game) => void;
 }) {
   const t = useT();
   const headingId = useId();
@@ -46,14 +52,14 @@ export function StatisticsPage({
         (answer.statistics.games === 0 ? (
           <p className="note">{t('statistics.empty')}</p>
         ) : (
-          <Figures statistics={answer.statistics} />
+          <Figures statistics={answer.statistics} onOpen={onOpen} />
         ))}
     </section>
   );
 }
 
-/** The totals, then how many Games have each Status. */
-function Figures({ statistics }: { statistics: Statistics }) {
+/** The totals, the Playtime per week, how many Games have each Status, then the most played Games. */
+function Figures({ statistics, onOpen }: { statistics: Statistics; onOpen: (game: Game) => void }) {
   const t = useT();
   const format = useFormat();
   const byStatusId = useId();
@@ -82,6 +88,7 @@ function Figures({ statistics }: { statistics: Statistics }) {
           <dd>{format.count(statistics.completeGames)}</dd>
         </div>
       </dl>
+      <WeeklyPlaytime weeks={statistics.weeks} />
       <section className="statistics-section" aria-labelledby={byStatusId}>
         <h2 id={byStatusId}>{t('statistics.byStatus')}</h2>
         <dl className="statistics-by-status">
@@ -93,6 +100,7 @@ function Figures({ statistics }: { statistics: Statistics }) {
           ))}
         </dl>
       </section>
+      <MostPlayed games={statistics.mostPlayed} onOpen={onOpen} />
     </>
   );
 }

@@ -71,6 +71,13 @@
   /* Achievements on the detail page: Steam's icons are 64 px squares. */
   --achievement-icon-size: 48px;
   --achievement-locked-opacity: 0.55;
+
+  /* Statistics charts: thin neutral bars, rounded only at the data end; the Covers keep the colour (ADR-0007). */
+  --chart-height: 160px;
+  --chart-bar-width: 24px;
+  --chart-bar-thin: 4px;
+  --radius-bar: 4px;
+  --chart-title-width: 24ch;
 }
 
 /* The light theme: the same roles on warm paper surfaces. */

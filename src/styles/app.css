@@ -256,6 +256,40 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .statistics-figures dd { font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display); }
 .statistics-section { display: grid; gap: var(--space-2); }
 .statistics-section h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.statistics-section > .muted { margin: 0; font-size: var(--text-size-label); }
+
+/* Playtime per week (src/statistics/WeeklyPlaytime.tsx): eight columns on one baseline, value above, week below. */
+.week-chart {
+  display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-2);
+  margin: 0; padding: 0; list-style: none; max-width: var(--note-max-width);
+}
+.week-chart li { display: grid; grid-template-rows: auto var(--chart-height) auto; justify-items: center; gap: var(--space-1); }
+.week-chart .week-value, .week-chart .week-label { font-size: var(--text-size-label); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.week-chart .week-label { color: var(--color-text-muted); }
+.week-chart .week-track {
+  display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%;
+  border-bottom: var(--hairline) solid var(--color-line);
+}
+.week-chart .week-bar {
+  width: 100%; max-width: var(--chart-bar-width);
+  border-radius: var(--radius-bar) var(--radius-bar) 0 0; background: var(--color-text-muted);
+}
+.week-chart li[aria-current='date'] .week-bar { background: var(--color-text); }
+.week-chart li[aria-current='date'] .week-label { color: var(--color-text); }
+.week-chart li:hover .week-bar { opacity: 0.8; }
+
+/* The most played Games (src/statistics/MostPlayed.tsx): rows with hairlines, a thin bar for each one's share. */
+.most-played { display: grid; margin: 0; padding: 0; list-style: none; max-width: var(--note-max-width); }
+.most-played li { border-top: var(--hairline) solid var(--color-line); }
+.most-played button {
+  display: grid; grid-template-columns: auto minmax(0, var(--chart-title-width)) 1fr auto; align-items: center;
+  gap: var(--space-3); width: 100%; padding: var(--space-2) 0; text-align: start;
+}
+.most-played button:hover .most-played-title { text-decoration: underline; }
+.most-played-rank, .most-played-playtime { font-variant-numeric: tabular-nums; color: var(--color-text-muted); }
+.most-played-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.most-played-share { display: block; height: var(--chart-bar-thin); }
+.most-played-share > span { display: block; height: 100%; border-radius: var(--radius-bar); background: var(--color-text-muted); }
 
 /* Favorites: the sidebar entry with its count, and the star on a Cover that marks a Favorite. */
 .favorites-entry {

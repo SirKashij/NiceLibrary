@@ -18,6 +18,7 @@ use rusqlite::{Connection, params};
 use crate::collections::{self, CollectionNaming};
 use crate::local_games::StoredLocalGame;
 use crate::sessions::Played;
+use crate::statistics::Recorded;
 use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
 use crate::theme::Theme;
@@ -545,6 +546,27 @@ impl Store {
             })?
             .collect::<Result<_, _>>()?;
         Ok(played)
+    }
+
+    /// The Sessions of Local Games that ended after `since`, in seconds
+    /// since the Unix epoch, for the Playtime per week.
+    pub(crate) fn sessions_ended_after(&self, since: u64) -> Result<Vec<Recorded>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(
+            "SELECT local_game, started_at, ended_at FROM local_game_sessions WHERE ended_at > ?1 ORDER BY started_at",
+        )?;
+        let sessions = statement
+            .query_map([seconds_column(since)?], |row| {
+                let started_at: i64 = row.get(1)?;
+                let ended_at: i64 = row.get(2)?;
+                Ok(Recorded {
+                    game_id: crate::sessions::game_id(row.get(0)?),
+                    started_at: u64::try_from(started_at).unwrap_or(0),
+                    ended_at: u64::try_from(ended_at).unwrap_or(0),
+                })
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(sessions)
     }
 }
 

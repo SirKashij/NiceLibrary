@@ -48,7 +48,7 @@ pub use local_games::{AddLocalGame, EditLocalGame, ExecutableChoice, ExecutableP
 pub use progress::ManualProgress;
 pub use log::Log;
 pub use sessions::{ProcessList, Tracking};
-pub use statistics::{GamesByStatus, Statistics};
+pub use statistics::{GamesByStatus, PlayedWeek, Statistics};
 pub use status::Status;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_app_list::{AutomaticSteamAppListFetch, SteamAppList, SteamAppListFetch, SteamTitle};
@@ -1256,16 +1256,23 @@ impl Core {
 
     /// The Statistics of the Library as it shows: total Playtime, unlocked
     /// Achievements of all and their share, Games at 100 % Progress, and
-    /// Games per Status. Hidden Games count in none of them.
+    /// Games per Status, the Playtime of each of the last eight weeks from
+    /// the recorded Sessions, and the five most played Games. Hidden Games
+    /// count in none of them.
     pub fn statistics(&self) -> Result<Statistics, Error> {
         let statistics = self.stored_library().and_then(|games| {
             let achievements = match self.library_steam_account()? {
                 Some(account) => self.store.achievement_counts(&account)?,
                 None => Default::default(),
             };
-            Ok(statistics::of(&games, |game| {
-                steam_app_id(&game.id).and_then(|app_id| achievements.get(&app_id).copied())
-            }))
+            let now = clock::seconds_since_epoch(self.ports.clock.now());
+            let sessions = self.store.sessions_ended_after(statistics::first_week_start(now))?;
+            Ok(statistics::of(
+                &games,
+                |game| steam_app_id(&game.id).and_then(|app_id| achievements.get(&app_id).copied()),
+                &sessions,
+                now,
+            ))
         });
         self.logged("statistics", statistics)
     }

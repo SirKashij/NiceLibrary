@@ -588,4 +588,18 @@ export interface Statistics {
   completeGames: number;
   /** How many Games have each Status. */
   gamesByStatus: Record<Status, number>;
+  /** The Playtime of each of the last eight weeks, oldest first, from the recorded Sessions. */
+  weeks: PlayedWeek[];
+  /** The five Games with the most Playtime, most played first; a Game not played at all is none of them. */
+  mostPlayed: Game[];
+}
+
+/** Mirrors `PlayedWeek` in crates/core: the Playtime of the seven days up to `endsAt`. */
+export interface PlayedWeek {
+  /** Where the week starts, in seconds since the Unix epoch. */
+  startsAt: number;
+  /** Where the week ends, in seconds since the Unix epoch; the latest week ends now. */
+  endsAt: number;
+  /** How long Sessions ran within the week, in whole minutes. */
+  minutes: number;
 }

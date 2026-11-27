@@ -60,6 +60,17 @@ function Shell({ operations }: { operations: Operations }) {
   // How often Collections or what is in them changed while the app runs; each change may change the counts.
   const [collectionChanges, setCollectionChanges] = useState(0);
   const collectionsChanged = () => setCollectionChanges((n) => n + 1);
+  // The Game whose detail page the Library opens with, chosen on another page such as the Statistics.
+  const [opening, setOpening] = useState<Game>();
+  useEffect(() => {
+    if (view !== 'library') setOpening(undefined);
+  }, [view]);
+  const openGame = (game: Game) => {
+    setOpening(game);
+    setView('library');
+    setFavoritesOnly(false);
+    setChosen(undefined);
+  };
 
   return (
     <div className="shell">
@@ -124,9 +135,10 @@ function Shell({ operations }: { operations: Operations }) {
             collection={chosen}
             collectionChanges={collectionChanges}
             onCollectionsChanged={collectionsChanged}
+            opening={opening}
           />
         )}
-        {view === 'statistics' && <StatisticsPage operations={operations} syncs={changes} />}
+        {view === 'statistics' && <StatisticsPage operations={operations} syncs={changes} onOpen={openGame} />}
         {view === 'settings' && (
           <SettingsView operations={operations} onAccountChosen={() => setAccountChoices((n) => n + 1)} />
         )}
@@ -243,6 +255,7 @@ function LibraryView({
   collection,
   collectionChanges,
   onCollectionsChanged,
+  opening,
 }: {
   operations: Operations;
   syncs: number;
@@ -259,6 +272,8 @@ function LibraryView({
   collectionChanges: number;
   /** Hears each change of what is in a Collection made on a detail page. */
   onCollectionsChanged: () => void;
+  /** The Game whose detail page shows when the Library opens. */
+  opening?: Game;
 }) {
   const t = useT();
   // How many Local Games were added, edited or removed here; each one changes the stored Library.
@@ -349,7 +364,7 @@ function LibraryView({
 
   // The Game whose detail page is open. The Library stays mounted behind it,
   // so going back finds it as it was.
-  const [opened, setOpened] = useState<Game>();
+  const [opened, setOpened] = useState<Game | undefined>(opening);
   // Whether the Hidden Games are shown in place of the Library, which stays mounted behind them too.
   const [showingHidden, setShowingHidden] = useState(false);
   // The Game hidden last from its detail page, for the notice in the Library.
@@ -383,8 +398,11 @@ function LibraryView({
     onLibraryEdited();
   };
   // Choosing another Collection, the Favorites or the whole Library shows that list, not the Game
-  // or the Hidden Games opened before.
+  // or the Hidden Games opened before; the Game the Library opens with stays open.
+  const shownList = useRef({ chosenId, favoritesOnly });
   useEffect(() => {
+    if (shownList.current.chosenId === chosenId && shownList.current.favoritesOnly === favoritesOnly) return;
+    shownList.current = { chosenId, favoritesOnly };
     setOpened(undefined);
     setShowingHidden(false);
   }, [chosenId, favoritesOnly]);

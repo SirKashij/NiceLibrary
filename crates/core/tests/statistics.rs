@@ -2,15 +2,21 @@
 //! Playtime, how many Achievements are unlocked of all and their share, how
 //! many Games are at 100 % Progress, and how many Games have each Status.
 //! Hidden Games are left out of every figure.
+//!
+//! Also the Playtime of each of the last eight weeks, from the Sessions the
+//! app recorded (not from Steam's figure, which says nothing about when a
+//! Game was played), and the five most played Games by their Playtime.
 
+use std::collections::VecDeque;
 use std::fs;
+use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
-    AddLocalGame, Clock, Core, CoverCache, Downloader, GamesByStatus, OpenError, Opener, Ports, SecretStore,
-    Statistics, Status, SteamLocator, Store, SyncOutcome, Wakeup, WebAnswer, WebApi,
+    AddLocalGame, Clock, Core, CoverCache, Downloader, GamesByStatus, OpenError, Opener, PlayedWeek, Ports,
+    SecretStore, Statistics, Status, SteamLocator, Store, SyncOutcome, Tracking, Wakeup, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
 
@@ -133,15 +139,43 @@ impl SecretStore for KeyStored {
     }
 }
 
-/// A clock that stands at NOW.
-struct StoppedClock;
+/// A clock that stands at NOW, except while scripted looks at the running
+/// processes set it to the time of each look.
+#[derive(Clone)]
+struct ScriptedClock(Arc<Mutex<u64>>);
 
-impl Clock for StoppedClock {
+impl ScriptedClock {
+    fn set(&self, at: u64) {
+        *self.0.lock().unwrap() = at;
+    }
+}
+
+impl Clock for ScriptedClock {
     fn now(&self) -> SystemTime {
-        UNIX_EPOCH + Duration::from_secs(NOW)
+        UNIX_EPOCH + Duration::from_secs(*self.0.lock().unwrap())
     }
 
+    /// The script decides when the next look happens.
     fn sleep(&self, _duration: Duration, _wakeup: &Wakeup) {}
+}
+
+/// A substitute for the process list: answers each scripted look at its
+/// time with the executables that run then. Once the script is over, it
+/// fails, which ends the tracking in these tests.
+#[derive(Clone)]
+struct ScriptedProcesses {
+    looks: Arc<Mutex<VecDeque<(u64, Vec<PathBuf>)>>>,
+    clock: ScriptedClock,
+}
+
+impl nicelibrary_core::ProcessList for ScriptedProcesses {
+    fn running_executables(&self) -> Result<Vec<PathBuf>, String> {
+        let Some((at, running)) = self.looks.lock().unwrap().pop_front() else {
+            return Err("the script is over".into());
+        };
+        self.clock.set(at);
+        Ok(running)
+    }
 }
 
 struct NoUrls;
@@ -187,15 +221,6 @@ impl nicelibrary_core::Autostart for NoAutostart {
     }
 }
 
-/// A computer on which no process runs; these tests record no Sessions.
-struct NothingRuns;
-
-impl nicelibrary_core::ProcessList for NothingRuns {
-    fn running_executables(&self) -> Result<Vec<PathBuf>, String> {
-        Ok(Vec::new())
-    }
-}
-
 /// A computer that starts no process; these tests launch nothing.
 struct NothingStarted;
 
@@ -223,6 +248,7 @@ impl nicelibrary_core::ImagePicker for NoIconsNoImages {
 /// One running app over a fresh profile, with a disk for Local Games.
 struct App {
     core: Core,
+    processes: ScriptedProcesses,
     _profile: TempDir,
     disk: TempDir,
 }
@@ -237,6 +263,8 @@ impl App {
         )
         .unwrap();
         let profile = tempfile::tempdir().unwrap();
+        let processes =
+            ScriptedProcesses { looks: Arc::default(), clock: ScriptedClock(Arc::new(Mutex::new(NOW))) };
         let core = Core::new(
             Ports {
                 steam_locator: Box::new(SteamAt(steam_folder)),
@@ -244,10 +272,10 @@ impl App {
                 opener: Box::new(NoUrls),
                 secrets: Box::new(KeyStored),
                 web_api: Box::new(steam.clone()),
-                clock: Box::new(StoppedClock),
+                clock: Box::new(processes.clock.clone()),
                 executable_picker: Box::new(NoExecutableChosen),
                 autostart: Box::new(NoAutostart),
-                processes: Box::new(NothingRuns),
+                processes: Box::new(processes.clone()),
                 process_starter: Box::new(NothingStarted),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
@@ -255,7 +283,25 @@ impl App {
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
         );
-        Self { core, _profile: profile, disk: tempfile::tempdir().unwrap() }
+        Self { core, processes, _profile: profile, disk: tempfile::tempdir().unwrap() }
+    }
+
+    /// The executable of the Local Game `title` on the disk.
+    fn executable(&self, title: &str) -> PathBuf {
+        self.disk.path().join(title).join(format!("{title}.exe"))
+    }
+
+    /// Records a Session of the Local Game `title` from `from` to `to`: the
+    /// app sees its process run at both times and gone right after. The
+    /// clock stands at NOW again afterwards.
+    fn play(&self, title: &str, from: u64, to: u64) {
+        let running = vec![self.executable(title)];
+        self.processes.looks.lock().unwrap().extend([(from, running.clone()), (to, running), (to + 1, Vec::new())]);
+        self.core.track_sessions(|event| match event {
+            Tracking::Failed { .. } => ControlFlow::Break(()),
+            _ => ControlFlow::Continue(()),
+        });
+        self.processes.clock.set(NOW);
     }
 
     /// The app after a Sync with Steam.
@@ -267,7 +313,7 @@ impl App {
 
     /// Adds the Local Game `title` and answers its id.
     fn add_local_game(&self, title: &str) -> String {
-        let executable = self.disk.path().join(title).join(format!("{title}.exe"));
+        let executable = self.executable(title);
         fs::create_dir_all(executable.parent().unwrap()).unwrap();
         fs::write(&executable, b"MZ").unwrap();
         match self.core.add_local_game(executable.to_str().unwrap(), title).unwrap() {
@@ -314,6 +360,8 @@ fn a_fresh_library_has_statistics_of_nothing() {
             achievement_share: None,
             complete_games: 0,
             games_by_status: GamesByStatus { unplayed: 0, playing: 0, completed: 0, dropped: 0 },
+            weeks: (0..8).rev().map(|ago| week(ago, 0)).collect(),
+            most_played: Vec::new(),
         }
     );
 }
@@ -389,6 +437,7 @@ fn games_are_counted_by_status_and_a_game_without_one_set_is_unplayed() {
 fn hidden_games_are_left_out_of_every_figure() {
     let app = App::synced(&FakeSteam::owning(vec![portal_2(), portal(), half_life()]));
     let celeste = app.add_local_game("Celeste");
+    app.play("Celeste", NOW - 2 * HOUR, NOW - HOUR);
     app.core.set_manual_progress(&celeste, Some(100)).unwrap();
     app.core.set_status(&celeste, Status::Dropped).unwrap();
     app.core.set_status("steam:400", Status::Completed).unwrap();
@@ -396,8 +445,10 @@ fn hidden_games_are_left_out_of_every_figure() {
     app.core.hide_game("steam:400").unwrap();
     app.core.hide_game(&celeste).unwrap();
 
+    let statistics = app.statistics();
+    assert_eq!(most_played(&statistics), ["Portal 2", "Half-Life"]);
     assert_eq!(
-        app.statistics(),
+        Statistics { most_played: Vec::new(), ..statistics },
         Statistics {
             games: 2,
             playtime_minutes: 1_260 + 30,
@@ -406,19 +457,25 @@ fn hidden_games_are_left_out_of_every_figure() {
             achievement_share: Some(50),
             complete_games: 0,
             games_by_status: GamesByStatus { unplayed: 2, playing: 0, completed: 0, dropped: 0 },
+            weeks: (0..8).rev().map(|ago| week(ago, 0)).collect(),
+            most_played: Vec::new(),
         }
     );
 
-    app.core.unhide_game("steam:400").unwrap();
-    assert_eq!(app.statistics().complete_games, 1);
+    app.core.unhide_game(&celeste).unwrap();
+    assert_eq!(app.statistics().weeks[7].minutes, 60);
 }
 
 #[test]
 fn statistics_reach_the_interface_in_its_shape() {
     let app = App::synced(&FakeSteam::owning(vec![portal_2()]));
 
+    let mut statistics = serde_json::to_value(app.statistics()).unwrap();
+    let weeks = statistics.as_object_mut().unwrap().remove("weeks").unwrap();
+    let most_played = statistics.as_object_mut().unwrap().remove("mostPlayed").unwrap();
+
     assert_eq!(
-        serde_json::to_value(app.statistics()).unwrap(),
+        statistics,
         serde_json::json!({
             "games": 1,
             "playtimeMinutes": 1_260,
@@ -429,4 +486,123 @@ fn statistics_reach_the_interface_in_its_shape() {
             "gamesByStatus": { "unplayed": 1, "playing": 0, "completed": 0, "dropped": 0 }
         })
     );
+    // 2026-11-18 12:00:00 to 2026-11-25 12:00:00 UTC.
+    assert_eq!(weeks[7], serde_json::json!({ "startsAt": 1_795_003_200, "endsAt": NOW, "minutes": 0 }));
+    assert_eq!(most_played[0]["id"], "steam:620");
+    assert_eq!(most_played[0]["playtimeMinutes"], 1_260);
+}
+
+/// An hour, in seconds.
+const HOUR: u64 = 3_600;
+/// A day, in seconds.
+const DAY: u64 = 24 * HOUR;
+
+/// The week that ended `ago` weeks before NOW, with `minutes` played in it.
+fn week(ago: u64, minutes: u32) -> PlayedWeek {
+    PlayedWeek { starts_at: NOW - (ago + 1) * 7 * DAY, ends_at: NOW - ago * 7 * DAY, minutes }
+}
+
+/// The titles of the most played Games, most played first.
+fn most_played(statistics: &Statistics) -> Vec<&str> {
+    statistics.most_played.iter().map(|game| game.title.as_str()).collect()
+}
+
+#[test]
+fn the_weeks_are_the_last_eight_weeks_up_to_now_oldest_first() {
+    let app = App::start(&FakeSteam::default());
+
+    let weeks = app.statistics().weeks;
+
+    assert_eq!(weeks.len(), 8);
+    assert_eq!(weeks[0], PlayedWeek { starts_at: NOW - 56 * DAY, ends_at: NOW - 49 * DAY, minutes: 0 });
+    assert_eq!(weeks[7], PlayedWeek { starts_at: NOW - 7 * DAY, ends_at: NOW, minutes: 0 });
+}
+
+#[test]
+fn a_session_counts_in_the_week_it_was_played_in() {
+    let app = App::start(&FakeSteam::default());
+    app.add_local_game("Celeste");
+    app.add_local_game("Hades");
+    app.play("Celeste", NOW - 3 * DAY, NOW - 3 * DAY + 2 * HOUR);
+    app.play("Hades", NOW - 2 * DAY, NOW - 2 * DAY + 45 * 60);
+    app.play("Celeste", NOW - 10 * DAY, NOW - 10 * DAY + 30 * 60);
+    app.play("Hades", NOW - 50 * DAY, NOW - 50 * DAY + HOUR);
+
+    assert_eq!(
+        app.statistics().weeks,
+        [week(7, 60), week(6, 0), week(5, 0), week(4, 0), week(3, 0), week(2, 0), week(1, 30), week(0, 165)]
+    );
+}
+
+#[test]
+fn a_session_across_the_end_of_a_week_counts_in_both_weeks_with_its_share() {
+    let app = App::start(&FakeSteam::default());
+    app.add_local_game("Celeste");
+    app.play("Celeste", NOW - 7 * DAY - 40 * 60, NOW - 7 * DAY + 20 * 60);
+
+    let weeks = app.statistics().weeks;
+
+    assert_eq!((weeks[6].minutes, weeks[7].minutes), (40, 20));
+}
+
+#[test]
+fn sessions_older_than_eight_weeks_count_in_no_week() {
+    let app = App::start(&FakeSteam::default());
+    app.add_local_game("Celeste");
+    app.play("Celeste", NOW - 57 * DAY, NOW - 57 * DAY + 3 * HOUR);
+    app.play("Celeste", NOW - 56 * DAY - HOUR, NOW - 56 * DAY + HOUR);
+
+    let statistics = app.statistics();
+
+    assert_eq!(statistics.weeks[0].minutes, 60);
+    assert_eq!(statistics.weeks.iter().map(|week| week.minutes).sum::<u32>(), 60);
+    assert_eq!(statistics.playtime_minutes, 5 * 60);
+}
+
+#[test]
+fn steam_playtime_counts_in_no_week_since_steam_says_not_when_it_was_played() {
+    let app = App::synced(&FakeSteam::owning(vec![portal_2(), portal()]));
+
+    let statistics = app.statistics();
+
+    assert_eq!(statistics.playtime_minutes, 1_260 + 95);
+    assert!(statistics.weeks.iter().all(|week| week.minutes == 0));
+}
+
+#[test]
+fn the_five_most_played_games_come_from_both_sources_most_played_first() {
+    let app = App::synced(&FakeSteam::owning(vec![
+        portal_2(),
+        portal(),
+        half_life(),
+        owned(10, "Counter-Strike", 600, None),
+        owned(220, "Half-Life 2", 0, None),
+    ]));
+    app.add_local_game("Celeste");
+    app.add_local_game("Hades");
+    app.add_local_game("Tunic");
+    app.play("Celeste", NOW - 3 * DAY, NOW - 3 * DAY + 2 * HOUR);
+    app.play("Hades", NOW - 90 * DAY, NOW - 90 * DAY + 30 * HOUR);
+
+    assert_eq!(most_played(&app.statistics()), ["Hades", "Portal 2", "Counter-Strike", "Celeste", "Portal"]);
+}
+
+#[test]
+fn games_not_played_at_all_are_not_among_the_most_played() {
+    let app = App::synced(&FakeSteam::owning(vec![half_life(), owned(220, "Half-Life 2", 0, None)]));
+    app.add_local_game("Celeste");
+
+    assert_eq!(most_played(&app.statistics()), ["Half-Life"]);
+}
+
+#[test]
+fn games_played_as_long_as_each_other_are_most_played_in_title_order() {
+    let app = App::synced(&FakeSteam::owning(vec![
+        owned(10, "Counter-Strike", 60, None),
+        owned(70, "Half-Life", 60, None),
+    ]));
+    app.add_local_game("Amnesia");
+    app.play("Amnesia", NOW - DAY, NOW - DAY + HOUR);
+
+    assert_eq!(most_played(&app.statistics()), ["Amnesia", "Counter-Strike", "Half-Life"]);
 }
