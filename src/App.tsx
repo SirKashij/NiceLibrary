@@ -3,6 +3,7 @@ import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
+import { StatusBadge } from './library/Status';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -168,8 +169,10 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
   useEffect(() => {
     if (fromSteam.state === 'ready') setFresh(fromSteam.value);
   }, [fromSteam]);
+  // How often the user set a Status while the app runs; each one changes the stored Library.
+  const [statusChanges, setStatusChanges] = useState(0);
   useEffect(() => {
-    if (syncs === 0) return;
+    if (syncs === 0 && statusChanges === 0) return;
     let active = true;
     // A Library that cannot be loaded now stays as shown; the next answer replaces it.
     operations.library().then(
@@ -179,7 +182,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     return () => {
       active = false;
     };
-  }, [operations, syncs]);
+  }, [operations, syncs, statusChanges]);
 
   const library = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
   const [filter, setFilter] = useState(NO_FILTER);
@@ -274,6 +277,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           cover={(game) => <Cover key={game.id} title={game.title} src={operations.coverUrl(game)} />}
           notice={launchNotice}
           onPlay={launch}
+          onStatusSet={() => setStatusChanges((changes) => changes + 1)}
           onBack={back}
         />
       )}
@@ -319,6 +323,7 @@ function CoverGrid({
             )}
           </div>
           <h2 className="game-title">{game.title}</h2>
+          <StatusBadge status={game.status} />
           <Played game={game} />
           {!game.installed && <span className="muted">{t('library.notInstalled')}</span>}
         </li>

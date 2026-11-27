@@ -44,6 +44,9 @@ function fakeOperations({ stored = false } = {}) {
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
   };
   return { operations, calls };
 }

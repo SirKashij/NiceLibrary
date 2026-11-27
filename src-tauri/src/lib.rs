@@ -7,7 +7,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AutomaticSync, Core, CoverCache, Error, Game, Launch, LibraryFilter, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
-    SyncOutcome,
+    Status, SyncOutcome,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -82,6 +82,11 @@ fn game(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<Game>, E
     core.game(&game_id)
 }
 
+#[tauri::command]
+fn set_status(core: tauri::State<'_, Core>, game_id: String, status: Status) -> Result<Game, Error> {
+    core.set_status(&game_id, status)
+}
+
 /// Async, so a slow start of the browser does not block the window.
 #[tauri::command]
 async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(), Error> {
@@ -133,7 +138,8 @@ pub fn run() {
             sync,
             last_sync,
             filter_library,
-            game
+            game,
+            set_status
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

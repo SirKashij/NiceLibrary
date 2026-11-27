@@ -5,6 +5,9 @@ import { listen } from '@tauri-apps/api/event';
 
 export type Source = 'steam' | 'local';
 
+/** The person's own judgement of where they stand with a Game. Mirrors `Status` in crates/core. */
+export type Status = 'unplayed' | 'playing' | 'completed' | 'dropped';
+
 /** One playable title in the Library. Mirrors `Game` in crates/core. */
 export interface Game {
   /** Unique across Sources: `steam:<app id>` for a Steam Game. */
@@ -16,6 +19,8 @@ export interface Game {
   playtimeMinutes: number | null;
   /** Last Played, in seconds since the Unix epoch; `null` for never or not known. */
   lastPlayed: number | null;
+  /** Set by hand only, `unplayed` until then; no Sync changes it. */
+  status: Status;
 }
 
 /** How a Sync went, when nothing failed. Every outcome but `synced` changed nothing. Mirrors `SyncOutcome` in crates/core. */
@@ -66,6 +71,8 @@ export interface LibraryFilter {
   source: Source | null;
   /** Only Installed Games. */
   installedOnly: boolean;
+  /** Only Games with this Status; `null` for every Status. */
+  status: Status | null;
 }
 
 export interface Operations {
@@ -128,6 +135,11 @@ export interface Operations {
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /**
+   * Sets the Status of a Game, also after a restart, and answers the Game as
+   * the Library now shows it. Rejects for a Game that is not in the Library.
+   */
+  setStatus(gameId: string, status: Status): Promise<Game>;
 }
 
 export const tauriOperations: Operations = {
@@ -154,4 +166,5 @@ export const tauriOperations: Operations = {
   },
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  setStatus: (gameId, status) => invoke<Game>('set_status', { gameId, status }),
 };

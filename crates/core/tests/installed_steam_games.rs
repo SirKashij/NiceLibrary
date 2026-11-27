@@ -5,7 +5,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use nicelibrary_core::{Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, Source, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, Source, Status, SteamLocator, Store};
 use tempfile::TempDir;
 
 /// A computer whose secret store holds nothing and whose network reaches no
@@ -168,6 +168,7 @@ fn installed(app_id: u32, title: &str) -> Game {
         installed: true,
         playtime_minutes: None,
         last_played: None,
+        status: Status::Unplayed,
     }
 }
 

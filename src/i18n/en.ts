@@ -99,6 +99,15 @@ export const en = {
   'game.never': 'Never',
   'game.notKnown': 'Not known yet',
   'game.gone': '{title} is no longer in your library.',
+  'game.status': 'Status',
+  'status.unplayed': 'Unplayed',
+  'status.playing': 'Playing',
+  'status.completed': 'Completed',
+  'status.dropped': 'Dropped',
+  'status.of': 'Status of {title}',
+  'status.setFailed': 'The status of {title} could not be changed.',
+  'filter.status': 'Status',
+  'filter.anyStatus': 'Any status',
 } as const;
 
 export type MessageKey = keyof typeof en;

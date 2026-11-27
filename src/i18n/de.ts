@@ -101,4 +101,13 @@ export const de: Record<MessageKey, string> = {
   'game.never': 'Nie',
   'game.notKnown': 'Noch nicht bekannt',
   'game.gone': '{title} ist nicht mehr in deiner Bibliothek.',
+  'game.status': 'Status',
+  'status.unplayed': 'Ungespielt',
+  'status.playing': 'Wird gespielt',
+  'status.completed': 'Durchgespielt',
+  'status.dropped': 'Abgebrochen',
+  'status.of': 'Status von {title}',
+  'status.setFailed': 'Der Status von {title} konnte nicht geändert werden.',
+  'filter.status': 'Status',
+  'filter.anyStatus': 'Jeder Status',
 };

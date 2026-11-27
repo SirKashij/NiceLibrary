@@ -12,6 +12,7 @@ function steamGame(appId: number, title: string, details: Partial<Game> = {}): G
     installed: true,
     playtimeMinutes: null,
     lastPlayed: null,
+    status: 'unplayed',
     ...details,
   };
 }
@@ -58,6 +59,9 @@ function fakeOperations(
       calls.game.push(gameId);
       return games.find((game) => game.id === gameId) ?? null;
     },
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
   };
   return { operations, calls, change: (next: Game[]) => (games = next) };
 }
@@ -101,7 +105,7 @@ describe('The detail page of a Game', () => {
     expect(facts).toHaveTextContent('InstalledNo');
     expect(facts).toHaveTextContent('PlaytimeNever played');
     expect(facts).toHaveTextContent('Last playedNever');
-    expect(within(page).queryByRole('button', { name: /Play/ })).not.toBeInTheDocument();
+    expect(within(page).queryByRole('button', { name: /^Play / })).not.toBeInTheDocument();
   });
 
   it('says that Playtime and Last Played are not known before the first Sync', async () => {

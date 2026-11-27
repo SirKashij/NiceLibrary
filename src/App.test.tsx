@@ -24,6 +24,9 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
     launch: async () => ({ outcome: 'launched' }),
   };
 }
@@ -32,7 +35,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
 const pending = <T,>() => new Promise<T>(() => {});
 
 function steamGame(appId: number, title: string, installed = true): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed' };
 }
 
 function gameTitles() {
