@@ -767,7 +767,11 @@ function SteamSettings({ operations, onAccountChosen }: { operations: Operations
             <span>{t('steam.found')}</span>
             <span className="muted">{steam.value.path}</span>
           </div>
-          {steam.value.logins.length === 0 && <p className="note">{t('steam.noAccounts')}</p>}
+          {steam.value.loginsUnreadable ? (
+            <p className="note">{t('steam.accountsUnreadable')}</p>
+          ) : (
+            steam.value.logins.length === 0 && <p className="note">{t('steam.noAccounts')}</p>
+          )}
         </>
       )}
       {account.state === 'failed' && (

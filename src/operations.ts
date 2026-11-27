@@ -71,10 +71,14 @@ export interface SteamLogin {
   mostRecent: boolean;
 }
 
-/** The Steam installation on this computer. Mirrors `SteamInstallation` in crates/core. */
+/**
+ * The Steam Installation on this computer. `loginsUnreadable` means Steam's
+ * list of Steam Logins exists but could not be read; `logins` is then empty.
+ * Mirrors `SteamInstallation` in crates/core.
+ */
 export type SteamInstallation =
   | { state: 'notFound' }
-  | { state: 'found'; path: string; logins: SteamLogin[] };
+  | { state: 'found'; path: string; logins: SteamLogin[]; loginsUnreadable: boolean };
 
 /** How choosing the Steam Account went, when nothing failed. Mirrors `SteamAccountChoice` in crates/core. */
 export type SteamAccountChoice = { outcome: 'chosen' } | { outcome: 'invalidSteamId' };
@@ -287,7 +291,7 @@ export interface Operations {
   library(): Promise<Game[]>;
   /** Reads which Steam Games are Installed, stores it and answers the Library. */
   readInstalledGames(): Promise<Game[]>;
-  /** The Steam installation and its Steam Accounts, the most recently used first. */
+  /** The Steam Installation and its Steam Logins, the most recently used first. */
   steamInstallation(): Promise<SteamInstallation>;
   /**
    * The SteamID of the Steam Account the app works with: the one the user

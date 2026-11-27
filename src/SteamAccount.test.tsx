@@ -15,12 +15,14 @@ const TWO_LOGINS: SteamInstallation = {
     { steamId: PLAYER_TWO, displayName: 'Player Two', mostRecent: true },
     { steamId: PLAYER_ONE, displayName: 'Player One', mostRecent: false },
   ],
+  loginsUnreadable: false,
 };
 
 const ONE_LOGIN: SteamInstallation = {
   state: 'found',
   path: 'C:\\Steam',
   logins: [{ steamId: PLAYER_ONE, displayName: 'Player One', mostRecent: true }],
+  loginsUnreadable: false,
 };
 
 /**
@@ -242,7 +244,15 @@ describe('Entering a SteamID by hand', () => {
   });
 
   it('is offered when there is no Steam Login', async () => {
-    const { operations } = fakeOperations({ state: 'found', path: 'C:\\Steam', logins: [] });
+    const { operations } = fakeOperations({ state: 'found', path: 'C:\\Steam', logins: [], loginsUnreadable: false });
+    const { steam } = await openSettings(operations);
+
+    expect(await within(steam).findByRole('textbox', { name: 'SteamID' })).toBeInTheDocument();
+    expect(within(steam).queryByRole('radiogroup')).not.toBeInTheDocument();
+  });
+
+  it('is offered when the list of Steam Logins cannot be read', async () => {
+    const { operations } = fakeOperations({ state: 'found', path: 'C:\\Steam', logins: [], loginsUnreadable: true });
     const { steam } = await openSettings(operations);
 
     expect(await within(steam).findByRole('textbox', { name: 'SteamID' })).toBeInTheDocument();

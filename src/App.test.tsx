@@ -146,6 +146,14 @@ const TWO_LOGINS: SteamInstallation = {
     { steamId: '76561197960287931', displayName: 'Player Two', mostRecent: true },
     { steamId: '76561197960287930', displayName: 'Player One', mostRecent: false },
   ],
+  loginsUnreadable: false,
+};
+
+const UNREADABLE_LOGINS: SteamInstallation = {
+  state: 'found',
+  path: 'C:\\Steam',
+  logins: [],
+  loginsUnreadable: true,
 };
 
 async function openSettings(operations: Operations, lang: 'de' | 'en' = 'en') {
@@ -177,9 +185,29 @@ describe('Steam in the settings', () => {
   });
 
   it('says so when there is no Steam Login yet', async () => {
-    const steam = await openSettings(fakeOperations([], { state: 'found', path: 'C:\\Steam', logins: [] }));
+    const steam = await openSettings(fakeOperations([], { state: 'found', path: 'C:\\Steam', logins: [], loginsUnreadable: false }));
 
     expect(await within(steam).findByText('No Steam account has logged in on this computer yet.')).toBeInTheDocument();
+  });
+
+  it('says so when the list of Steam Logins cannot be read, not that there is none', async () => {
+    const steam = await openSettings(fakeOperations([], UNREADABLE_LOGINS));
+
+    expect(await within(steam).findByText('Steam installation found')).toBeInTheDocument();
+    expect(within(steam).getByText('C:\\Steam')).toBeInTheDocument();
+    expect(within(steam).getByText('Steam was found, but its list of accounts could not be read.')).toBeInTheDocument();
+    expect(within(steam).queryByText('No Steam account has logged in on this computer yet.')).not.toBeInTheDocument();
+  });
+
+  it('says so in German when the list of Steam Logins cannot be read', async () => {
+    const steam = await openSettings(fakeOperations([], UNREADABLE_LOGINS), 'de');
+
+    expect(
+      await within(steam).findByText('Steam wurde gefunden, aber die Liste der Steam-Konten konnte nicht gelesen werden.'),
+    ).toBeInTheDocument();
+    expect(
+      within(steam).queryByText('Auf diesem Computer hat sich noch kein Steam-Konto angemeldet.'),
+    ).not.toBeInTheDocument();
   });
 
   it('says so when the Steam installation cannot be read', async () => {

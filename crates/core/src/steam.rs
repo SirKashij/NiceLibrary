@@ -3,6 +3,7 @@
 
 use std::collections::{BTreeMap, HashSet};
 use std::fs;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
@@ -36,8 +37,12 @@ pub enum SteamInstallation {
     #[serde(rename_all = "camelCase")]
     Found {
         path: String,
-        /// Its Steam Logins, the most recently used one first.
+        /// Its Steam Logins, the most recently used one first. Empty when no
+        /// account has logged in yet, or when `logins_unreadable` is set.
         logins: Vec<SteamLogin>,
+        /// Whether Steam's list of Steam Logins exists but could not be read,
+        /// so it is unknown which accounts have logged in here.
+        logins_unreadable: bool,
     },
 }
 
@@ -82,25 +87,30 @@ pub(crate) fn personal_steam_id(text: &str) -> Option<&str> {
 pub(crate) fn read_installation(locator: &dyn SteamLocator) -> SteamInstallation {
     match locator.steam_folder() {
         None => SteamInstallation::NotFound,
-        Some(folder) => SteamInstallation::Found {
-            path: folder.display().to_string(),
-            logins: read_logins(&folder),
-        },
+        Some(folder) => {
+            let logins = read_logins(&folder);
+            SteamInstallation::Found {
+                path: folder.display().to_string(),
+                logins_unreadable: logins.is_none(),
+                logins: logins.unwrap_or_default(),
+            }
+        }
     }
 }
 
-/// The Steam Logins in `config/loginusers.vdf`; none if the file is missing
-/// or cannot be read.
-fn read_logins(folder: &Path) -> Vec<SteamLogin> {
-    let Ok(bytes) = fs::read(folder.join("config").join("loginusers.vdf")) else {
-        return Vec::new();
+/// The Steam Logins in `config/loginusers.vdf`; an empty list if the file is
+/// missing, because then no account has logged in yet.
+///
+/// `None` when the file exists but cannot be read or parsed, or has no
+/// `users` block: then it is unknown which accounts have logged in.
+fn read_logins(folder: &Path) -> Option<Vec<SteamLogin>> {
+    let bytes = match fs::read(folder.join("config").join("loginusers.vdf")) {
+        Ok(bytes) => bytes,
+        Err(error) if error.kind() == ErrorKind::NotFound => return Some(Vec::new()),
+        Err(_) => return None,
     };
-    let Ok(doc) = keyvalues::parse(&String::from_utf8_lossy(&bytes)) else {
-        return Vec::new();
-    };
-    let Some(users) = doc.block("users") else {
-        return Vec::new();
-    };
+    let doc = keyvalues::parse(&String::from_utf8_lossy(&bytes)).ok()?;
+    let users = doc.block("users")?;
 
     let entries: Vec<(&str, &keyvalues::Block)> = users
         .entries()
@@ -136,13 +146,15 @@ fn read_logins(folder: &Path) -> Vec<SteamLogin> {
         })
         .collect();
     logins.sort_by_key(|login| !login.most_recent);
-    logins
+    Some(logins)
 }
 
 /// The most recently used Steam Login, else the first one listed: the Steam
-/// Account the app works with until the user chooses one.
+/// Account the app works with until the user chooses one. `None` also when
+/// the list of Steam Logins cannot be read; the caller then falls back to the
+/// Steam Account chosen earlier.
 pub(crate) fn most_recent_login(folder: &Path) -> Option<SteamLogin> {
-    let logins = read_logins(folder);
+    let logins = read_logins(folder).unwrap_or_default();
     let index = logins.iter().position(|login| login.most_recent).unwrap_or(0);
     logins.into_iter().nth(index)
 }
