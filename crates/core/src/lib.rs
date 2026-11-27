@@ -10,6 +10,7 @@ mod autostart;
 mod clock;
 mod collections;
 mod covers;
+mod export;
 mod favorites;
 pub mod keyvalues;
 mod language;
@@ -46,6 +47,7 @@ pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
+pub use export::{DataExport, ExportFilePicker};
 pub use language::Language;
 pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
@@ -166,6 +168,7 @@ pub struct Ports {
     pub process_starter: Box<dyn ProcessStarter>,
     pub icon_extractor: Box<dyn IconExtractor>,
     pub image_picker: Box<dyn ImagePicker>,
+    pub export_file_picker: Box<dyn ExportFilePicker>,
 }
 
 /// The application core. Each public method is one operation.
@@ -1380,6 +1383,32 @@ impl Core {
         }
         self.store.set_playtime_adjustment(number, playtime_adjustment::stored(minutes))?;
         in_library(self.stored_library()?).ok_or_else(not_in_library)
+    }
+
+    /// Exports everything that is the person's own into one Export File
+    /// they choose in a "Save as" dialog, which offers a name with today's
+    /// date: Local Games with how they are launched and the Cover images
+    /// they chose, Sessions, Playtime Adjustments, Manual Progress,
+    /// Statuses, Favorites, Hidden Games, Collections and the settings
+    /// (docs/export-format.md). The Steam Web API key is never in it. A file
+    /// already there is replaced; cancelling writes nothing.
+    pub fn export_data(&self) -> Result<DataExport, Error> {
+        self.logged_outcome("export_data", self.write_export())
+    }
+
+    fn write_export(&self) -> Result<DataExport, Error> {
+        let now = clock::seconds_since_epoch(self.ports.clock.now());
+        let chosen = self
+            .ports
+            .export_file_picker
+            .choose_export_file(&export::suggested_name(now))
+            .map_err(|reason| Error::new(format!("file dialog: {reason}")))?;
+        let Some(file) = chosen else {
+            return Ok(DataExport::Cancelled);
+        };
+        let contents = export::contents(&self.store, &self.covers, self.ports.autostart.as_ref(), now)?;
+        export::write(&file, &contents)?;
+        Ok(DataExport::Exported { file: file.display().to_string() })
     }
 }
 

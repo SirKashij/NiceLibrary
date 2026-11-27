@@ -23,6 +23,7 @@ import { Tray } from './Tray';
 import { SortChoice, useLibrarySort } from './library/LibrarySort';
 import { StatusBadge } from './library/Status';
 import { ProgressBadge } from './library/Progress';
+import { ExportSettings } from './settings/ExportSettings';
 import { LogSettings } from './settings/LogSettings';
 import { StatisticsPage } from './statistics/StatisticsPage';
 
@@ -645,6 +646,7 @@ function SettingsView({ operations, onAccountChosen }: { operations: Operations;
       <LanguageSettings />
       <WindowSettings operations={operations} />
       <SteamAppListSettings operations={operations} />
+      <ExportSettings operations={operations} />
       <LogSettings operations={operations} />
     </Page>
   );

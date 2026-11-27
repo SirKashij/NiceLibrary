@@ -8,7 +8,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     About, AboutPage, AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
-    CoverImageChoice, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Language, Launch, LaunchOptions,
+    CoverImageChoice, DataExport, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Language, Launch, LaunchOptions,
     LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, ManualProgress, Statistics, Status, SteamAccountChoice,
     SteamAppList, SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking,
     started_with_windows,
@@ -131,6 +131,12 @@ fn playtime_adjustment(core: tauri::State<'_, Core>, game_id: String) -> Result<
 #[tauri::command]
 fn set_playtime_adjustment(core: tauri::State<'_, Core>, game_id: String, minutes: Option<i32>) -> Result<Game, Error> {
     core.set_playtime_adjustment(&game_id, minutes)
+}
+
+/// Async, so the window stays responsive while the "Save as" dialog is open.
+#[tauri::command]
+async fn export_data(core: tauri::State<'_, Core>) -> Result<DataExport, Error> {
+    core.export_data()
 }
 
 /// Async, so the window stays responsive while the file dialog is open.
@@ -473,7 +479,8 @@ pub fn run() {
             language,
             choose_language,
             playtime_adjustment,
-            set_playtime_adjustment
+            set_playtime_adjustment,
+            export_data
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

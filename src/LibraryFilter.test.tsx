@@ -20,6 +20,7 @@ function fakeOperations() {
     library: async () => LIBRARY,
     readInstalledGames: async () => LIBRARY,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,

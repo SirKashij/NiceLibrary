@@ -68,6 +68,7 @@ function fakeOperations(answers: (() => Promise<Statistics>)[]) {
     library: async () => [],
     readInstalledGames: async () => [],
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     language: async () => 'system',
     chooseLanguage: async () => {},
     playtimeAdjustment: async () => null,

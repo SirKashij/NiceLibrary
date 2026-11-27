@@ -17,6 +17,7 @@ function fakeOperations({
     library: async () => [],
     readInstalledGames: async () => [],
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     playtimeAdjustment: async () => null,
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');

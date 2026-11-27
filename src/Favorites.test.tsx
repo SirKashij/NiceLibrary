@@ -27,6 +27,7 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     library: async () => library(),
     readInstalledGames: async () => library(),
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     playtimeAdjustment: async () => null,
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');

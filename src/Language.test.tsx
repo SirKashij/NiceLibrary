@@ -32,6 +32,7 @@ function fakeOperations({
     library: async () => [played],
     readInstalledGames: async () => [played],
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     playtimeAdjustment: async () => null,
     setPlaytimeAdjustment: async () => {

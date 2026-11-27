@@ -55,6 +55,7 @@ function fakeOperations(
     library: async () => games(),
     readInstalledGames: async () => games(),
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     chooseCoverImage: async () => ({ outcome: 'cancelled' }),
     coverImageChosen: async () => false,
     removeCoverImage: async () => {},

@@ -29,6 +29,7 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     library: async () => LIBRARY,
     readInstalledGames: async () => LIBRARY,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     playtimeAdjustment: async () => null,
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');

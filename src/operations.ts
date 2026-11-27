@@ -491,10 +491,19 @@ export interface Operations {
   about(): Promise<About>;
   /** Opens the project page or the license in the browser. */
   openAboutPage(page: AboutPage): Promise<void>;
+  /**
+   * Asks where to save an Export File and writes everything that is the
+   * user's own into it (docs/export-format.md); never the Steam Web API key.
+   * Answers where it was written, or that the user cancelled.
+   */
+  exportData(): Promise<DataExport>;
 }
 
 /** How choosing an image as a Local Game's Cover went. Every outcome but `chosen` changed nothing. Mirrors `CoverImageChoice` in crates/core. */
 export type CoverImageChoice = { outcome: 'chosen' } | { outcome: 'cancelled' } | { outcome: 'notAnImage' };
+
+/** How exporting the data went: written to `file`, or cancelled with nothing written. Mirrors `DataExport` in crates/core. */
+export type DataExport = { outcome: 'exported'; file: string } | { outcome: 'cancelled' };
 
 /** What the About dialog tells of the app itself. Mirrors `About` in crates/core. */
 export interface About {
@@ -621,6 +630,7 @@ export const tauriOperations: Operations = {
   favoriteCount: () => invoke<number>('favorite_count'),
   about: () => invoke<About>('about'),
   openAboutPage: (page) => invoke<void>('open_about_page', { page }),
+  exportData: () => invoke<DataExport>('export_data'),
 };
 
 /** Mirrors `Statistics` in crates/core: the totals over the Games in the Library. */

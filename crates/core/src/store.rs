@@ -5,6 +5,7 @@
 //! a database from any earlier version is brought up to date on open. Every
 //! Steam-derived row carries the Steam Account it belongs to.
 
+mod export;
 mod hidden_games;
 mod playtime_adjustments;
 mod steam_app_list;

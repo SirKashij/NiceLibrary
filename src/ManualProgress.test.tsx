@@ -32,6 +32,7 @@ function fakeOperations(initial: Game[], options: { setManualProgress?: Operatio
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     language: async () => 'system',
     chooseLanguage: async () => {},
     playtimeAdjustment: async () => null,

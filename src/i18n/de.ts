@@ -339,4 +339,12 @@ export const de: Record<MessageKey, string> = {
   'about.notAffiliated':
     'NiceLibrary steht in keiner Verbindung zur Valve Corporation und wird von ihr weder unterstützt noch gesponsert.',
   'about.close': 'Schließen',
+  'settings.export': 'Datensicherung',
+  'export.what':
+    'Exportiere deine Daten in eine Datei, als Sicherung oder für den Umzug auf einen anderen Computer: deine lokalen Spiele mit ihren Startoptionen und den Coverbildern, die du gewählt hast, Sitzungen, Spielzeit-Korrekturen, Fortschritt, Status, Favoriten, ausgeblendete Spiele, Sammlungen und Einstellungen. Was von Steam stammt, holt die App wieder von Steam.',
+  'export.noKey': 'Dein Steam-Web-API-Schlüssel wird nie exportiert.',
+  'export.button': 'Daten exportieren …',
+  'export.running': 'Wird exportiert …',
+  'export.done': 'Deine Daten wurden nach {file} exportiert.',
+  'export.failed': 'Deine Daten konnten nicht exportiert werden.',
 };

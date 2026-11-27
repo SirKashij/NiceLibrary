@@ -40,6 +40,7 @@ function fakeOperations(initial: Game[], sort: LibrarySort = 'name') {
     library: async () => [...games].sort((a, b) => a.title.localeCompare(b.title)),
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     language: async () => 'system',
     chooseLanguage: async () => {},
     playtimeAdjustment: async () => null,

@@ -133,6 +133,7 @@ impl Computer {
                 process_starter: Box::new(NothingStarted),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
+                export_file_picker: Box::new(NoExportFile),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -349,6 +350,15 @@ impl nicelibrary_core::IconExtractor for NoIconsNoImages {
 
 impl nicelibrary_core::ImagePicker for NoIconsNoImages {
     fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+}
+
+/// No export is made here: the user cancels every "Save as" dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
     }
 }

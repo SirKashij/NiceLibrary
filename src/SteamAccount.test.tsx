@@ -40,6 +40,7 @@ function fakeOperations(
     library: async () => (account && libraries[account]) || [],
     readInstalledGames: async () => (account && libraries[account]) || [],
     steamInstallation: async () => steam,
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => account,
     chooseSteamAccount:
       choose ??

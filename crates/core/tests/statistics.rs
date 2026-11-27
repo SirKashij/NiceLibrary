@@ -279,6 +279,7 @@ impl App {
                 process_starter: Box::new(NothingStarted),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
+                export_file_picker: Box::new(NoExportFile),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -605,4 +606,13 @@ fn games_played_as_long_as_each_other_are_most_played_in_title_order() {
     app.play("Amnesia", NOW - DAY, NOW - DAY + HOUR);
 
     assert_eq!(most_played(&app.statistics()), ["Amnesia", "Counter-Strike", "Half-Life"]);
+}
+
+/// No export is made here: the user cancels every "Save as" dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

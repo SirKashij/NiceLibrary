@@ -12,6 +12,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => steam,
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -247,6 +248,7 @@ describe('Steam in the settings', () => {
     const failing: Operations = {
       ...fakeOperations(),
       steamInstallation: () => Promise.reject(new Error('core unavailable')),
+      exportData: async () => ({ outcome: 'cancelled' }),
     };
     const steam = await openSettings(failing);
 

@@ -15,6 +15,7 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,

@@ -186,6 +186,7 @@ impl App {
                 process_starter: Box::new(NothingStarted),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
+                export_file_picker: Box::new(NoExportFile),
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.join("covers")),
@@ -305,4 +306,13 @@ fn the_outcome_reaches_the_interface_in_the_shape_the_interface_expects() {
         serde_json::to_value(ManualProgress::NotALocalGame).unwrap(),
         serde_json::json!({ "outcome": "notALocalGame" })
     );
+}
+
+/// No export is made here: the user cancels every "Save as" dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

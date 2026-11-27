@@ -145,6 +145,10 @@ _Avoid_: Command line, parameters (in English text)
 The folder a Local Game's executable is started in. Without one, the executable's own folder.
 _Avoid_: Start folder, current directory
 
+**Export File**:
+One file the person saves from the settings that holds everything in the app that is their own: Local Games with their Launch Options and chosen Cover images, Sessions, Playtime Adjustments, Manual Progress, Statuses, Favorites, Hidden Games, Collections and the settings. It is a backup, and the way to move to another computer by importing it there. It never holds the Steam Web API key or anything the app can fetch again from Steam. Its format is versioned and documented in docs/export-format.md. The German interface calls the area "Datensicherung".
+_Avoid_: Backup file, dump, archive
+
 **Log**:
 The files on this computer the app writes its errors and notable events to, for the person to attach to a bug report themselves. It never holds the Steam Web API key or a full SteamID, and the app never sends it.
 _Avoid_: Crash report, telemetry, diagnostics

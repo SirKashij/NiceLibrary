@@ -335,6 +335,14 @@ export const en = {
     'Steam and the Steam logo are trademarks and/or registered trademarks of Valve Corporation in the U.S. and/or other countries.',
   'about.notAffiliated': 'NiceLibrary is not affiliated with, endorsed or sponsored by Valve Corporation.',
   'about.close': 'Close',
+  'settings.export': 'Backup',
+  'export.what':
+    'Export your data to one file, as a backup or to move to another computer: your Local Games with their launch options and the cover images you chose, sessions, playtime adjustments, progress, statuses, favorites, hidden games, Collections and settings. Steam’s own data comes back from Steam.',
+  'export.noKey': 'Your Steam Web API key is never exported.',
+  'export.button': 'Export data…',
+  'export.running': 'Exporting…',
+  'export.done': 'Your data was exported to {file}.',
+  'export.failed': 'Your data could not be exported.',
 } as const;
 
 export type MessageKey = keyof typeof en;
