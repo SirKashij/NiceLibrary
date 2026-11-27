@@ -6,11 +6,11 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 use nicelibrary_core::{
-    Clock, Core, CoverCache, Downloader, OpenError, Opener, Ports, SecretStore, SteamLocator, Store, Theme, WebAnswer,
+    Clock, Core, CoverCache, Downloader, ExecutablePicker, OpenError, Opener, Ports, SecretStore, SteamLocator, Store, Theme, WebAnswer,
     WebApi, Wakeup,
 };
 
-/// A computer these tests need nothing from: no Steam, no network, no secrets.
+/// A computer these tests need nothing from: no Steam, no network, no secrets, no file dialog.
 struct Nothing;
 
 impl SteamLocator for Nothing {
@@ -59,6 +59,12 @@ impl Clock for Nothing {
     fn sleep(&self, _duration: Duration, _wakeup: &Wakeup) {}
 }
 
+impl ExecutablePicker for Nothing {
+    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
+    }
+}
+
 /// The app started on the profile in `profile`, as on every start.
 fn start(profile: &Path) -> Core {
     Core::new(
@@ -69,6 +75,7 @@ fn start(profile: &Path) -> Core {
             secrets: Box::new(Nothing),
             web_api: Box::new(Nothing),
             clock: Box::new(Nothing),
+            executable_picker: Box::new(Nothing),
         },
         Store::open(&profile.join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.join("covers")),

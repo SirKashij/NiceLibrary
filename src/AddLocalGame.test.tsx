@@ -39,6 +39,8 @@ function fakeOperations({
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     filterLibrary: async () => [...games],
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: choice,

@@ -33,6 +33,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
       calls.chosen.push(chosen);
       theme = chosen;
     },
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, calls };
 }
