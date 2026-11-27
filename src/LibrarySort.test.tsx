@@ -55,6 +55,8 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
         .map((title) => LIBRARY.find((game) => game.title === title)!)
         .filter((game) => game.title.toLowerCase().includes(filter.search.toLowerCase()));
     },
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
     launchOptions: async () => null,
     setLaunchOptions: async () => {},
@@ -90,6 +92,8 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     librarySort: async () => stored,
     chooseLibrarySort: async (sort) => {
       chosen.push(sort);

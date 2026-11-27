@@ -4,6 +4,7 @@
 //! about Tauri; the desktop shell is a thin adapter over these operations, and
 //! everything that varies by machine or OS reaches the core through ports.
 
+mod about;
 mod achievements;
 mod autostart;
 mod clock;
@@ -16,6 +17,7 @@ mod local_covers;
 mod local_games;
 mod library_filter;
 mod progress;
+mod library_layout;
 mod log;
 mod sessions;
 mod statistics;
@@ -36,6 +38,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use log::Level;
 
+pub use about::{About, AboutPage};
 pub use achievements::{Achievement, GameAchievements};
 pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
@@ -50,6 +53,7 @@ pub use log::Log;
 pub use sessions::{ProcessList, Tracking};
 pub use statistics::{GamesByStatus, PlayedWeek, Statistics};
 pub use status::Status;
+pub use library_layout::LibraryLayout;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_app_list::{AutomaticSteamAppListFetch, SteamAppList, SteamAppListFetch, SteamTitle};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
@@ -861,6 +865,17 @@ impl Core {
         self.logged("choose_theme", self.store.choose_theme(theme))
     }
 
+    /// How the Library shows its Games; until the user switches,
+    /// [`LibraryLayout::CoverGrid`].
+    pub fn library_layout(&self) -> Result<LibraryLayout, Error> {
+        self.logged("library_layout", self.store.library_layout())
+    }
+
+    /// Makes `layout` the Library Layout, from now on and after every restart.
+    pub fn choose_library_layout(&self, layout: LibraryLayout) -> Result<(), Error> {
+        self.logged("choose_library_layout", self.store.choose_library_layout(layout))
+    }
+
     /// Every Collection with how many Games of the Library are in it,
     /// ordered by name whatever its case.
     pub fn collections(&self) -> Result<Vec<Collection>, Error> {
@@ -1301,6 +1316,19 @@ impl Core {
             .map(|games| u32::try_from(games.iter().filter(|game| game.favorite).count()).unwrap_or(u32::MAX));
         self.logged("favorite_count", count)
     }
+
+    /// The version of the app that runs and its license, for the About dialog.
+    pub fn about(&self) -> About {
+        about::about()
+    }
+
+    /// Opens `page`, the project page or the license, in the browser.
+    pub fn open_about_page(&self, page: AboutPage) -> Result<(), Error> {
+        let url = page.url();
+        let opened =
+            self.ports.opener.open_url(url).map_err(|error| Error::new(format!("{url} could not be opened: {error}")));
+        self.logged("open_about_page", opened)
+    }
 }
 
 /// The name of an outcome the interface branches on (its `outcome` tag),
@@ -1314,7 +1342,6 @@ fn outcome_name(outcome: &impl Serialize) -> String {
         _ => "done".to_owned(),
     }
 }
-
 
 /// The number in the Local Game id `game_id`; an error for any other Game,
 /// since only Local Games are edited and removed by hand.

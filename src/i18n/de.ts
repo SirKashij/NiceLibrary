@@ -209,6 +209,11 @@ export const de: Record<MessageKey, string> = {
   'game.never': 'Nie',
   'game.notKnown': 'Noch nicht bekannt',
   'game.gone': '{title} ist nicht mehr in deiner Bibliothek.',
+  'layout.choose': 'Ansicht',
+  'layout.coverGrid': 'Raster',
+  'layout.list': 'Liste',
+  'layout.titleColumn': 'Titel',
+  'layout.saveFailed': 'Die Ansicht konnte nicht gespeichert werden.',
   'settings.window': 'Fenster',
   'window.closeToTray': 'Beim Schließen des Fensters im Infobereich weiterlaufen',
   'window.closeToTrayOn':
@@ -294,4 +299,23 @@ export const de: Record<MessageKey, string> = {
   'favorites.toggle': '{title} als Favorit',
   'favorites.none': 'Noch keine Favoriten. Markiere ein Spiel mit seinem Stern, um es hier zu finden.',
   'favorites.failed': '{title} konnte nicht als Favorit markiert oder entfernt werden.',
+  'about.title': 'Über NiceLibrary',
+  'about.version': 'Version {version}',
+  'about.license': '{license}-Lizenz',
+  'about.versionFailed': 'Die Version konnte nicht gelesen werden.',
+  'about.projectPage': 'Projektseite',
+  'about.licensePage': 'Lizenz',
+  'about.openFailed': 'Die Seite konnte nicht geöffnet werden.',
+  'about.privacy': 'Datenschutz',
+  'about.privacyConnections':
+    'NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Trophäen, mit den Bildservern von Steam für Cover und mit GitHub, um nach Updates zu suchen.',
+  'about.privacyStorage':
+    'Alles, was es speichert, bleibt nur auf diesem Computer: deine Bibliothek und Einstellungen in einer Datenbank in deinem Benutzerprofil, Cover in einem Cache-Ordner und dein Steam-Web-API-Schlüssel in der Windows-Anmeldeinformationsverwaltung.',
+  'about.privacyNothingElse': 'Sonst verlässt nichts deinen Computer.',
+  'about.trademarks': 'Marken',
+  'about.trademarkNotice':
+    'Steam und das Steam-Logo sind Marken und/oder eingetragene Marken der Valve Corporation in den USA und/oder anderen Ländern.',
+  'about.notAffiliated':
+    'NiceLibrary steht in keiner Verbindung zur Valve Corporation und wird von ihr weder unterstützt noch gesponsert.',
+  'about.close': 'Schließen',
 };

@@ -80,6 +80,8 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     setStatus:
@@ -100,6 +102,8 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
   };
   return { operations, calls };
 }

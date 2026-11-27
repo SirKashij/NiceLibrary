@@ -16,6 +16,7 @@ use std::sync::{Mutex, MutexGuard};
 use rusqlite::{Connection, params};
 
 use crate::collections::{self, CollectionNaming};
+use crate::library_layout::LibraryLayout;
 use crate::local_games::StoredLocalGame;
 use crate::sessions::Played;
 use crate::statistics::Recorded;
@@ -150,6 +151,9 @@ const LIBRARY_SORT: &str = "library_sort";
 /// The setting that holds the theme the user chose.
 const THEME: &str = "theme";
 
+/// The setting that holds the Library Layout the user chose.
+const LIBRARY_LAYOUT: &str = "library_layout";
+
 /// The local store.
 pub struct Store {
     connection: Mutex<Connection>,
@@ -240,6 +244,23 @@ impl Store {
             "INSERT INTO settings (key, value) VALUES (?1, ?2)
              ON CONFLICT (key) DO UPDATE SET value = excluded.value",
             params![THEME, theme.as_setting()],
+        )?;
+        Ok(())
+    }
+
+    /// The Library Layout the user chose; [`LibraryLayout::CoverGrid`] until they choose.
+    pub(crate) fn library_layout(&self) -> Result<LibraryLayout, Error> {
+        Ok(self
+            .setting(LIBRARY_LAYOUT)?
+            .map_or(LibraryLayout::CoverGrid, |setting| LibraryLayout::from_setting(&setting)))
+    }
+
+    /// Remembers `layout` as the Library Layout the user chose.
+    pub(crate) fn choose_library_layout(&self, layout: LibraryLayout) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![LIBRARY_LAYOUT, layout.as_setting()],
         )?;
         Ok(())
     }

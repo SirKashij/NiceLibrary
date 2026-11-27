@@ -7,10 +7,10 @@ mod tray;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
+    About, AboutPage, AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
     CoverImageChoice, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Launch, LaunchOptions,
-    LibraryFilter, LibrarySort, LocalGame, Log, ManualProgress, Statistics, Status, SteamAccountChoice, SteamAppList,
-    SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking,
+    LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, ManualProgress, Statistics, Status, SteamAccountChoice,
+    SteamAppList, SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking,
     started_with_windows,
 };
 use percent_encoding::percent_decode_str;
@@ -158,6 +158,16 @@ fn edit_local_game(
 #[tauri::command]
 fn remove_local_game(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Error> {
     core.remove_local_game(&game_id)
+}
+
+#[tauri::command]
+fn library_layout(core: tauri::State<'_, Core>) -> Result<LibraryLayout, Error> {
+    core.library_layout()
+}
+
+#[tauri::command]
+fn choose_library_layout(core: tauri::State<'_, Core>, layout: LibraryLayout) -> Result<(), Error> {
+    core.choose_library_layout(layout)
 }
 
 #[tauri::command]
@@ -309,6 +319,17 @@ fn favorite_count(core: tauri::State<'_, Core>) -> Result<u32, Error> {
     core.favorite_count()
 }
 
+#[tauri::command]
+fn about(core: tauri::State<'_, Core>) -> About {
+    core.about()
+}
+
+/// Async, so a slow start of the browser does not block the window.
+#[tauri::command]
+async fn open_about_page(core: tauri::State<'_, Core>, page: AboutPage) -> Result<(), Error> {
+    core.open_about_page(page)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 /// Achievement icons come from `<game id>/achievements/<icon>` under the same scheme
@@ -400,6 +421,8 @@ pub fn run() {
             game_collections,
             add_game_to_collection,
             remove_game_from_collection,
+            library_layout,
+            choose_library_layout,
             close_to_tray,
             set_close_to_tray,
             close_window,
@@ -424,7 +447,9 @@ pub fn run() {
             remove_local_game,
             statistics,
             mark_favorite,
-            favorite_count
+            favorite_count,
+            about,
+            open_about_page
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

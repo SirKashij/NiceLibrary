@@ -238,6 +238,8 @@ export type GameAchievements =
       /** Unlocked ones first, the most recently unlocked first, then the locked ones in Steam's order. */
       achievements: Achievement[];
     };
+/** How the Library shows its Games: a grid of Covers or one row per Game. Mirrors `LibraryLayout` in crates/core. */
+export type LibraryLayout = 'coverGrid' | 'list';
 
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
@@ -352,6 +354,10 @@ export interface Operations {
   addGameToCollection(collection: number, gameId: string): Promise<void>;
   /** Takes a Game out of a Collection; it stays in the Library and in its other Collections. */
   removeGameFromCollection(collection: number, gameId: string): Promise<void>;
+  /** How the Library shows its Games; `coverGrid` until the user switches. */
+  libraryLayout(): Promise<LibraryLayout>;
+  /** Makes a Library Layout the one the Library shows, also after a restart. */
+  chooseLibraryLayout(layout: LibraryLayout): Promise<void>;
   /** Whether closing the window keeps the app running in the Tray. On until the user turns it off. */
   closeToTray(): Promise<boolean>;
   /** Turns close-to-tray on or off, also after a restart. */
@@ -465,10 +471,25 @@ export interface Operations {
   markFavorite(gameId: string, favorite: boolean): Promise<void>;
   /** How many Games of the Library are Favorites. */
   favoriteCount(): Promise<number>;
+  /** The version of the app that runs and its license, for the About dialog. */
+  about(): Promise<About>;
+  /** Opens the project page or the license in the browser. */
+  openAboutPage(page: AboutPage): Promise<void>;
 }
 
 /** How choosing an image as a Local Game's Cover went. Every outcome but `chosen` changed nothing. Mirrors `CoverImageChoice` in crates/core. */
 export type CoverImageChoice = { outcome: 'chosen' } | { outcome: 'cancelled' } | { outcome: 'notAnImage' };
+
+/** What the About dialog tells of the app itself. Mirrors `About` in crates/core. */
+export interface About {
+  /** Such as `0.1.0`. */
+  version: string;
+  /** The SPDX identifier of the license, such as `MIT`. */
+  license: string;
+}
+
+/** A page the About dialog links to. Mirrors `AboutPage` in crates/core. */
+export type AboutPage = 'project' | 'license';
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
 export interface TrayMenuTexts {
@@ -526,6 +547,8 @@ export const tauriOperations: Operations = {
   gameCollections: (gameId) => invoke<number[]>('game_collections', { gameId }),
   addGameToCollection: (collection, gameId) => invoke<void>('add_game_to_collection', { collection, gameId }),
   removeGameFromCollection: (collection, gameId) => invoke<void>('remove_game_from_collection', { collection, gameId }),
+  libraryLayout: () => invoke<LibraryLayout>('library_layout'),
+  chooseLibraryLayout: (layout) => invoke<void>('choose_library_layout', { layout }),
   closeToTray: () => invoke<boolean>('close_to_tray'),
   setCloseToTray: (on) => invoke<void>('set_close_to_tray', { on }),
   closeWindow: () => invoke<void>('close_window'),
@@ -570,6 +593,8 @@ export const tauriOperations: Operations = {
   statistics: () => invoke<Statistics>('statistics'),
   markFavorite: (gameId, favorite) => invoke<void>('mark_favorite', { gameId, favorite }),
   favoriteCount: () => invoke<number>('favorite_count'),
+  about: () => invoke<About>('about'),
+  openAboutPage: (page) => invoke<void>('open_about_page', { page }),
 };
 
 /** Mirrors `Statistics` in crates/core: the totals over the Games in the Library. */

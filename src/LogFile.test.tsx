@@ -74,6 +74,10 @@ function fakeOperations() {
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
   };
   return { operations, calls };
 }

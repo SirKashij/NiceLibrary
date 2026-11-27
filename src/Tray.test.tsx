@@ -69,6 +69,8 @@ function fakeOperations({ closeToTray = true } = {}) {
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
     filterLibrary: async () => [],
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async () => null,
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
@@ -89,6 +91,8 @@ function fakeOperations({ closeToTray = true } = {}) {
     showTrayMenu: async (texts) => {
       calls.trayMenus.push(texts);
     },
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
   };
   /** The first close of the window, which the core answers with the Tray notice. */
   const firstClose = () => act(() => noticeListeners.forEach((listener) => listener()));

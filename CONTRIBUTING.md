@@ -1,8 +1,22 @@
 # Contributing to NiceLibrary
 
+Thanks for helping. Everyone who takes part follows the [code of conduct](CODE_OF_CONDUCT.md).
+
+## How to take part
+
+- Report bugs and suggest features through the [issue templates](https://github.com/SirKashij/NiceLibrary/issues/new/choose). Report security problems privately instead (see [SECURITY.md](SECURITY.md)).
+- For anything bigger than a small fix, open or comment on an issue first, so we can agree on the behaviour before you write code.
+- Open one pull request per change, against `main`. CI must pass before it is merged.
+
+Code, comments, commit messages, issues and pull requests are in English. The interface and the README are in English and German: every interface text goes through the translation system (`src/i18n/en.ts` and `src/i18n/de.ts`), and a change to the README changes both parts. Use the terms in [GLOSSARY.md](GLOSSARY.md); decisions are recorded in [docs/adr/](docs/adr/).
+
 ## License of contributions
 
 NiceLibrary is MIT licensed (ADR-0004). By contributing, you agree that your contribution is licensed under the same MIT license ("inbound = outbound"). There is no contributor license agreement.
+
+## No artwork, keys or personal data
+
+Game artwork belongs to its publishers (ADR-0005). Never commit a game image, and use placeholder Covers in every screenshot, including those in the README, issues and pull requests. Never commit a Steam Web API key, a SteamID or other personal data, and keep them out of screenshots and logs you attach.
 
 ## Tests
 

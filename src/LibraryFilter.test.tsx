@@ -43,6 +43,8 @@ function fakeOperations() {
     showTrayMenu: async () => {},
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     onAutomaticSync: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
@@ -67,6 +69,8 @@ function fakeOperations() {
           game.title.toLowerCase().includes(filter.search.toLowerCase()),
       );
     },
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
