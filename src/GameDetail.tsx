@@ -1,5 +1,6 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Achievements } from './Achievements';
+import { useCoverTint } from './coverTint';
 import { useFormat, useT, type MessageKey } from './i18n';
 import { FavoriteToggle } from './Favorites';
 import { LaunchOptionsForm } from './LaunchOptions';
@@ -18,7 +19,8 @@ const SOURCES: Record<Source, MessageKey> = {
  * Installed, its Status to set, Playtime, Last Played, its Collections and
  * the main action, its Achievements, marking it as a Favorite, and the way
  * back to the Library. Shows the Game as opened at once and as the core
- * answers it then, again after each change.
+ * answers it then, again after each change. Takes its Tint from the Game's
+ * Cover, or stays neutral (see src/coverTint.ts).
  */
 export function GameDetail({
   operations,
@@ -91,6 +93,12 @@ export function GameDetail({
     };
   }, [operations, opened.id, syncs]);
 
+  const tint = useCoverTint(operations, opened.id);
+  // The Tint replaces the theme's background and accent for everything on the page.
+  const tinted = tint
+    ? ({ '--color-bg': tint.background, '--color-accent': tint.accent, '--color-accent-ink': tint.accentInk } as CSSProperties)
+    : undefined;
+
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
 
@@ -100,7 +108,13 @@ export function GameDetail({
     game?.lastPlayed != null ? format.date(game.lastPlayed) : minutes === null ? t('game.notKnown') : t('game.never');
 
   return (
-    <section className="page game-detail" aria-labelledby={headingId} data-installed={game?.installed ?? false}>
+    <section
+      className="page game-detail"
+      aria-labelledby={headingId}
+      data-installed={game?.installed ?? false}
+      data-tint={tint ? 'cover' : 'neutral'}
+      style={tinted}
+    >
       <button type="button" className="back" onClick={onBack}>
         {t('game.back')}
       </button>

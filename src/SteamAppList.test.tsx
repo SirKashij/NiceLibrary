@@ -100,6 +100,7 @@ function fakeOperations({
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    coverHue: async () => null,
     steamAppList: async () => list,
     fetchSteamAppList: () => {
       calls.fetches += 1;

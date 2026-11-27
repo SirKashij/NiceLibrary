@@ -451,6 +451,19 @@ export interface Operations {
   about(): Promise<About>;
   /** Opens the project page or the license in the browser. */
   openAboutPage(page: AboutPage): Promise<void>;
+  /**
+   * The dominant hue of the Game's Cover, from which its Detail Page takes
+   * its Tint; `null` when it has no Cover or one without colour to speak of.
+   */
+  coverHue(gameId: string): Promise<CoverHue | null>;
+}
+
+/** The hue most of a Cover's colourful pixels share. Mirrors `CoverHue` in crates/core. */
+export interface CoverHue {
+  /** Degrees on the colour wheel, from 0 (red) up to 360. */
+  hue: number;
+  /** How vivid the Cover's pixels of that hue are, from 0 (grey) to 1. */
+  saturation: number;
 }
 
 /** How choosing an image as a Local Game's Cover went. Every outcome but `chosen` changed nothing. Mirrors `CoverImageChoice` in crates/core. */
@@ -577,4 +590,5 @@ export const tauriOperations: Operations = {
   favoriteCount: () => invoke<number>('favorite_count'),
   about: () => invoke<About>('about'),
   openAboutPage: (page) => invoke<void>('open_about_page', { page }),
+  coverHue: (gameId) => invoke<CoverHue | null>('cover_hue', { gameId }),
 };

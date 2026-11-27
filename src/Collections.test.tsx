@@ -100,6 +100,7 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    coverHue: async () => null,
   };
   return { operations, calls };
 }

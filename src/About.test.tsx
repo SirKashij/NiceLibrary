@@ -76,6 +76,7 @@ function fakeOperations({
     removeGameFromCollection: async () => {},
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
+    coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
     about,

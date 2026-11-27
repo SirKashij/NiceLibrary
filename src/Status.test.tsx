@@ -62,6 +62,7 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     openLogFolder: async () => {},
+    coverHue: async () => null,
     collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),
     renameCollection: async () => ({ outcome: 'emptyName' }),

@@ -76,6 +76,7 @@ function fakeOperations() {
     openAboutPage: async () => {},
     language: async () => 'system',
     chooseLanguage: async () => {},
+    coverHue: async () => null,
   };
   return { operations, calls };
 }

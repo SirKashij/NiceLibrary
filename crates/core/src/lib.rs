@@ -9,6 +9,7 @@ mod achievements;
 mod autostart;
 mod clock;
 mod collections;
+mod cover_hue;
 mod covers;
 mod favorites;
 pub mod keyvalues;
@@ -42,6 +43,7 @@ pub use achievements::{Achievement, GameAchievements};
 pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
+pub use cover_hue::CoverHue;
 pub use covers::{Cover, CoverCache, Downloader};
 pub use language::Language;
 pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
@@ -1271,6 +1273,14 @@ impl Core {
         let opened =
             self.ports.opener.open_url(url).map_err(|error| Error::new(format!("{url} could not be opened: {error}")));
         self.logged("open_about_page", opened)
+    }
+
+    /// The dominant hue of the Game `game_id`'s Cover, from which its Detail
+    /// Page takes its Tint; `None` when the Game has no Cover or a Cover
+    /// without colour to speak of. Reads the cached Cover, downloading it
+    /// first like [`Core::cover`] when it is not cached yet.
+    pub fn cover_hue(&self, game_id: &str) -> Result<Option<CoverHue>, Error> {
+        Ok(self.cover(game_id)?.as_ref().and_then(cover_hue::dominant_hue))
     }
 }
 

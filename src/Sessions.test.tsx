@@ -88,6 +88,7 @@ function fakeOperations(initial: Game[]) {
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
   };
