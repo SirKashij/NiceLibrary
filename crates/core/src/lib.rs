@@ -75,7 +75,7 @@ pub use status::Status;
 pub use library_layout::LibraryLayout;
 pub use steam::{SteamAccountChoice, SteamInstallation, SteamLocator, SteamLogin};
 pub use steam_app_list::{AutomaticSteamAppListFetch, SteamAppList, SteamAppListFetch, SteamTitle};
-pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
+pub use steam_web_api::{KEY_SECRET as STEAM_WEB_API_KEY_SECRET, SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
 pub use sync::{AutomaticSync, SyncOutcome};
 pub use theme::Theme;

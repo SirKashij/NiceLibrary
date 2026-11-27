@@ -114,3 +114,17 @@ impl SecretStore for WindowsSecretStore {
 fn wide(text: &str) -> Vec<u16> {
     OsStr::new(text).encode_wide().chain(std::iter::once(0)).collect()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The installer's hooks, which run when Windows uninstalls the app.
+    const INSTALLER_HOOKS: &str = include_str!("../../windows/hooks.nsh");
+
+    #[test]
+    fn uninstalling_with_the_app_data_removes_the_steam_web_api_key() {
+        let command = format!("cmdkey /delete:{APP_PREFIX}{}", nicelibrary_core::STEAM_WEB_API_KEY_SECRET);
+        assert!(INSTALLER_HOOKS.contains(&command), "the uninstaller does not run `{command}`");
+    }
+}

@@ -128,3 +128,24 @@ fn delete_value(path: &str, name: &str) -> Result<(), String> {
         Err(error) => Err(format!("the autostart entry could not be removed: {error}")),
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The installer's hooks, which run when Windows uninstalls the app.
+    const INSTALLER_HOOKS: &str = include_str!("../../windows/hooks.nsh");
+
+    /// Tauri's uninstaller removes the value named after the product under `RUN` itself.
+    const TAURI_CONFIG: &str = include_str!("../../tauri.conf.json");
+
+    #[test]
+    fn uninstalling_removes_the_autostart_entry_and_its_switch() {
+        assert_eq!(RUN, r"Software\Microsoft\Windows\CurrentVersion\Run", "Tauri's uninstaller cleans this key");
+        let product_name = format!(r#""productName": "{NAME}""#);
+        assert!(TAURI_CONFIG.contains(&product_name), "the autostart entry is not named after the product");
+
+        let line = format!(r#"DeleteRegValue HKCU "{STARTUP_APPROVED}" "{NAME}""#);
+        assert!(INSTALLER_HOOKS.contains(&line), "the uninstaller does not run `{line}`");
+    }
+}

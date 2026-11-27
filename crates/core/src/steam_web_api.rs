@@ -81,8 +81,9 @@ pub enum SteamWebApiKeyCheck {
     SteamUnreachable,
 }
 
-/// The name the key is kept under in the secret store.
-pub(crate) const KEY_SECRET: &str = "steam-web-api-key";
+/// The name the key is kept under in the secret store. Public so the shell
+/// can check that its uninstaller removes the same entry.
+pub const KEY_SECRET: &str = "steam-web-api-key";
 
 /// The Steam page where a user creates their key.
 pub(crate) const KEY_PAGE: &str = "https://steamcommunity.com/dev/apikey";
