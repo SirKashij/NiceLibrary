@@ -117,6 +117,7 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     chooseLanguage: async () => {},
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, asked, marks };
 }

@@ -108,6 +108,7 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     chooseLanguage: async () => {},
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, hidden };
 }

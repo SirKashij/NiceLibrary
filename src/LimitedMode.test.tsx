@@ -116,6 +116,7 @@ function fakeOperations({
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    sessions: async () => [],
   };
   /** The core runs an automatic Sync that ends with `answer`. */
   const automaticSync = (answer: SyncOutcome) => {

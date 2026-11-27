@@ -125,6 +125,7 @@ function fakeOperations({
     },
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, added, matched };
 }

@@ -125,6 +125,7 @@ function fakeOperations({
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, calls };
 }

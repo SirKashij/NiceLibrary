@@ -113,6 +113,7 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     setCoverMatch: async () => {},
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, chosen, launched, installed, marks, failWhenChoosing: () => (failChoosing = true) };
 }

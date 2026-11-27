@@ -125,6 +125,7 @@ function fakeOperations({
     chooseLanguage: async () => {},
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, saved };
 }

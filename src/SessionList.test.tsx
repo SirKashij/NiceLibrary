@@ -10,7 +10,7 @@ const THIS_MORNING = 1_795_776_300;
 const LAST_WEEK = 1_795_205_700;
 
 function localGame(id: number, title: string, details: Partial<Game> = {}): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', ...details };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false, ...details };
 }
 
 const CELESTE = localGame(1, 'Celeste', { playtimeMinutes: 115, lastPlayed: THIS_MORNING });
@@ -75,6 +75,38 @@ function fakeOperations(games: Game[], initial: Record<string, Session[]> = {}) 
     },
     achievements: async () => ({ state: 'localGame' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
+    language: async () => 'system',
+    chooseLanguage: async () => {},
+    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
+    coverImageChosen: async () => false,
+    removeCoverImage: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
+    hiddenGames: async () => [],
+    hideGame: async () => {},
+    unhideGame: async () => {},
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
+    coverHue: async () => null,
+    install: async () => ({ outcome: 'started' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
+    findSteamTitles: async () => [],
+    proposeCoverMatch: async () => null,
+    coverMatch: async () => null,
+    setCoverMatch: async () => {},
   };
   const send = (event: SessionEvent) => act(() => listeners.forEach((listener) => listener(event)));
   return { operations, asked, send, change: (next: Record<string, Session[]>) => (sessions = next) };

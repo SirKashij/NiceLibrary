@@ -92,6 +92,7 @@ function fakeOperations({
     install: async () => ({ outcome: 'started' }),
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, calls };
 }
