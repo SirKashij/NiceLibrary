@@ -184,15 +184,15 @@ The files on this computer the app writes its errors and notable events to, for 
 _Avoid_: Crash report, telemetry, diagnostics
 
 **Update**:
-A newer version of the app, published on GitHub Releases. The app checks for one once a day unless the person switched the automatic Update Check off, and whenever they check by hand; it offers what it found and installs it only once they agreed. Pre-releases are never offered.
+A newer version of the app, published on GitHub Releases. The app checks for one once a day unless the person switched the automatic Update Check off, and whenever they check by hand; it offers what it found and installs it only once they agreed. Pre-releases are never offered. The German interface says "Update" too.
 _Avoid_: Upgrade, patch (and "update" for a Sync)
 
 **Update Check**:
-Asking GitHub Releases whether an Update is out. It installs nothing. The automatic one runs once a day and can be switched off in the settings; checking by hand works either way.
+Asking GitHub Releases whether an Update is out. It installs nothing. The automatic one runs once a day and can be switched off in the settings; checking by hand works either way. The German interface says "nach Updates suchen".
 _Avoid_: Update search, polling
 
 **Update Package**:
-The installer of an Update, signed with the project's updater key, whose private half exists only as a secret of the release workflow. The app installs a package only when its signature is that key's and names the version offered; any other is refused and nothing is installed.
+The installer of an Update, signed with the project's updater key, whose private half exists only as a secret of the release workflow. The app installs a package only when its signature is that key's and names the version offered; any other is refused and nothing is installed. The German interface calls it "Update-Paket" where it names it at all.
 _Avoid_: Patch, download
 
 **Unreadable Database**:

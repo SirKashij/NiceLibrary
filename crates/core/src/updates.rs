@@ -166,8 +166,8 @@ pub(crate) fn signed(public_key: &str, package: &[u8], signature: &str, version:
     let Some(signature) = decoded(signature).and_then(|text| Signature::decode(&text).ok()) else {
         return false;
     };
-    // Tauri's signer signs the package itself rather than its hash (minisign's legacy mode).
-    if public_key.verify(package, &signature, true).is_err() {
+    // Tauri's signer signs the package's hash (minisign's "ED"); a legacy signature of the bytes themselves is refused.
+    if public_key.verify(package, &signature, false).is_err() {
         return false;
     }
     let wanted = format!("version:{version}");
