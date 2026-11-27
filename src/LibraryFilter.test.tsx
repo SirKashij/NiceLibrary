@@ -40,6 +40,7 @@ function fakeOperations() {
           game.title.toLowerCase().includes(filter.search.toLowerCase()),
       );
     },
+    game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
   };
   return { operations, asked };
 }
@@ -92,6 +93,26 @@ describe('Filtering the Library', () => {
 
     expect(asked.at(-1)).toEqual({ search: 'ha', source: 'steam', installedOnly: true });
     expect(await shownTitles(1)).toEqual(['Hades']);
+  });
+
+  it('keeps the search and the filters when coming back from a detail page', async () => {
+    const user = userEvent.setup();
+    const { operations, asked } = fakeOperations();
+    render(<App operations={operations} lang="en" />);
+    await shownTitles(3);
+    await user.click(screen.getByRole('checkbox', { name: 'Installed only' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Search the library' }), 'ha');
+    expect(await shownTitles(1)).toEqual(['Hades']);
+    const filtered = asked.length;
+
+    await user.click(screen.getByRole('button', { name: 'Details for Hades' }));
+    await screen.findByRole('region', { name: 'Hades' });
+    await user.click(screen.getByRole('button', { name: 'Back to the library' }));
+
+    expect(await shownTitles(1)).toEqual(['Hades']);
+    expect(screen.getByRole('searchbox', { name: 'Search the library' })).toHaveValue('ha');
+    expect(screen.getByRole('checkbox', { name: 'Installed only' })).toBeChecked();
+    expect(asked.length).toBe(filtered);
   });
 
   it('shows an empty state when nothing matches, whose action clears every filter and the search', async () => {
