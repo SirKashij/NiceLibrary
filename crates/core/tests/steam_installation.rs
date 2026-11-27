@@ -1,10 +1,10 @@
-//! Finding the Steam installation and the Steam Accounts that have logged in
+//! Finding the Steam Installation and its Steam Logins
 //! on this computer, as the settings show them.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use nicelibrary_core::{Core, CoverCache, Ports, SteamAccount, SteamInstallation, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Ports, SteamInstallation, SteamLocator, SteamLogin, Store};
 use tempfile::TempDir;
 use nicelibrary_core::stand_ins;
 
@@ -54,8 +54,8 @@ fn steam_folder(loginusers: Option<&str>) -> TempDir {
     dir
 }
 
-fn account(steam_id: &str, display_name: &str, most_recent: bool) -> SteamAccount {
-    SteamAccount { steam_id: steam_id.into(), display_name: display_name.into(), most_recent }
+fn login(steam_id: &str, display_name: &str, most_recent: bool) -> SteamLogin {
+    SteamLogin { steam_id: steam_id.into(), display_name: display_name.into(), most_recent }
 }
 
 const TWO_ACCOUNTS: &str = r#"
@@ -81,7 +81,7 @@ const TWO_ACCOUNTS: &str = r#"
 "#;
 
 #[test]
-fn lists_each_steam_account_by_display_name_with_the_most_recent_first() {
+fn lists_each_steam_login_by_display_name_with_the_most_recent_first() {
     let steam = steam_folder(Some(TWO_ACCOUNTS));
 
     let found = core_with_steam_at(Some(steam.path())).steam_installation();
@@ -90,16 +90,16 @@ fn lists_each_steam_account_by_display_name_with_the_most_recent_first() {
         found,
         SteamInstallation::Found {
             path: steam.path().display().to_string(),
-            accounts: vec![
-                account("76561197960287931", "Player Two", true),
-                account("76561197960287930", "Player One", false),
+            logins: vec![
+                login("76561197960287931", "Player Two", true),
+                login("76561197960287930", "Player One", false),
             ],
         }
     );
 }
 
 #[test]
-fn an_account_without_a_display_name_shows_its_account_name() {
+fn a_steam_login_without_a_display_name_shows_its_account_name() {
     let steam = steam_folder(Some(
         r#""users" { "76561197960287930" { "AccountName" "player_one" "MostRecent" "1" } }"#,
     ));
@@ -108,7 +108,7 @@ fn an_account_without_a_display_name_shows_its_account_name() {
         core_with_steam_at(Some(steam.path())).steam_installation(),
         SteamInstallation::Found {
             path: steam.path().display().to_string(),
-            accounts: vec![account("76561197960287930", "player_one", true)],
+            logins: vec![login("76561197960287930", "player_one", true)],
         }
     );
 }
@@ -126,16 +126,16 @@ fn without_a_most_recent_flag_the_latest_login_counts_as_most_recent() {
         core_with_steam_at(Some(steam.path())).steam_installation(),
         SteamInstallation::Found {
             path: steam.path().display().to_string(),
-            accounts: vec![
-                account("76561197960287930", "Player One", true),
-                account("76561197960287931", "Player Two", false),
+            logins: vec![
+                login("76561197960287930", "Player One", true),
+                login("76561197960287931", "Player Two", false),
             ],
         }
     );
 }
 
 #[test]
-fn without_any_login_time_no_account_is_marked_most_recent() {
+fn without_any_login_time_no_steam_login_is_marked_most_recent() {
     let steam = steam_folder(Some(
         r#""users" { "76561197960287930" { "PersonaName" "Player One" } "76561197960287931" { "PersonaName" "Player Two" } }"#,
     ));
@@ -144,9 +144,9 @@ fn without_any_login_time_no_account_is_marked_most_recent() {
         core_with_steam_at(Some(steam.path())).steam_installation(),
         SteamInstallation::Found {
             path: steam.path().display().to_string(),
-            accounts: vec![
-                account("76561197960287930", "Player One", false),
-                account("76561197960287931", "Player Two", false),
+            logins: vec![
+                login("76561197960287930", "Player One", false),
+                login("76561197960287931", "Player Two", false),
             ],
         }
     );
@@ -158,22 +158,22 @@ fn without_steam_says_it_is_not_found() {
 }
 
 #[test]
-fn steam_without_any_login_has_no_accounts() {
+fn steam_without_any_login_has_no_steam_logins() {
     let steam = steam_folder(None);
 
     assert_eq!(
         core_with_steam_at(Some(steam.path())).steam_installation(),
-        SteamInstallation::Found { path: steam.path().display().to_string(), accounts: vec![] }
+        SteamInstallation::Found { path: steam.path().display().to_string(), logins: vec![] }
     );
 }
 
 #[test]
-fn a_damaged_login_file_leaves_steam_found_without_accounts() {
+fn a_damaged_login_file_leaves_steam_found_without_steam_logins() {
     let steam = steam_folder(Some(r#""users" { "76561197960287930" { "PersonaName" "#));
 
     assert_eq!(
         core_with_steam_at(Some(steam.path())).steam_installation(),
-        SteamInstallation::Found { path: steam.path().display().to_string(), accounts: vec![] }
+        SteamInstallation::Found { path: steam.path().display().to_string(), logins: vec![] }
     );
 }
 
@@ -181,7 +181,7 @@ fn a_damaged_login_file_leaves_steam_found_without_accounts() {
 fn reaches_the_interface_in_the_shape_the_interface_expects() {
     let found = SteamInstallation::Found {
         path: r"C:\Steam".into(),
-        accounts: vec![account("76561197960287930", "Player One", true)],
+        logins: vec![login("76561197960287930", "Player One", true)],
     };
 
     assert_eq!(
@@ -189,7 +189,7 @@ fn reaches_the_interface_in_the_shape_the_interface_expects() {
         serde_json::json!({
             "state": "found",
             "path": r"C:\Steam",
-            "accounts": [{ "steamId": "76561197960287930", "displayName": "Player One", "mostRecent": true }]
+            "logins": [{ "steamId": "76561197960287930", "displayName": "Player One", "mostRecent": true }]
         })
     );
     assert_eq!(

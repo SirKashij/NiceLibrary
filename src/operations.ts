@@ -63,8 +63,8 @@ export type AutomaticSync =
   | ({ state: 'finished' } & SyncOutcome)
   | { state: 'failed'; reason: string };
 
-/** A Steam Account that has logged in on this computer. Mirrors `SteamAccount` in crates/core. */
-export interface SteamAccount {
+/** A Steam Login: an account that has logged in to Steam on this computer. Mirrors `SteamLogin` in crates/core. */
+export interface SteamLogin {
   /** SteamID64, as text because it exceeds JavaScript's safe integers. */
   steamId: string;
   displayName: string;
@@ -74,7 +74,7 @@ export interface SteamAccount {
 /** The Steam installation on this computer. Mirrors `SteamInstallation` in crates/core. */
 export type SteamInstallation =
   | { state: 'notFound' }
-  | { state: 'found'; path: string; accounts: SteamAccount[] };
+  | { state: 'found'; path: string; logins: SteamLogin[] };
 
 /** How choosing the Steam Account went, when nothing failed. Mirrors `SteamAccountChoice` in crates/core. */
 export type SteamAccountChoice = { outcome: 'chosen' } | { outcome: 'invalidSteamId' };
@@ -296,7 +296,7 @@ export interface Operations {
   steamAccount(): Promise<string | null>;
   /**
    * Makes a SteamID the Steam Account the app works with, also after a
-   * restart: one of the accounts on this computer or one entered by hand.
+   * restart: one of the Steam Logins or one entered by hand.
    * Answers `invalidSteamId`, and changes nothing, for anything that is not one.
    */
   chooseSteamAccount(steamId: string): Promise<SteamAccountChoice>;

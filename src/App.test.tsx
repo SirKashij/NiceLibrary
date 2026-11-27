@@ -139,10 +139,10 @@ describe('Covers in the Library', () => {
   });
 });
 
-const TWO_ACCOUNTS: SteamInstallation = {
+const TWO_LOGINS: SteamInstallation = {
   state: 'found',
   path: 'C:\\Program Files (x86)\\Steam',
-  accounts: [
+  logins: [
     { steamId: '76561197960287931', displayName: 'Player Two', mostRecent: true },
     { steamId: '76561197960287930', displayName: 'Player One', mostRecent: false },
   ],
@@ -156,17 +156,17 @@ async function openSettings(operations: Operations, lang: 'de' | 'en' = 'en') {
 }
 
 describe('Steam in the settings', () => {
-  it('shows the installation as found and lists each Steam Account, marking the most recent', async () => {
-    const steam = await openSettings(fakeOperations([], TWO_ACCOUNTS));
+  it('shows the installation as found and lists each Steam Login, marking the most recent', async () => {
+    const steam = await openSettings(fakeOperations([], TWO_LOGINS));
 
     expect(await within(steam).findByText('Steam installation found')).toBeInTheDocument();
     expect(within(steam).getByText('C:\\Program Files (x86)\\Steam')).toBeInTheDocument();
 
-    const accounts = within(within(steam).getByRole('list', { name: 'Steam accounts on this computer' }))
+    const logins = within(within(steam).getByRole('list', { name: 'Steam accounts on this computer' }))
       .getAllByRole('listitem');
-    expect(accounts.map((a) => within(a).getByText(/Player/).textContent)).toEqual(['Player Two', 'Player One']);
-    expect(within(accounts[0]).getByText('Most recently used')).toBeInTheDocument();
-    expect(within(accounts[1]).queryByText('Most recently used')).not.toBeInTheDocument();
+    expect(logins.map((login) => within(login).getByText(/Player/).textContent)).toEqual(['Player Two', 'Player One']);
+    expect(within(logins[0]).getByText('Most recently used')).toBeInTheDocument();
+    expect(within(logins[1]).queryByText('Most recently used')).not.toBeInTheDocument();
   });
 
   it('says so when Steam is not installed', async () => {
@@ -176,8 +176,8 @@ describe('Steam in the settings', () => {
     expect(within(steam).queryByRole('list')).not.toBeInTheDocument();
   });
 
-  it('says so when no Steam Account has logged in yet', async () => {
-    const steam = await openSettings(fakeOperations([], { state: 'found', path: 'C:\\Steam', accounts: [] }));
+  it('says so when there is no Steam Login yet', async () => {
+    const steam = await openSettings(fakeOperations([], { state: 'found', path: 'C:\\Steam', logins: [] }));
 
     expect(await within(steam).findByText('No Steam account has logged in on this computer yet.')).toBeInTheDocument();
   });
@@ -194,7 +194,7 @@ describe('Steam in the settings', () => {
   });
 
   it('speaks German', async () => {
-    const steam = await openSettings(fakeOperations([], TWO_ACCOUNTS), 'de');
+    const steam = await openSettings(fakeOperations([], TWO_LOGINS), 'de');
 
     expect(await within(steam).findByText('Steam-Installation gefunden')).toBeInTheDocument();
     expect(within(steam).getByRole('list', { name: 'Steam-Konten auf diesem Computer' })).toBeInTheDocument();

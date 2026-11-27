@@ -72,7 +72,7 @@ pub use sessions::{ProcessList, Session, Tracking};
 pub use statistics::{GamesByStatus, PlayedWeek, Statistics};
 pub use status::Status;
 pub use library_layout::LibraryLayout;
-pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
+pub use steam::{SteamAccountChoice, SteamInstallation, SteamLocator, SteamLogin};
 pub use steam_app_list::{AutomaticSteamAppListFetch, SteamAppList, SteamAppListFetch, SteamTitle};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
@@ -392,7 +392,7 @@ impl Core {
 
     fn read_and_record_installed_games(&self) -> Result<Vec<Game>, Error> {
         if let Some(folder) = self.ports.steam_locator.steam_folder()
-            && let Some(account) = self.chosen_steam_account_or(|| Ok(most_recent_account(&folder)))?
+            && let Some(account) = self.chosen_steam_account_or(|| Ok(most_recent_login(&folder)))?
             && let Some(apps) = steam::installed_apps(&folder)
         {
             let local = steam::local_playtimes(&folder, &account);
@@ -411,7 +411,7 @@ impl Core {
     /// [`Self::steam_account`], without writing to the Log.
     fn current_steam_account(&self) -> Result<Option<String>, Error> {
         self.chosen_steam_account_or(|| {
-            match self.ports.steam_locator.steam_folder().and_then(|folder| most_recent_account(&folder)) {
+            match self.ports.steam_locator.steam_folder().and_then(|folder| most_recent_login(&folder)) {
                 Some(detected) => Ok(Some(detected)),
                 None => self.store.last_read_steam_account(),
             }
@@ -431,7 +431,7 @@ impl Core {
     }
 
     /// Makes `steam_id` the Steam Account the app works with, from now on and
-    /// after every restart: one of the accounts on this computer, or a
+    /// after every restart: one of the Steam Logins, or a
     /// SteamID64 the user entered by hand. Anything that is not a SteamID64
     /// of a personal account is refused and changes nothing.
     pub fn choose_steam_account(&self, steam_id: &str) -> Result<SteamAccountChoice, Error> {
@@ -1708,10 +1708,10 @@ fn secret_store_error(reason: String) -> Error {
     Error::new(format!("secret store: {reason}"))
 }
 
-/// The SteamID of the account that logged in most recently to the Steam
-/// installation in `folder`.
-fn most_recent_account(folder: &std::path::Path) -> Option<String> {
-    steam::current_account(folder).map(|account| account.steam_id)
+/// The SteamID of the most recently used Steam Login of the Steam
+/// Installation in `folder`.
+fn most_recent_login(folder: &std::path::Path) -> Option<String> {
+    steam::most_recent_login(folder).map(|login| login.steam_id)
 }
 
 /// The store's number in a Local Game's id (`local:<number>`).
