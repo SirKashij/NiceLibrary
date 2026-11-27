@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFormat, useT, type MessageKey } from './i18n';
+import { HideGameButton } from './library/HiddenGames';
 import type { Game, Operations, Source } from './operations';
 
 const SOURCES: Record<Source, MessageKey> = {
@@ -21,6 +22,7 @@ export function GameDetail({
   notice,
   onPlay,
   onBack,
+  onHidden,
 }: {
   operations: Operations;
   /** The Game as the Library showed it when it was opened. */
@@ -32,6 +34,8 @@ export function GameDetail({
   notice?: ReactNode;
   onPlay: (game: Game) => void;
   onBack: () => void;
+  /** Hears the Game once the user hid it. */
+  onHidden: (game: Game) => void;
 }) {
   const t = useT();
   const format = useFormat();
@@ -103,6 +107,7 @@ export function GameDetail({
                   <dd>{lastPlayed}</dd>
                 </div>
               </dl>
+              <HideGameButton operations={operations} game={game} onHidden={onHidden} />
             </>
           )}
         </div>

@@ -140,6 +140,16 @@ export const en = {
   'game.never': 'Never',
   'game.notKnown': 'Not known yet',
   'game.gone': '{title} is no longer in your library.',
+  'hidden.title': 'Hidden games',
+  'hidden.hideGame': 'Hide {title}',
+  'hidden.hide': 'Hide',
+  'hidden.hidden': '{title} is hidden. You find it under Hidden games.',
+  'hidden.hideFailed': '{title} could not be hidden.',
+  'hidden.unhideGame': 'Unhide {title}',
+  'hidden.unhide': 'Unhide',
+  'hidden.unhideFailed': '{title} could not be unhidden.',
+  'hidden.none': 'No game is hidden.',
+  'hidden.loadFailed': 'Your hidden games could not be loaded.',
 } as const;
 
 export type MessageKey = keyof typeof en;

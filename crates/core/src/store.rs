@@ -5,6 +5,8 @@
 //! a database from any earlier version is brought up to date on open. Every
 //! Steam-derived row carries the Steam Account it belongs to.
 
+mod hidden_games;
+
 use std::fs;
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard};
@@ -56,6 +58,10 @@ const MIGRATIONS: &[&str] = &[
          collection_id INTEGER NOT NULL REFERENCES collections (id),
          game_id       TEXT    NOT NULL,
          PRIMARY KEY (collection_id, game_id)
+     );",
+    // 5: Hidden Games; hiding belongs to the person, not to a Steam Account.
+    "CREATE TABLE hidden_games (
+         game_id TEXT PRIMARY KEY
      );",
 ];
 

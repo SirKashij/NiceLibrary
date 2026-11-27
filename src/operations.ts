@@ -189,6 +189,12 @@ export interface Operations {
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /** The Hidden Games, ordered by title like `library`. They stay hidden through Syncs and restarts. */
+  hiddenGames(): Promise<Game[]>;
+  /** Hides a Game: it leaves the Library and every view built on it without being deleted. */
+  hideGame(gameId: string): Promise<void>;
+  /** Brings a Hidden Game back into the Library. */
+  unhideGame(gameId: string): Promise<void>;
 }
 
 export const tauriOperations: Operations = {
@@ -223,4 +229,7 @@ export const tauriOperations: Operations = {
   deleteCollection: (id) => invoke<void>('delete_collection', { id }),
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  hiddenGames: () => invoke<Game[]>('hidden_games'),
+  hideGame: (gameId) => invoke<void>('hide_game', { gameId }),
+  unhideGame: (gameId) => invoke<void>('unhide_game', { gameId }),
 };

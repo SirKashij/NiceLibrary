@@ -77,6 +77,9 @@ function fakeOperations({
     lastSync: async () => last,
     theme: async () => 'system',
     chooseTheme: async () => {},
+    hiddenGames: async () => [],
+    hideGame: async () => {},
+    unhideGame: async () => {},
     filterLibrary: async () => [],
     onAutomaticSync: (listener) => {
       listeners.add(listener);

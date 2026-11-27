@@ -136,9 +136,18 @@ impl Core {
         Self { ports, store, covers, syncing: Mutex::new(()), sync_soon: Wakeup::new() }
     }
 
-    /// All Games in the Library, as last stored, ordered by title. Answers
-    /// from the store alone, so a start shows the Library at once.
+    /// All Games in the Library, as last stored, ordered by title; a Hidden
+    /// Game is not among them. Answers from the store alone, so a start
+    /// shows the Library at once.
     pub fn library(&self) -> Result<Vec<Game>, Error> {
+        let hidden = self.store.hidden_game_ids()?;
+        let mut games = self.every_game()?;
+        games.retain(|game| !hidden.contains(&game.id));
+        Ok(games)
+    }
+
+    /// Every Game of both Sources, Hidden Games too, ordered by title.
+    fn every_game(&self) -> Result<Vec<Game>, Error> {
         // Until the user chooses, the account read last: it holds the Games.
         let account = self.chosen_steam_account_or(|| self.store.last_read_steam_account())?;
         let mut games = match account {
@@ -464,6 +473,30 @@ impl Core {
     /// a Collection that is gone already changes nothing.
     pub fn delete_collection(&self, id: i64) -> Result<(), Error> {
         self.store.delete_collection(id)
+    }
+
+    /// The Hidden Games, ordered by title like [`Self::library`]. A Hidden
+    /// Game stays hidden through Syncs and restarts until it is unhidden.
+    pub fn hidden_games(&self) -> Result<Vec<Game>, Error> {
+        let hidden = self.store.hidden_game_ids()?;
+        let mut games = self.every_game()?;
+        games.retain(|game| hidden.contains(&game.id));
+        Ok(games)
+    }
+
+    /// Hides the Game `game_id`: it leaves the Library and every view built
+    /// on it without being deleted. Fails when there is no such Game.
+    pub fn hide_game(&self, game_id: &str) -> Result<(), Error> {
+        if !self.every_game()?.iter().any(|game| game.id == game_id) {
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
+        }
+        self.store.hide_game(game_id)
+    }
+
+    /// Brings the Hidden Game `game_id` back into the Library; unhiding a
+    /// Game that is not hidden changes nothing.
+    pub fn unhide_game(&self, game_id: &str) -> Result<(), Error> {
+        self.store.unhide_game(game_id)
     }
 }
 
