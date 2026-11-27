@@ -51,6 +51,10 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
         .filter((game) => game.title.toLowerCase().includes(filter.search.toLowerCase()));
     },
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     theme: async () => 'system',
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),

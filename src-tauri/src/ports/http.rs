@@ -1,4 +1,4 @@
-//! HTTP(S): downloads Covers from Steam's artwork host and asks the Steam Web API.
+//! HTTP(S): downloads Covers and Achievement icons from Steam's image hosts and asks the Steam Web API.
 
 use std::time::Duration;
 

@@ -123,6 +123,7 @@ impl App {
                 executable_picker: Box::new(user.clone()),
                 autostart: Box::new(NoAutostart),
                 processes: Box::new(NothingRuns),
+                process_starter: Box::new(NothingStarted),
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.join("covers")),
@@ -270,6 +271,7 @@ fn a_failing_file_dialog_is_an_error() {
             executable_picker: Box::new(BrokenDialog),
             autostart: Box::new(NoAutostart),
             processes: Box::new(NothingRuns),
+            process_starter: Box::new(NothingStarted),
         },
         Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.path().join("covers")),
@@ -478,5 +480,14 @@ struct NothingRuns;
 impl nicelibrary_core::ProcessList for NothingRuns {
     fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
         Ok(Vec::new())
+    }
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
     }
 }

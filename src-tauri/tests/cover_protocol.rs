@@ -68,7 +68,7 @@ impl Downloader for FakeSteam {
 fn core(online: bool) -> (Core, TempDir) {
     let profile = tempfile::tempdir().unwrap();
     let core = Core::new(
-        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(FakeSteam { online }), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen), autostart: Box::new(NoAutostart), processes: Box::new(NothingRuns) },
+        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(FakeSteam { online }), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen), autostart: Box::new(NoAutostart), processes: Box::new(NothingRuns), process_starter: Box::new(NothingStarted) },
         Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.path().join("covers")),
     );
@@ -98,6 +98,31 @@ fn a_cover_that_cannot_be_downloaded_is_unavailable() {
     let (core, _profile) = core(false);
 
     assert_eq!(cover_response(&core, "/steam%3A620").status(), 503);
+}
+
+#[test]
+fn answers_with_an_achievement_icon_under_the_games_address() {
+    let (core, _profile) = core(true);
+
+    // `achievementIconUrl` in src/operations.ts encodes `steam:620/achievements/<icon>` as a whole.
+    let response = cover_response(&core, "/steam%3A620%2Fachievements%2F0123456789abcdef");
+
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.body(), IMAGE);
+}
+
+#[test]
+fn an_achievement_icon_that_is_not_steams_is_not_found() {
+    let (core, _profile) = core(true);
+
+    assert_eq!(cover_response(&core, "/steam%3A620%2Fachievements%2F..%2F..%2Fevil").status(), 404);
+}
+
+#[test]
+fn an_achievement_icon_that_cannot_be_downloaded_is_unavailable() {
+    let (core, _profile) = core(false);
+
+    assert_eq!(cover_response(&core, "/steam%3A620%2Fachievements%2F0123456789abcdef").status(), 503);
 }
 
 /// A clock that stands still; these tests do not depend on the time.
@@ -143,5 +168,14 @@ struct NothingRuns;
 impl nicelibrary_core::ProcessList for NothingRuns {
     fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
         Ok(Vec::new())
+    }
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(&self, executable: &std::path::Path, _arguments: &[String], _working_directory: &std::path::Path) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
     }
 }

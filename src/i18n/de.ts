@@ -195,4 +195,28 @@ export const de: Record<MessageKey, string> = {
   'autostart.hint': 'Wenn du dich bei Windows anmeldest, startet NiceLibrary im Infobereich, ohne sein Fenster zu öffnen.',
   'autostart.loadFailed': 'Ob NiceLibrary mit Windows startet, konnte nicht gelesen werden.',
   'autostart.saveFailed': 'Der Start mit Windows konnte nicht geändert werden.',
+  'achievements.title': 'Trophäen',
+  'achievements.count': '{unlocked} / {total} freigeschaltet',
+  'achievements.list': 'Trophäen von {title}',
+  'achievements.unlockedOn': 'Freigeschaltet am {date}',
+  'achievements.unlocked': 'Freigeschaltet',
+  'achievements.locked': 'Noch nicht freigeschaltet',
+  'achievements.localGame': 'Lokale Spiele haben keine Trophäen.',
+  'achievements.none': '{title} hat keine Trophäen.',
+  'achievements.notFetchedYet': 'Die Trophäen wurden noch nicht abgerufen. Sie kommen mit einer der nächsten Synchronisierungen.',
+  'achievements.loadFailed': 'Die Trophäen konnten nicht geladen werden.',
+  'launch.executableNotFound':
+    '{title} konnte nicht gestartet werden, weil seine ausführbare Datei nicht gefunden wurde. Vielleicht wurde sie verschoben oder gelöscht.',
+  'launch.workingDirectoryNotFound':
+    '{title} konnte nicht gestartet werden, weil sein Arbeitsverzeichnis nicht gefunden wurde. Prüfe seine Startoptionen.',
+  'launchOptions.title': 'Startoptionen',
+  'launchOptions.arguments': 'Startparameter',
+  'launchOptions.argumentsHint':
+    'Trenne Parameter durch Leerzeichen. Setze einen Parameter, der Leerzeichen enthält, in doppelte Anführungszeichen.',
+  'launchOptions.workingDirectory': 'Arbeitsverzeichnis',
+  'launchOptions.workingDirectoryHint': 'Lass es leer, um das Spiel im Ordner seiner ausführbaren Datei zu starten.',
+  'launchOptions.save': 'Speichern',
+  'launchOptions.saved': 'Die Startoptionen wurden gespeichert.',
+  'launchOptions.saveFailed': 'Die Startoptionen konnten nicht gespeichert werden.',
+  'launchOptions.loadFailed': 'Die Startoptionen konnten nicht geladen werden.',
 };

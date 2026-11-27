@@ -47,8 +47,12 @@ function fakeOperations({ closeToTray = true } = {}) {
     },
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
     filterLibrary: async () => [],
     game: async () => null,
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     closeToTray: async () => setting,
     setCloseToTray: async (on) => {
       calls.closeToTray.push(on);

@@ -162,6 +162,15 @@ impl ExecutablePicker for NoExecutableChosen {
     }
 }
 
+/// These tests start no executable.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
+        Err(format!("this test starts no executable, not even {}", executable.display()))
+    }
+}
+
 /// A computer where the app does not start with Windows; these tests do not turn it on.
 struct NoAutostart;
 
@@ -216,6 +225,7 @@ impl App {
                 clock: Box::new(processes.clock.clone()),
                 executable_picker: Box::new(NoExecutableChosen),
                 processes: Box::new(processes.clone()),
+                process_starter: Box::new(NothingStarted),
                 autostart: Box::new(NoAutostart),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),

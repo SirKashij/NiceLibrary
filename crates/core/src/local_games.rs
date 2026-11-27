@@ -54,6 +54,7 @@ pub(crate) struct StoredLocalGame {
     pub id: i64,
     pub title: String,
     pub executable: String,
+    pub launch_options: crate::LaunchOptions,
 }
 
 impl Game {

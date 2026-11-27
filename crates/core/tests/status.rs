@@ -24,7 +24,10 @@ struct SteamOwning;
 
 impl WebApi for SteamOwning {
     fn get(&self, url: &str) -> Result<WebAnswer, String> {
-        assert!(url.starts_with("https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?"), "asked for {url}");
+        // Achievements are not needed here.
+        if !url.starts_with("https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?") {
+            return Ok(WebAnswer { status: 404, body: b"<html><body>Not Found</body></html>".to_vec() });
+        }
         let body = serde_json::json!({ "response": { "game_count": 3, "games": [
             { "appid": 620, "name": "Portal 2", "playtime_forever": 600, "rtime_last_played": 0 },
             { "appid": 220, "name": "Half-Life 2", "playtime_forever": 0, "rtime_last_played": 0 },
@@ -137,6 +140,7 @@ impl Computer {
                 executable_picker: Box::new(NoExecutableChosen),
                 autostart: Box::new(NoAutostart),
                 processes: Box::new(NothingRuns),
+                process_starter: Box::new(NothingStarted),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -347,5 +351,19 @@ struct NothingRuns;
 impl nicelibrary_core::ProcessList for NothingRuns {
     fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
         Ok(Vec::new())
+    }
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(
+        &self,
+        executable: &std::path::Path,
+        _arguments: &[String],
+        _working_directory: &std::path::Path,
+    ) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
     }
 }

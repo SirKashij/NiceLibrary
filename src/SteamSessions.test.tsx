@@ -74,6 +74,10 @@ function fakeOperations(initial: Game[]) {
       sessionListeners.add(listener);
       return () => sessionListeners.delete(listener);
     },
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
   };
   const session = (event: SessionEvent) => act(() => sessionListeners.forEach((listener) => listener(event)));
   const sync = (event: AutomaticSync) => act(() => syncListeners.forEach((listener) => listener(event)));

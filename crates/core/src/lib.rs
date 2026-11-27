@@ -4,6 +4,7 @@
 //! about Tauri; the desktop shell is a thin adapter over these operations, and
 //! everything that varies by machine or OS reaches the core through ports.
 
+mod achievements;
 mod autostart;
 mod clock;
 mod collections;
@@ -33,11 +34,12 @@ use serde::{Deserialize, Serialize, Serializer};
 use log::Level;
 use sessions::Tracked;
 
+pub use achievements::{Achievement, GameAchievements};
 pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
-pub use launch::{Launch, OpenError, Opener};
+pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
 pub use log::Log;
@@ -140,6 +142,7 @@ pub struct Ports {
     pub autostart: Box<dyn Autostart>,
     pub executable_picker: Box<dyn ExecutablePicker>,
     pub processes: Box<dyn ProcessList>,
+    pub process_starter: Box<dyn ProcessStarter>,
 }
 
 /// The application core. Each public method is one operation.
@@ -376,12 +379,21 @@ impl Core {
 
     /// Launches the Game `game_id`. A Steam Game is launched through Steam, by
     /// opening its `steam://rungameid/` URL; the app never starts a Steam
-    /// Game's executable itself (ADR-0002).
+    /// Game's executable itself (ADR-0002). A Local Game is launched by
+    /// starting its executable, not through a shell, with its Launch
+    /// Arguments in its Working Directory, or else in the executable's
+    /// folder (see [`Self::set_launch_options`]).
     pub fn launch(&self, game_id: &str) -> Result<Launch, Error> {
         self.logged_outcome("launch", self.launch_game(game_id))
     }
 
     fn launch_game(&self, game_id: &str) -> Result<Launch, Error> {
+        if let Some(id) = local_game_id(game_id) {
+            return match self.store.local_game(id)? {
+                Some(game) => launch::launch_local_game(self.ports.process_starter.as_ref(), &game),
+                None => Err(Error::new(format!("no such game in the library: {game_id}"))),
+            };
+        }
         let Some(game) = self.stored_library()?.into_iter().find(|game| game.id == game_id) else {
             return Err(Error::new(format!("no such game in the library: {game_id}")));
         };
@@ -389,7 +401,7 @@ impl Core {
             return Err(Error::new(format!("not installed: {}", game.title)));
         }
         let Some(app_id) = steam_app_id(&game.id) else {
-            return Err(Error::new(format!("only Steam Games can be launched so far: {}", game.title)));
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
         };
         if self.ports.steam_locator.steam_folder().is_none() {
             return Ok(Launch::SteamNotFound);
@@ -404,7 +416,11 @@ impl Core {
     /// Syncs: fetches every Steam Game the Steam Account owns, Installed or
     /// not, with Steam's Playtime and Last Played, and merges it into the
     /// store. A Steam Game the account no longer owns leaves the Library
-    /// unless it is Installed.
+    /// unless it is Installed. Then fetches the Achievements of the Steam
+    /// Games played since they were last fetched, or never fetched, the most
+    /// recently played first, as many as this Sync's and this day's share of
+    /// Steam's calls allows; the others follow with the next Syncs. When
+    /// Steam does not give them, the stored Achievements stay as they were.
     ///
     /// Every outcome but `Synced`, and every error, leaves the stored data as
     /// it was. A Sync asked for while another runs begins once that one ends.
@@ -434,6 +450,8 @@ impl Core {
         };
         let at = clock::seconds_since_epoch(self.ports.clock.now());
         self.store.record_steam_sync(&account, &games, at)?;
+        // One call so far: the owned games.
+        achievements::fetch(self.ports.web_api.as_ref(), &self.store, &key, &account, at, 1)?;
         Ok(SyncOutcome::Synced { at })
     }
 
@@ -515,6 +533,45 @@ impl Core {
             self.steam_app_list_soon.ring();
         }
         Ok(check)
+    }
+
+    /// The Achievements of the Game `game_id` for the Steam Account whose
+    /// Library is shown, as the last Syncs fetched them. Answers from the
+    /// store alone.
+    pub fn achievements(&self, game_id: &str) -> Result<GameAchievements, Error> {
+        self.logged("achievements", self.stored_achievements(game_id))
+    }
+
+    fn stored_achievements(&self, game_id: &str) -> Result<GameAchievements, Error> {
+        let Some(app_id) = steam_app_id(game_id) else {
+            return Ok(GameAchievements::LocalGame);
+        };
+        let Some(account) = self.chosen_steam_account_or(|| self.store.last_read_steam_account())? else {
+            return Ok(GameAchievements::NotFetchedYet);
+        };
+        Ok(match self.store.achievements(&account, app_id)? {
+            None => GameAchievements::NotFetchedYet,
+            Some(achievements) if achievements.is_empty() => GameAchievements::NoAchievements,
+            Some(achievements) => GameAchievements::Listed {
+                unlocked: u32::try_from(achievements.iter().filter(|a| a.unlocked).count()).unwrap_or(u32::MAX),
+                total: u32::try_from(achievements.len()).unwrap_or(u32::MAX),
+                achievements,
+            },
+        })
+    }
+
+    /// The image of the Achievement icon `icon` (see [`Achievement::icon`])
+    /// of the Game `game_id`: from the cache of Covers when it is there, else
+    /// downloaded from Steam and kept. `None` when Steam has no such image,
+    /// or `icon` is not one of Steam's names for an icon.
+    pub fn achievement_icon(&self, game_id: &str, icon: &str) -> Result<Option<Cover>, Error> {
+        let Some(app_id) = steam_app_id(game_id) else {
+            return Ok(None);
+        };
+        if !achievements::is_icon_name(icon) {
+            return Ok(None);
+        }
+        self.covers.achievement_icon(self.ports.downloader.as_ref(), app_id, icon)
     }
 
     /// Removes the stored Steam Web API key, if there is one.
@@ -667,6 +724,44 @@ impl Core {
             }
         }
         ControlFlow::Continue(())
+    }
+
+    /// How the Local Game `game_id` is launched; `None` when it is not a
+    /// Local Game in the Library.
+    pub fn launch_options(&self, game_id: &str) -> Result<Option<LaunchOptions>, Error> {
+        let Some(id) = local_game_id(game_id) else {
+            return Ok(None);
+        };
+        self.logged("launch_options", self.store.local_game(id).map(|game| game.map(|game| game.launch_options)))
+    }
+
+    /// Sets how the Local Game `game_id` is launched, from now on and after
+    /// every restart: its Launch Arguments as typed, split when it is
+    /// launched (see [`Self::launch`]), and its Working Directory. A Working
+    /// Directory of only spaces is none, so the executable's folder is used.
+    /// Anything but a Local Game in the Library is refused.
+    pub fn set_launch_options(&self, game_id: &str, options: &LaunchOptions) -> Result<(), Error> {
+        let set = self.record_launch_options(game_id, options);
+        if set.is_ok() {
+            self.note("set_launch_options: set");
+        }
+        self.logged("set_launch_options", set)
+    }
+
+    fn record_launch_options(&self, game_id: &str, options: &LaunchOptions) -> Result<(), Error> {
+        let options = LaunchOptions {
+            arguments: options.arguments.trim().to_owned(),
+            working_directory: options
+                .working_directory
+                .as_deref()
+                .map(str::trim)
+                .filter(|folder| !folder.is_empty())
+                .map(str::to_owned),
+        };
+        match local_game_id(game_id) {
+            Some(id) if self.store.set_launch_options(id, &options)? => Ok(()),
+            _ => Err(Error::new(format!("no such Local Game in the library: {game_id}"))),
+        }
     }
 
     /// Opens the Steam page where the user creates their Steam Web API key,
@@ -912,6 +1007,11 @@ fn secret_store_error(reason: String) -> Error {
 /// installation in `folder`.
 fn most_recent_account(folder: &std::path::Path) -> Option<String> {
     steam::current_account(folder).map(|account| account.steam_id)
+}
+
+/// The store's number in a Local Game's id (`local:<number>`).
+fn local_game_id(game_id: &str) -> Option<i64> {
+    game_id.strip_prefix("local:")?.parse().ok()
 }
 
 /// Steam's app id in a Steam Game's id (`steam:<app id>`).

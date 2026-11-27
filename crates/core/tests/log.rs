@@ -172,6 +172,7 @@ impl App {
                 executable_picker: Box::new(NoExecutableChosen),
                 autostart: Box::new(NoAutostart),
                 processes: Box::new(NothingRuns),
+                process_starter: Box::new(NothingStarted),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -236,6 +237,18 @@ fn creating_a_collection_and_fetching_the_steam_app_list_are_written_as_notable_
     assert!(log.contains("INFO create_collection: named"), "{log}");
     assert!(log.contains("INFO create_collection: emptyName"), "{log}");
     assert!(log.contains("INFO fetch_steam_app_list: keyRejected"), "{log}");
+}
+
+#[test]
+fn setting_the_launch_options_of_a_game_that_is_not_a_local_game_writes_why_to_the_log() {
+    let app = App::start();
+
+    let options = nicelibrary_core::LaunchOptions { arguments: "-windowed".into(), working_directory: None };
+    assert!(app.core.set_launch_options("steam:620", &options).is_err());
+
+    let log = app.log();
+    assert!(log.contains("ERROR set_launch_options: no such Local Game in the library: steam:620"), "{log}");
+    assert!(!log.contains("-windowed"), "the Log holds no Launch Arguments: {log}");
 }
 
 #[test]
@@ -365,5 +378,19 @@ struct NothingRuns;
 impl nicelibrary_core::ProcessList for NothingRuns {
     fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
         Ok(Vec::new())
+    }
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(
+        &self,
+        executable: &std::path::Path,
+        _arguments: &[String],
+        _working_directory: &std::path::Path,
+    ) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
     }
 }

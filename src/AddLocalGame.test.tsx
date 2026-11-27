@@ -61,6 +61,8 @@ function fakeOperations({
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     chooseLocalGameExecutable: choice,
     addLocalGame: async (executable, title) => {
       added.push({ executable, title });
@@ -72,6 +74,8 @@ function fakeOperations({
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
   };
   return { operations, added };
 }
