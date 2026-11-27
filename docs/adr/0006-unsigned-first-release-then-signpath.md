@@ -6,4 +6,4 @@ Windows warns about unsigned installers, but the affordable routes are closed: M
 
 - CI is built to SignPath's conditions from the start: releases are built only from source in CI and each one is approved by hand.
 - The README explains the SmartScreen warning and lists checksums. Update packages are signed with the Tauri updater's own key regardless.
-- The repo stays private until v0.1.0. Before it goes public, the whole history is checked for personal data.
+- The repo is public before v0.1.0. Its whole history was checked for personal data on 2026-11-27: every author and committer is the project's noreply identity or GitHub's web-flow committer, and the one sample user name in the code was replaced in a new commit rather than by rewriting the history.

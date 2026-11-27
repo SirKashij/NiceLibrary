@@ -34,6 +34,21 @@ Once installed, NiceLibrary updates itself. When a newer version is out, it asks
 
 To uninstall, open **Settings > Apps > Installed apps** in Windows and uninstall NiceLibrary. This also turns off **Start with Windows**. Tick **Delete the application data** to remove your Library, the Covers and the stored Steam Web API key too; otherwise they stay for a later installation.
 
+## Code signing policy
+
+Releases are not signed yet. Once the SignPath Foundation has accepted the project, Windows releases are signed as follows: Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+Only the project's own binaries are signed, built by GitHub Actions from the tagged source on `main`. Every release is approved by hand before it is signed and published.
+
+| Role | Members |
+| --- | --- |
+| Committers and reviewers | [SirKashij](https://github.com/SirKashij) |
+| Approvers | [SirKashij](https://github.com/SirKashij) |
+
+Changes from contributors without commit rights are reviewed by a committer before they are merged.
+
+Privacy: this program does not transfer any information to other networked systems unless the user requests it. The [Privacy](#privacy) section lists every connection it makes.
+
 ## Privacy
 
 NiceLibrary connects only to the Steam Web API, for your games, playtime and achievements, to Steam’s image servers, for covers, and to GitHub, for updates.
@@ -111,6 +126,21 @@ Stimmen beide überein, wähle **Weitere Informationen** und dann **Trotzdem aus
 Einmal installiert, aktualisiert sich NiceLibrary selbst. Ist eine neuere Version erschienen, fragt es dich, ob es sie installieren soll, und installiert nichts ohne dein Ja. Jedes Update-Paket ist mit dem eigenen Update-Schlüssel des Projekts signiert, dessen privater Teil nur im Release-Workflow auf GitHub existiert; ein Paket mit unpassender Signatur lehnt die App ab.
 
 Zum Deinstallieren öffne in Windows **Einstellungen > Apps > Installierte Apps** und deinstalliere NiceLibrary. Dabei wird auch **Mit Windows starten** ausgeschaltet. Setze den Haken bei **Lösche die Anwendungsdaten**, um auch deine Bibliothek, die Cover und den gespeicherten Steam-Web-API-Schlüssel zu entfernen; sonst bleiben sie für eine spätere Installation erhalten.
+
+### Code signing policy (Codesignierung)
+
+Releases sind noch nicht signiert. Sobald die SignPath Foundation das Projekt aufgenommen hat, werden die Windows-Releases so signiert: Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+Signiert werden nur die eigenen Programmdateien des Projekts, gebaut von GitHub Actions aus dem getaggten Quellcode auf `main`. Jedes Release wird von Hand freigegeben, bevor es signiert und veröffentlicht wird.
+
+| Rolle | Mitglieder |
+| --- | --- |
+| Committer und Reviewer | [SirKashij](https://github.com/SirKashij) |
+| Freigabe | [SirKashij](https://github.com/SirKashij) |
+
+Änderungen von Beitragenden ohne Schreibrechte prüft ein Committer, bevor sie gemergt werden.
+
+Datenschutz: Das Programm überträgt keine Informationen an andere vernetzte Systeme, außer die Person, die es nutzt, verlangt es. Der Abschnitt [Datenschutz](#datenschutz) listet jede Verbindung auf.
 
 ### Datenschutz
 

@@ -341,16 +341,16 @@ fn log_of_failed_import_from(path: &str) -> String {
 
 #[test]
 fn the_log_never_holds_the_name_of_the_users_profile_folder() {
-    let windows = log_of_failed_import_from(r"C:\Users\Kevin\Documents\NiceLibrary backup.json");
-    let other_drive = log_of_failed_import_from("d:/users/kevin/NiceLibrary backup.json");
-    let linux = log_of_failed_import_from("/home/kevin/NiceLibrary backup.json");
+    let windows = log_of_failed_import_from(r"C:\Users\Alex\Documents\NiceLibrary backup.json");
+    let other_drive = log_of_failed_import_from("d:/users/alex/NiceLibrary backup.json");
+    let linux = log_of_failed_import_from("/home/alex/NiceLibrary backup.json");
 
     // What failed is still told, with the profile folder in place of its name.
     assert!(windows.contains(r"ERROR import_data: cannot read %USERPROFILE%\Documents\NiceLibrary backup.json"), "{windows}");
     assert!(other_drive.contains("cannot read %USERPROFILE%/NiceLibrary backup.json"), "{other_drive}");
     assert!(linux.contains("cannot read %USERPROFILE%/NiceLibrary backup.json"), "{linux}");
     for log in [windows, other_drive, linux] {
-        assert!(!log.to_lowercase().contains("kevin"), "{log}");
+        assert!(!log.to_lowercase().contains("alex"), "{log}");
     }
 }
 

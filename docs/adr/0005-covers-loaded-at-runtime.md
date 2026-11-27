@@ -5,16 +5,16 @@ Game artwork belongs to the publishers, and Valve neither permits nor forbids th
 A Local Game gets its Cover through a chain, because no source without a server of our own always delivers the right picture:
 
 1. Derive the title from the executable and folder name and look it up in Steam's app list; on a hit, use the Steam Cover. The user confirms or changes this Cover Match when adding the game.
-2. Otherwise SteamGridDB, if the user has stored their own key there.
-3. Otherwise the executable's icon, until the user picks an image.
+2. Otherwise the executable's icon, until the user picks an image.
 
 ## Considered Options
 
+- **SteamGridDB**: its Terms of Use allow only "personal, non-commercial use" and forbid "any automated use of the Site, the Service or the related systems", and no separate API terms permit an app like this one. Not built, not even as an opt-in with the user's own key ([research notes](../research/issue-56-going-public.md#2-steamgriddb-terms-and-the-opt-in-cover-source)).
 - **IGDB**: needs a Twitch client secret per user, too heavy for setup.
 - **RAWG**: requires an attribution link on every page that shows its data.
 - **Scraping sites such as HowLongToBeat**: their terms do not allow it.
 
 ## Consequences
 
-- Step 2 is opt-in and only ships once the SteamGridDB terms have been read by hand; they could not be retrieved automatically.
+- A Local Game that is not on Steam starts with its executable's icon; the user can pick their own image.
 - The Steam logo is never a prominent element of the interface (Valve branding guidelines).
