@@ -2,16 +2,17 @@ import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useT, type MessageKey } from '../i18n';
 import type { Game, LibraryFilter, LibrarySort, Operations, Source } from '../operations';
 import { LIBRARY_ORDER } from './LibrarySort';
+import { STATUS_LABELS, STATUSES } from './Status';
 
 /** What the Library is narrowed to: the filter without its order. */
 export type Narrowing = Omit<LibraryFilter, 'sort'>;
 
 /** The filter that narrows nothing: the whole Library. */
-export const NO_FILTER: Narrowing = { search: '', source: null, installedOnly: false };
+export const NO_FILTER: Narrowing = { search: '', source: null, installedOnly: false, status: null };
 
 /** Whether `filter` narrows the Library at all. */
 export function isFiltering(filter: Narrowing): boolean {
-  return filter.search !== '' || filter.source !== null || filter.installedOnly;
+  return filter.search !== '' || filter.source !== null || filter.installedOnly || filter.status !== null;
 }
 
 /** What the Library shows for a filter: the Games, or that the core could not filter. */
@@ -62,7 +63,7 @@ const SOURCES: { source: Source | null; label: MessageKey }[] = [
   { source: 'local', label: 'filter.local' },
 ];
 
-/** The toolbar above the Library: search, Source and Installed only, then `children`. */
+/** The toolbar above the Library: search, Source, Status and Installed only, then `children`. */
 export function LibraryToolbar({
   filter,
   onChange,
@@ -95,6 +96,19 @@ export function LibraryToolbar({
           </button>
         ))}
       </div>
+      <select
+        className="toolbar-select"
+        aria-label={t('filter.status')}
+        value={filter.status ?? ''}
+        onChange={(event) => onChange({ ...filter, status: STATUSES.find((status) => status === event.target.value) ?? null })}
+      >
+        <option value="">{t('filter.anyStatus')}</option>
+        {STATUSES.map((status) => (
+          <option key={status} value={status}>
+            {t(STATUS_LABELS[status])}
+          </option>
+        ))}
+      </select>
       <label className="toolbar-toggle">
         <input
           type="checkbox"

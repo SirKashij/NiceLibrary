@@ -76,6 +76,7 @@ fn start(profile: &Path) -> Core {
             web_api: Box::new(Nothing),
             clock: Box::new(Nothing),
             executable_picker: Box::new(Nothing),
+            autostart: Box::new(NoAutostart),
         },
         Store::open(&profile.join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.join("covers")),
@@ -123,5 +124,22 @@ fn the_theme_reaches_the_interface_and_comes_back_in_the_shape_the_interface_use
     for (theme, text) in [(Theme::System, "system"), (Theme::Dark, "dark"), (Theme::Light, "light")] {
         assert_eq!(serde_json::to_value(theme).unwrap(), serde_json::json!(text));
         assert_eq!(serde_json::from_value::<Theme>(serde_json::json!(text)).unwrap(), theme);
+    }
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
     }
 }

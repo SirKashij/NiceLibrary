@@ -171,6 +171,7 @@ impl Profile {
                 web_api: Box::new(api.clone()),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(NoExecutableChosen),
+                autostart: Box::new(NoAutostart),
             },
             Store::open(&self.folder.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.folder.path().join("covers")),
@@ -399,5 +400,22 @@ struct NoExecutableChosen;
 impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
     fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
+    }
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
     }
 }

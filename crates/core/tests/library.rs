@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use nicelibrary_core::{Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, Source, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, Source, Status, SteamLocator, Store};
 
 /// A computer whose secret store holds nothing and whose network reaches no
 /// Web API; these tests need neither.
@@ -57,7 +57,7 @@ fn a_fresh_core_has_an_empty_library() {
     let profile = tempfile::tempdir().unwrap();
     let store = Store::open(&profile.path().join("nicelibrary.db")).unwrap();
     let core = Core::new(
-        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen) },
+        Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen), autostart: Box::new(NoAutostart) },
         store,
         CoverCache::new(profile.path().join("covers")),
     );
@@ -84,6 +84,7 @@ fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
         playtime_minutes: Some(1_234),
         last_played: Some(1_795_205_700),
         progress: Some(42),
+        status: Status::Unplayed,
     };
 
     assert_eq!(
@@ -95,7 +96,8 @@ fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
             "installed": true,
             "playtimeMinutes": 1234,
             "lastPlayed": 1795205700,
-            "progress": 42
+            "progress": 42,
+            "status": "unplayed"
         })
     );
 }
@@ -110,6 +112,7 @@ fn a_game_without_playtime_last_played_and_progress_reaches_the_interface_with_n
         playtime_minutes: None,
         last_played: None,
         progress: None,
+        status: Status::Unplayed,
     };
 
     let json = serde_json::to_value(&game).unwrap();
@@ -136,5 +139,22 @@ struct NoExecutableChosen;
 impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
     fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
+    }
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
     }
 }

@@ -82,6 +82,23 @@ impl nicelibrary_core::Clock for StoppedClock {
     fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
 }
 
+/// A computer where the app does not start with Windows; these tests do not change that.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
+}
+
 /// One running app with Portal 2 Installed through Steam and the Local Game
 /// Celeste added.
 struct App {
@@ -130,6 +147,7 @@ impl App {
                 web_api: Box::new(NoSecretsNoWebApi),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(UserChooses(celeste.to_path_buf())),
+                autostart: Box::new(NoAutostart),
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.join("covers")),

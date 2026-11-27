@@ -1,12 +1,12 @@
 //! Which Games of the Library the user wants to see, and in which order:
-//! filters by Source and to Installed Games, combined with a search in the
-//! title, and a sort order.
+//! filters by Source, to Installed Games and by Status, combined with a
+//! search in the title, and a sort order.
 
 use std::cmp::Ordering;
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Game, Source};
+use crate::{Game, Source, Status};
 
 /// What the Library is narrowed to, and how it is ordered. Every part that
 /// is set must match; the default filters nothing and sorts by recently
@@ -20,6 +20,8 @@ pub struct LibraryFilter {
     pub source: Option<Source>,
     /// Only Installed Games.
     pub installed_only: bool,
+    /// Only Games with this Status; `None` for every Status.
+    pub status: Option<Status>,
     /// The order the Games are answered in.
     pub sort: LibrarySort,
 }
@@ -28,6 +30,7 @@ impl LibraryFilter {
     pub(crate) fn matches(&self, game: &Game) -> bool {
         self.source.is_none_or(|source| game.source == source)
             && (!self.installed_only || game.installed)
+            && self.status.is_none_or(|status| game.status == status)
             && game.title.to_lowercase().contains(&self.search.to_lowercase())
     }
 }

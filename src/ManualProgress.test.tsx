@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, ManualProgress, Operations } from './operations';
 
 function localGame(id: number, title: string, progress: number | null = null): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, progress };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, progress, status: 'unplayed' };
 }
 
 const PORTAL_2: Game = {
@@ -16,6 +16,7 @@ const PORTAL_2: Game = {
   playtimeMinutes: null,
   lastPlayed: null,
   progress: null,
+  status: 'unplayed',
 };
 
 /**
@@ -61,6 +62,12 @@ function fakeOperations(initial: Game[], options: { setManualProgress?: Operatio
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
+    openLogFolder: async () => {},
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
     setManualProgress: (gameId, percent) => {
       calls.setManualProgress.push([gameId, percent]);
       if (options.setManualProgress) return options.setManualProgress(gameId, percent);
