@@ -67,12 +67,6 @@ impl Clock for Nothing {
     fn sleep(&self, _duration: Duration, _wakeup: &Wakeup) {}
 }
 
-impl nicelibrary_core::ExecutablePicker for Nothing {
-    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
-        Ok(None)
-    }
-}
-
 /// The app's data folder, kept across the starts of one test.
 struct Profile(TempDir);
 

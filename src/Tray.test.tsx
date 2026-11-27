@@ -40,14 +40,6 @@ function fakeOperations({ closeToTray = true } = {}) {
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
-    collections: async () => [],
-    createCollection: async () => ({ outcome: 'named', id: 1 }),
-    renameCollection: async (id) => ({ outcome: 'named', id }),
-    deleteCollection: async () => {},
-    theme: async () => 'system',
-    chooseTheme: async () => {},
-    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
-    addLocalGame: async () => ({ outcome: 'noTitle' }),
     openLogFolder: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');

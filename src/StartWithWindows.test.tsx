@@ -34,6 +34,15 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     deleteCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
+    openLogFolder: async () => {},
     onAutomaticSync: () => () => {},
     filterLibrary: async () => [],
     game: async () => null,
