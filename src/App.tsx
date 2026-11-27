@@ -23,6 +23,8 @@ function Shell({ operations }: { operations: Operations }) {
   const [view, setView] = useState<View>('library');
   // How many Syncs succeeded while the app runs; each one changes the stored Library.
   const [syncs, setSyncs] = useState(0);
+  // How often the user chose a Steam Account while the app runs; each choice changes whose Sync and Library are shown.
+  const [accountChoices, setAccountChoices] = useState(0);
 
   return (
     <div className="shell">
@@ -43,12 +45,15 @@ function Shell({ operations }: { operations: Operations }) {
             </button>
           ))}
         </nav>
-        <SyncStatus operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
+        {/* Starts over for each chosen account: shows its last Sync, never one of the account chosen before. */}
+        <SyncStatus key={accountChoices} operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
       </aside>
       <main className="main">
         {view === 'library' && <LibraryView operations={operations} syncs={syncs} />}
         {view === 'statistics' && <PlaceholderPage title="nav.statistics" note="statistics.empty" />}
-        {view === 'settings' && <SettingsView operations={operations} />}
+        {view === 'settings' && (
+          <SettingsView operations={operations} onAccountChosen={() => setAccountChoices((n) => n + 1)} />
+        )}
       </main>
     </div>
   );
@@ -94,13 +99,19 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
   const last = syncedAt ?? (loaded.state === 'ready' ? loaded.value : null);
   const [syncing, setSyncing] = useState(false);
   const [problem, setProblem] = useState<MessageKey>();
+  // Whether this view saw the running Sync start. One that started before is
+  // for the Steam Account chosen before, so its answer is not shown here.
+  const running = useRef(false);
 
   const begin = () => {
+    running.current = true;
     setSyncing(true);
     setProblem(undefined);
   };
   /** Shows how a Sync ended, started here or by the core on its own. */
   const settle = (answer: SyncOutcome | 'failed') => {
+    if (!running.current) return;
+    running.current = false;
     setSyncing(false);
     if (answer === 'failed') {
       setProblem('sync.failed');
@@ -278,16 +289,17 @@ function Cover({ title, src }: { title: string; src: string }) {
   );
 }
 
-function SettingsView({ operations }: { operations: Operations }) {
+function SettingsView({ operations, onAccountChosen }: { operations: Operations; onAccountChosen: () => void }) {
   return (
     <Page title="nav.settings">
-      <SteamSettings operations={operations} />
+      <SteamSettings operations={operations} onAccountChosen={onAccountChosen} />
       <SteamWebApiKeySettings operations={operations} />
     </Page>
   );
 }
 
-function SteamSettings({ operations }: { operations: Operations }) {
+/** The Steam installation and the Steam Account the app works with; `onAccountChosen` hears each account the core accepted. */
+function SteamSettings({ operations, onAccountChosen }: { operations: Operations; onAccountChosen: () => void }) {
   const t = useT();
   const steam = useOperation(operations, (o) => o.steamInstallation());
   const stored = useOperation(operations, (o) => o.steamAccount());
@@ -310,11 +322,12 @@ function SteamSettings({ operations }: { operations: Operations }) {
     // Shown at once; taken back when the core does not accept it.
     setChosen({ value: steamId });
     operations.chooseSteamAccount(steamId).then(
-      ({ outcome }) =>
-        outcome === 'chosen'
-          ? // The core decides how a SteamID entered by hand is written.
-            operations.steamAccount().then(settle, () => settle(steamId))
-          : settle(before, 'steam.invalidSteamId'),
+      ({ outcome }) => {
+        if (outcome !== 'chosen') return settle(before, 'steam.invalidSteamId');
+        onAccountChosen();
+        // The core decides how a SteamID entered by hand is written.
+        return operations.steamAccount().then(settle, () => settle(steamId));
+      },
       () => settle(before, 'steam.saveFailed'),
     );
   };
