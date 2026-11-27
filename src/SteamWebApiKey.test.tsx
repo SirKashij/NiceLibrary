@@ -41,9 +41,13 @@ function fakeOperations({ stored = false } = {}) {
     },
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
     openLogFolder: async () => {},
   };
   return { operations, calls };

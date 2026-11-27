@@ -131,6 +131,15 @@ impl Opener for RecordingOpener {
     }
 }
 
+/// A file dialog the user always cancels; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
+    }
+}
+
 /// One running app with a Log in `profile/logs`.
 struct App {
     core: Core,
@@ -160,6 +169,7 @@ impl App {
                 secrets: Box::new(secrets.clone()),
                 web_api: Box::new(network.clone()),
                 clock: Box::new(StoppedClock),
+                executable_picker: Box::new(NoExecutableChosen),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),

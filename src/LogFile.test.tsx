@@ -24,6 +24,10 @@ function fakeOperations() {
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
     openLogFolder: async () => {
       calls.logFolderOpened += 1;
     },

@@ -6,8 +6,8 @@ pub mod ports;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AutomaticSync, Core, CoverCache, Error, Game, Launch, LibraryFilter, Log, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
-    SyncOutcome,
+    AddLocalGame, AutomaticSync, Core, CoverCache, Error, ExecutableChoice, Game, Launch, LibraryFilter, Log,
+    SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -88,6 +88,27 @@ async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(),
     core.open_steam_web_api_key_page()
 }
 
+/// Async, so the window stays responsive while the file dialog is open.
+#[tauri::command]
+async fn choose_local_game_executable(core: tauri::State<'_, Core>) -> Result<ExecutableChoice, Error> {
+    core.choose_local_game_executable()
+}
+
+#[tauri::command]
+fn add_local_game(core: tauri::State<'_, Core>, executable: String, title: String) -> Result<AddLocalGame, Error> {
+    core.add_local_game(&executable, &title)
+}
+
+#[tauri::command]
+fn theme(core: tauri::State<'_, Core>) -> Result<Theme, Error> {
+    core.theme()
+}
+
+#[tauri::command]
+fn choose_theme(core: tauri::State<'_, Core>, theme: Theme) -> Result<(), Error> {
+    core.choose_theme(theme)
+}
+
 /// Async, so a slow start of File Explorer does not block the window.
 #[tauri::command]
 async fn open_log_folder(core: tauri::State<'_, Core>) -> Result<(), Error> {
@@ -142,8 +163,12 @@ pub fn run() {
             open_steam_web_api_key_page,
             sync,
             last_sync,
+            theme,
+            choose_theme,
             filter_library,
             game,
+            choose_local_game_executable,
+            add_local_game,
             open_log_folder
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {

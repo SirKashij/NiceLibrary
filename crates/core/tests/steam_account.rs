@@ -116,6 +116,7 @@ impl Profile {
                 secrets: Box::new(NoSecretsNoWebApi),
                 web_api: Box::new(NoSecretsNoWebApi),
                 clock: Box::new(StoppedClock),
+                executable_picker: Box::new(NoExecutableChosen),
             },
             Store::open(&self.0.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.0.path().join("covers")),
@@ -284,4 +285,13 @@ impl nicelibrary_core::Clock for StoppedClock {
     }
 
     fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
+}
+
+/// A computer whose user chooses no executable; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

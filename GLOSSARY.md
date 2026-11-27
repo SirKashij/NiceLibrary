@@ -117,3 +117,9 @@ _Avoid_: Run, start, open
 **Log**:
 The files on this computer the app writes its errors and notable events to, for the person to attach to a bug report themselves. It never holds the Steam Web API key or a full SteamID, and the app never sends it.
 _Avoid_: Crash report, telemetry, diagnostics
+
+### Interface
+
+**Theme**:
+Whether the interface shows dark or light. Until the person chooses one in the settings, it follows the operating system's setting. The German interface calls it "Design".
+_Avoid_: Skin, mode, appearance
