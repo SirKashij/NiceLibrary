@@ -77,6 +77,7 @@ fn start(profile: &Path) -> Core {
             clock: Box::new(Nothing),
             executable_picker: Box::new(Nothing),
             autostart: Box::new(NoAutostart),
+            processes: Box::new(NothingRuns),
         },
         Store::open(&profile.join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.join("covers")),
@@ -141,5 +142,14 @@ impl nicelibrary_core::Autostart for NoAutostart {
 
     fn turn_off(&self) -> Result<(), String> {
         Ok(())
+    }
+}
+
+/// A computer on which no process runs; these tests record no Sessions.
+struct NothingRuns;
+
+impl nicelibrary_core::ProcessList for NothingRuns {
+    fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
+        Ok(Vec::new())
     }
 }

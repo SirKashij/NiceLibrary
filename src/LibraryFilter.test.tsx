@@ -48,6 +48,7 @@ function fakeOperations() {
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
+    onSession: () => () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);
       return LIBRARY.filter(

@@ -40,6 +40,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
+    onSession: () => () => {},
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

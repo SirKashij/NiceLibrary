@@ -90,6 +90,7 @@ function fakeOperations({
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    onSession: () => () => {},
   };
   const automatic = {
     start: () => heard({ state: 'started' }),

@@ -922,3 +922,119 @@ mod executable_picker {
         assert_eq!(std::env::current_dir().unwrap(), before);
     }
 }
+
+/// `ProcessList` (crates/core): the absolute path of the executable of every
+/// running process the user may see, once per process; a process that has
+/// ended is no longer listed.
+///
+/// The tests copy this test program into a temporary folder and start the
+/// copy as a stand-in Game that only waits, then end it again; they stop no
+/// process but the one they started.
+#[cfg(windows)]
+mod process_list {
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::process::{Child, Command};
+    use std::time::{Duration, Instant};
+
+    use nicelibrary_core::ProcessList;
+    use nicelibrary_lib::ports::WindowsProcessList;
+
+    /// Not a test of its own: the body of the stand-in Game, which runs
+    /// until it is ended.
+    #[test]
+    #[ignore = "started by the process list tests as a stand-in Game"]
+    fn stand_in_game() {
+        std::thread::sleep(Duration::from_secs(120));
+    }
+
+    /// A running copy of this test program at its own path; ended when dropped.
+    struct StandInGame {
+        child: Child,
+        executable: PathBuf,
+        /// The folder of the copy, held by the stand-in that made it.
+        _folder: Option<tempfile::TempDir>,
+    }
+
+    impl StandInGame {
+        fn start() -> Self {
+            let folder = tempfile::tempdir().unwrap();
+            let executable = folder.path().join("StandInGame.exe");
+            fs::copy(std::env::current_exe().unwrap(), &executable).unwrap();
+            Self { child: run(&executable), executable, _folder: Some(folder) }
+        }
+
+        /// One more stand-in Game of the same executable.
+        fn start_again(&self) -> Self {
+            Self { child: run(&self.executable), executable: self.executable.clone(), _folder: None }
+        }
+
+        fn end(&mut self) {
+            // Only the process this test started, through its own handle.
+            let _ = self.child.kill();
+            let _ = self.child.wait();
+        }
+    }
+
+    impl Drop for StandInGame {
+        fn drop(&mut self) {
+            self.end();
+        }
+    }
+
+    fn run(executable: &Path) -> Child {
+        Command::new(executable)
+            .args(["--ignored", "--exact", "process_list::stand_in_game", "--quiet"])
+            .spawn()
+            .unwrap()
+    }
+
+    fn listed(executable: &Path) -> usize {
+        let wanted = fs::canonicalize(executable).unwrap();
+        WindowsProcessList
+            .running_executables()
+            .unwrap()
+            .iter()
+            .filter(|listed| fs::canonicalize(listed).ok().as_ref() == Some(&wanted))
+            .count()
+    }
+
+    /// Waits up to ten seconds for `executable` to be listed `times` times.
+    fn until_listed(executable: &Path, times: usize) -> usize {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            let count = listed(executable);
+            if count == times || Instant::now() > deadline {
+                return count;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+    }
+
+    #[test]
+    fn lists_a_started_process_by_its_executable_until_it_ends() {
+        let mut game = StandInGame::start();
+        assert_eq!(until_listed(&game.executable, 1), 1, "the stand-in Game runs");
+
+        game.end();
+
+        assert_eq!(listed(&game.executable), 0, "the stand-in Game has ended");
+    }
+
+    #[test]
+    fn lists_each_process_of_one_executable() {
+        let first = StandInGame::start();
+        let _second = first.start_again();
+
+        assert_eq!(until_listed(&first.executable, 2), 2);
+    }
+
+    #[test]
+    fn lists_absolute_paths_and_this_test_program_among_them() {
+        let running = WindowsProcessList.running_executables().unwrap();
+
+        assert!(running.iter().all(|path| path.is_absolute()), "{running:?}");
+        let this = fs::canonicalize(std::env::current_exe().unwrap()).unwrap();
+        assert!(running.iter().any(|path| fs::canonicalize(path).ok().as_ref() == Some(&this)), "{running:?}");
+    }
+}

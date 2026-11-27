@@ -13,6 +13,7 @@ mod launch;
 mod local_games;
 mod library_filter;
 mod log;
+mod sessions;
 mod status;
 mod steam;
 mod steam_app_list;
@@ -38,6 +39,7 @@ pub use launch::{Launch, OpenError, Opener};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
 pub use log::Log;
+pub use sessions::{ProcessList, Tracking};
 pub use status::Status;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_app_list::{AutomaticSteamAppListFetch, SteamAppList, SteamAppListFetch, SteamTitle};
@@ -135,6 +137,7 @@ pub struct Ports {
     pub clock: Box<dyn Clock>,
     pub autostart: Box<dyn Autostart>,
     pub executable_picker: Box<dyn ExecutablePicker>,
+    pub processes: Box<dyn ProcessList>,
 }
 
 /// The application core. Each public method is one operation.
@@ -226,7 +229,14 @@ impl Core {
             Some(account) => self.store.steam_games(&account)?,
             None => Vec::new(),
         };
-        games.extend(self.store.local_games()?.into_iter().map(|game| Game::local(game.id, game.title)));
+        let played = self.store.local_games_played()?;
+        games.extend(self.store.local_games()?.into_iter().map(|game| {
+            let unplayed = Game::local(game.id, game.title);
+            match played.get(&game.id) {
+                Some(played) => played.into_game(unplayed),
+                None => unplayed,
+            }
+        }));
         let statuses = self.store.statuses()?;
         for game in &mut games {
             game.status = statuses.get(&game.id).copied().unwrap_or_default();
@@ -559,6 +569,83 @@ impl Core {
         }
         let id = self.store.add_local_game(title, executable)?;
         Ok(AddLocalGame::Added { game: Game::local(id, title.to_owned()) })
+    }
+
+    /// Records Sessions while the app runs: looks at the running processes
+    /// every few seconds, waiting on the clock, and finds the Local Games
+    /// whose executable runs, however they were started. A Session begins at
+    /// the first look that finds its Game and is stored at once; each later
+    /// look that finds it again moves its end there, so it is kept up to the
+    /// last look even if the app is closed or crashes. A Game still running
+    /// when tracking starts again begins a new Session. `report` hears each
+    /// Session that begins or ends and each look that failed; tracking goes
+    /// on until it answers `Break`, otherwise for good.
+    pub fn track_sessions(&self, mut report: impl FnMut(Tracking) -> ControlFlow<()>) {
+        let mut open = sessions::OpenSessions::new();
+        // Nothing ends the waits early; the clock alone paces the looks.
+        let never = Wakeup::new();
+        // Whether the look before failed: a look that keeps failing is written to the Log once, not every few seconds.
+        let mut failing = false;
+        loop {
+            let mut failed = false;
+            let flow = self.look_at_processes(&mut open, &mut |event: Tracking| {
+                match &event {
+                    Tracking::Started { .. } => self.note("track_sessions: started"),
+                    Tracking::Ended { .. } => self.note("track_sessions: ended"),
+                    Tracking::Failed { reason } => {
+                        if !failing {
+                            let _ = self.logged::<()>("track_sessions", Err(reason.clone()));
+                        }
+                        failed = true;
+                    }
+                }
+                report(event)
+            });
+            failing = failed;
+            if flow.is_break() {
+                return;
+            }
+            self.ports.clock.sleep(sessions::LOOK_EVERY, &never);
+        }
+    }
+
+    /// One look of [`Self::track_sessions`]: begins, extends and ends the
+    /// Sessions in `open` by what runs now.
+    fn look_at_processes(
+        &self,
+        open: &mut sessions::OpenSessions,
+        report: &mut impl FnMut(Tracking) -> ControlFlow<()>,
+    ) -> ControlFlow<()> {
+        let running = match self.ports.processes.running_executables() {
+            Ok(running) => running,
+            Err(reason) => return report(Tracking::Failed { reason: Error::new(format!("process list: {reason}")) }),
+        };
+        let at = clock::seconds_since_epoch(self.ports.clock.now());
+        let games = match self.store.local_games() {
+            Ok(games) => games,
+            Err(reason) => return report(Tracking::Failed { reason }),
+        };
+        let running = sessions::running_games(&games, &running);
+        let ended: Vec<i64> = open.keys().copied().filter(|game| !running.contains(game)).collect();
+        for game in ended {
+            open.remove(&game);
+            report(Tracking::Ended { game_id: sessions::game_id(game) })?;
+        }
+        for game in running {
+            let recorded = match open.get(&game) {
+                Some(&session) => self.store.extend_session(session, at).map(|()| None),
+                None => self.store.begin_session(game, at).map(Some),
+            };
+            match recorded {
+                Ok(None) => {}
+                Ok(Some(session)) => {
+                    open.insert(game, session);
+                    report(Tracking::Started { game_id: sessions::game_id(game) })?;
+                }
+                Err(reason) => report(Tracking::Failed { reason })?,
+            }
+        }
+        ControlFlow::Continue(())
     }
 
     /// Opens the Steam page where the user creates their Steam Web API key,

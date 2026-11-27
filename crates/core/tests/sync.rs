@@ -314,6 +314,7 @@ impl Computer {
                 clock: Box::new(self.clock.clone()),
                 executable_picker: Box::new(NoExecutableChosen),
                 autostart: Box::new(NoAutostart),
+                processes: Box::new(NothingRuns),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -799,6 +800,7 @@ fn an_automatic_sync_that_fails_in_the_app_reaches_the_interface_with_its_reason
             clock: Box::new(computer.clock.clone()),
             executable_picker: Box::new(NoExecutableChosen),
             autostart: Box::new(NoAutostart),
+            processes: Box::new(NothingRuns),
         },
         Store::open(&computer.profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(computer.profile.path().join("covers")),
@@ -880,5 +882,14 @@ impl nicelibrary_core::Autostart for NoAutostart {
 
     fn turn_off(&self) -> Result<(), String> {
         Ok(())
+    }
+}
+
+/// A computer on which no process runs; these tests record no Sessions.
+struct NothingRuns;
+
+impl nicelibrary_core::ProcessList for NothingRuns {
+    fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
+        Ok(Vec::new())
     }
 }

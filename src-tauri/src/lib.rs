@@ -9,7 +9,7 @@ use std::ops::ControlFlow;
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
     ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
-    SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
+    SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking,
     started_with_windows,
 };
 use percent_encoding::percent_decode_str;
@@ -299,6 +299,7 @@ pub fn run() {
             start_automatic_syncs(app)?;
             tray::create(app.handle())?;
             start_automatic_steam_app_list_fetches(app)?;
+            start_session_tracking(app)?;
             create_main_window(app)
         })
         .run(tauri::generate_context!())
@@ -339,6 +340,26 @@ fn start_automatic_steam_app_list_fetches(app: &App) -> std::io::Result<()> {
             if event != AutomaticSteamAppListFetch::Skipped {
                 // No window to tell is no reason to stop fetching.
                 let _ = app.emit(AUTOMATIC_STEAM_APP_LIST_FETCH_EVENT, &event);
+            }
+            ControlFlow::Continue(())
+        });
+    })?;
+    Ok(())
+}
+
+/// The event the interface hears Sessions begin and end through
+/// (`onSession` in src/operations.ts). A failed look tells the interface nothing.
+const SESSION_EVENT: &str = "session";
+
+/// Records the Sessions of Local Games on a thread of its own for as long as
+/// the app runs.
+fn start_session_tracking(app: &App) -> std::io::Result<()> {
+    let app = app.handle().clone();
+    std::thread::Builder::new().name("session-tracking".into()).spawn(move || {
+        app.state::<Core>().track_sessions(|event| {
+            if !matches!(event, Tracking::Failed { .. }) {
+                // No window to tell is no reason to stop tracking.
+                let _ = app.emit(SESSION_EVENT, &event);
             }
             ControlFlow::Continue(())
         });

@@ -60,6 +60,7 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
+    onSession: () => () => {},
     closeToTray: async () => true,
     setCloseToTray: async () => {},
     closeWindow: async () => {},

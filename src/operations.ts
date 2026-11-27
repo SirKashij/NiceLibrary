@@ -152,6 +152,13 @@ export interface LibraryFilter {
   status: Status | null;
 }
 
+/**
+ * A Session of a Local Game that began or ended, noticed by the core however
+ * the Game was started. Mirrors `Tracking` in crates/core; a failed look at
+ * the running processes never reaches the interface.
+ */
+export type SessionEvent = { state: 'started'; gameId: string } | { state: 'ended'; gameId: string };
+
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
@@ -292,6 +299,12 @@ export interface Operations {
   startsWithWindows(): Promise<boolean>;
   /** Adds or removes the current user's autostart entry. */
   setStartWithWindows(on: boolean): Promise<void>;
+  /**
+   * Hears each Session of a Local Game begin and end while the app runs;
+   * each one changes the Game's Playtime and Last Played. Answers the
+   * function that stops listening.
+   */
+  onSession(listener: (event: SessionEvent) => void): () => void;
 }
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
@@ -362,4 +375,11 @@ export const tauriOperations: Operations = {
   openLogFolder: () => invoke<void>('open_log_folder'),
   startsWithWindows: () => invoke<boolean>('starts_with_windows'),
   setStartWithWindows: (on) => invoke<void>('set_start_with_windows', { on }),
+  onSession: (listener) => {
+    // SESSION_EVENT in src-tauri/src/lib.rs.
+    const listening = listen<SessionEvent>('session', (event) => listener(event.payload));
+    return () => {
+      void listening.then((stop) => stop());
+    };
+  },
 };

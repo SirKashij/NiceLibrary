@@ -141,6 +141,7 @@ impl Profile {
             clock: Box::new(Nothing),
             executable_picker: Box::new(Nothing),
             autostart: Box::new(autostart.clone()),
+            processes: Box::new(NothingRuns),
         };
         let store = Store::open(&self.path().join("nicelibrary.db")).unwrap();
         Core::new(ports, store, CoverCache::new(self.path().join("covers")))
@@ -231,4 +232,13 @@ fn only_a_start_with_the_autostart_argument_is_a_start_with_windows() {
     assert!(started_with_windows(["--other", AUTOSTART_ARGUMENT]));
     assert!(!started_with_windows(Vec::<String>::new()));
     assert!(!started_with_windows(["--other"]));
+}
+
+/// A computer on which no process runs; these tests record no Sessions.
+struct NothingRuns;
+
+impl nicelibrary_core::ProcessList for NothingRuns {
+    fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
+        Ok(Vec::new())
+    }
 }

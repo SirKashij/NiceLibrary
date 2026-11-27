@@ -7,7 +7,7 @@
 
 mod steam_app_list;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard};
@@ -16,6 +16,7 @@ use rusqlite::{Connection, params};
 
 use crate::collections::{self, CollectionNaming};
 use crate::local_games::StoredLocalGame;
+use crate::sessions::Played;
 use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
 use crate::theme::Theme;
@@ -71,6 +72,14 @@ const MIGRATIONS: &[&str] = &[
          game_id TEXT PRIMARY KEY,
          status  TEXT NOT NULL
      );",
+    // 7: Sessions of Local Games, each from its first to its last look, in seconds since 1970.
+    "CREATE TABLE local_game_sessions (
+         id         INTEGER PRIMARY KEY AUTOINCREMENT,
+         local_game INTEGER NOT NULL REFERENCES local_games (id) ON DELETE CASCADE,
+         started_at INTEGER NOT NULL,
+         ended_at   INTEGER NOT NULL
+     );
+     CREATE INDEX local_game_sessions_by_game ON local_game_sessions (local_game);",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
@@ -375,6 +384,52 @@ impl Store {
         transaction.execute("DELETE FROM collections WHERE id = ?1", [id])?;
         transaction.commit()?;
         Ok(())
+    }
+}
+
+impl Store {
+    /// Stores a Session of the Local Game `local_game` that began `at`, and
+    /// ends there until [`Self::extend_session`] moves its end, and answers
+    /// its id.
+    pub(crate) fn begin_session(&self, local_game: i64, at: u64) -> Result<i64, Error> {
+        let at = seconds_column(at)?;
+        let connection = self.connection();
+        connection.execute(
+            "INSERT INTO local_game_sessions (local_game, started_at, ended_at) VALUES (?1, ?2, ?2)",
+            params![local_game, at],
+        )?;
+        Ok(connection.last_insert_rowid())
+    }
+
+    /// Moves the end of the Session `session` to `at`, never before where it is.
+    pub(crate) fn extend_session(&self, session: i64, at: u64) -> Result<(), Error> {
+        self.connection().execute(
+            "UPDATE local_game_sessions SET ended_at = MAX(ended_at, ?2) WHERE id = ?1",
+            params![session, seconds_column(at)?],
+        )?;
+        Ok(())
+    }
+
+    /// What the Sessions of each Local Game that has any add up to, by its id.
+    pub(crate) fn local_games_played(&self) -> Result<BTreeMap<i64, Played>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(
+            "SELECT local_game, SUM(ended_at - started_at), MAX(ended_at) FROM local_game_sessions GROUP BY local_game",
+        )?;
+        let played = statement
+            .query_map([], |row| {
+                let seconds: i64 = row.get(1)?;
+                let last_ended: i64 = row.get(2)?;
+                Ok((
+                    row.get(0)?,
+                    Played {
+                        seconds: u64::try_from(seconds).unwrap_or(0),
+                        last_ended: u64::try_from(last_ended).unwrap_or(0),
+                    },
+                ))
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(played)
     }
 }
 
