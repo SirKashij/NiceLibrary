@@ -63,6 +63,9 @@ export type SteamAccountChoice = { outcome: 'chosen' } | { outcome: 'invalidStea
 /** How a Launch went, when nothing failed. Mirrors `Launch` in crates/core. */
 export type LaunchOutcome = { outcome: 'launched' } | { outcome: 'steamNotFound' };
 
+/** How starting the installation of a Steam Game went, when nothing failed. Mirrors `Install` in crates/core. */
+export type InstallOutcome = { outcome: 'started' } | { outcome: 'steamNotFound' };
+
 /** How storing the Steam Web API key went, when nothing failed. Mirrors `SteamWebApiKeyCheck` in crates/core. */
 export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' } | { outcome: 'steamUnreachable' };
 
@@ -292,6 +295,11 @@ export interface Operations {
   startsWithWindows(): Promise<boolean>;
   /** Adds or removes the current user's autostart entry. */
   setStartWithWindows(on: boolean): Promise<void>;
+  /**
+   * Starts the installation of a Steam Game that is owned but not Installed:
+   * Steam shows its install dialog for it. Rejects when that could not be done.
+   */
+  install(game: Game): Promise<InstallOutcome>;
 }
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
@@ -362,4 +370,5 @@ export const tauriOperations: Operations = {
   openLogFolder: () => invoke<void>('open_log_folder'),
   startsWithWindows: () => invoke<boolean>('starts_with_windows'),
   setStartWithWindows: (on) => invoke<void>('set_start_with_windows', { on }),
+  install: (game) => invoke<InstallOutcome>('install', { gameId: game.id }),
 };

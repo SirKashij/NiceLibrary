@@ -51,6 +51,7 @@ function fakeOperations({ stored = false } = {}) {
     showTrayMenu: async () => {},
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),

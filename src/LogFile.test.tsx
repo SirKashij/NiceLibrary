@@ -30,6 +30,7 @@ function fakeOperations() {
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),
     renameCollection: async () => ({ outcome: 'emptyName' }),

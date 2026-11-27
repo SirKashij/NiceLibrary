@@ -69,6 +69,7 @@ function fakeOperations({
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     openLogFolder: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');

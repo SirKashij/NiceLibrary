@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFormat, useT, type MessageKey } from './i18n';
+import { GameActionButton } from './library/GameAction';
 import { StatusChoice } from './library/Status';
 import type { Game, Operations, Source, Status } from './operations';
 
@@ -21,6 +22,7 @@ export function GameDetail({
   cover,
   notice,
   onPlay,
+  onInstall,
   onStatusSet,
   onBack,
 }: {
@@ -30,9 +32,11 @@ export function GameDetail({
   /** Changes with each successful Sync, which may change the Game. */
   syncs: number;
   cover: (game: Game) => ReactNode;
-  /** Why the last Launch did not start, if it did not. */
+  /** Why the last Launch or Install did not work, if it did not. */
   notice?: ReactNode;
   onPlay: (game: Game) => void;
+  /** Starts the installation of a Steam Game that is not Installed. */
+  onInstall: (game: Game) => void;
   /** Hears that the Game's Status was set, which changes the Library. */
   onStatusSet: (game: Game) => void;
   onBack: () => void;
@@ -94,16 +98,7 @@ export function GameDetail({
             <p className="note">{t('game.gone', { title: opened.title })}</p>
           ) : (
             <>
-              {game.installed && (
-                <button
-                  type="button"
-                  className="button play-main"
-                  aria-label={t('library.playGame', { title: game.title })}
-                  onClick={() => onPlay(game)}
-                >
-                  {t('library.play')}
-                </button>
-              )}
+              <GameActionButton game={game} className="button play-main" onPlay={onPlay} onInstall={onInstall} />
               <dl className="game-facts" aria-label={t('game.facts', { title: game.title })}>
                 <div>
                   <dt>{t('game.source')}</dt>

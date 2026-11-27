@@ -62,6 +62,7 @@ function fakeOperations({ closeToTray = true } = {}) {
     },
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     showTrayMenu: async (texts) => {
       calls.trayMenus.push(texts);
     },

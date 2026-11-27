@@ -63,3 +63,20 @@ pub enum Launch {
 pub(crate) fn steam_launch_url(app_id: u32) -> String {
     format!("steam://rungameid/{app_id}")
 }
+
+/// How starting the installation of a Steam Game went, when nothing failed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(tag = "outcome", rename_all = "camelCase")]
+pub enum Install {
+    /// Steam has been asked to show its install dialog for the Game; the
+    /// person goes on there.
+    Started,
+    /// Steam is not available on this computer: not installed, or no longer
+    /// registered for its `steam://` URLs.
+    SteamNotFound,
+}
+
+/// The URL that opens Steam's install dialog for the app `app_id`.
+pub(crate) fn steam_install_url(app_id: u32) -> String {
+    format!("steam://install/{app_id}")
+}

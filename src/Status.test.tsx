@@ -52,6 +52,7 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     openLogFolder: async () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),

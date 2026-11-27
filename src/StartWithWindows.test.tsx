@@ -56,6 +56,7 @@ function fakeOperations({ startsWithWindows = false } = {}) {
       calls.startWithWindows.push(on);
       entry = on;
     },
+    install: async () => ({ outcome: 'started' }),
   };
   const removeOutsideTheApp = () => {
     entry = false;

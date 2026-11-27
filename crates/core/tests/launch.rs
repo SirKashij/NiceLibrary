@@ -1,12 +1,14 @@
 //! An Installed Steam Game is launched through Steam itself, by opening its
 //! `steam://rungameid/<app id>` URL, never by starting its executable
 //! (ADR-0002). Steam keeps handling overlay, cloud saves and its own Playtime.
+//! A Steam Game that is owned but not Installed is installed through Steam
+//! too: its `steam://install/<app id>` URL opens Steam's install dialog.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use nicelibrary_core::{Core, CoverCache, Downloader, Launch, OpenError, Opener, Ports, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, Install, Launch, OpenError, Opener, Ports, SteamLocator, Store};
 use tempfile::TempDir;
 
 /// A computer whose secret store holds nothing and whose network reaches no
@@ -226,6 +228,81 @@ fn a_launch_reaches_the_interface_in_the_shape_the_interface_expects() {
     assert_eq!(serde_json::to_value(Launch::Launched).unwrap(), serde_json::json!({ "outcome": "launched" }));
     assert_eq!(
         serde_json::to_value(Launch::SteamNotFound).unwrap(),
+        serde_json::json!({ "outcome": "steamNotFound" })
+    );
+}
+
+/// The app knowing Portal 2 as a Steam Game whose files are not on this computer.
+fn app_with_portal_2_not_installed(steam: &SteamFixture) -> App {
+    steam.install(620, "Portal 2");
+    let app = App::start(steam);
+    steam.uninstall(620);
+    app.core.read_installed_games().unwrap();
+    app
+}
+
+#[test]
+fn installing_a_steam_game_that_is_not_installed_opens_steams_install_dialog_for_it() {
+    let steam = SteamFixture::new();
+    let app = app_with_portal_2_not_installed(&steam);
+
+    assert_eq!(app.core.install("steam:620"), Ok(Install::Started));
+    assert_eq!(app.opener.opened(), ["steam://install/620"]);
+}
+
+#[test]
+fn an_installed_steam_game_is_not_installed_again() {
+    let steam = SteamFixture::new();
+    steam.install(620, "Portal 2");
+    let app = App::start(&steam);
+
+    assert!(app.core.install("steam:620").is_err());
+    assert!(app.opener.opened().is_empty());
+}
+
+#[test]
+fn a_game_that_is_not_in_the_library_is_not_installed() {
+    let steam = SteamFixture::new();
+    let app = App::start(&steam);
+
+    assert!(app.core.install("steam:620").is_err());
+    assert!(app.core.install(r"C:\Windows\notepad.exe").is_err());
+    assert!(app.opener.opened().is_empty());
+}
+
+#[test]
+fn when_steam_is_no_longer_installed_the_install_says_so_and_opens_nothing() {
+    let steam = SteamFixture::new();
+    let app = app_with_portal_2_not_installed(&steam);
+    app.steam.uninstall_steam();
+
+    assert_eq!(app.core.install("steam:620"), Ok(Install::SteamNotFound));
+    assert!(app.opener.opened().is_empty());
+}
+
+#[test]
+fn when_steam_no_longer_handles_its_urls_the_install_says_steam_is_missing() {
+    let steam = SteamFixture::new();
+    let app = app_with_portal_2_not_installed(&steam);
+    app.opener.fail_with(OpenError::NoProgram);
+
+    assert_eq!(app.core.install("steam:620"), Ok(Install::SteamNotFound));
+}
+
+#[test]
+fn an_install_fails_when_the_url_cannot_be_opened() {
+    let steam = SteamFixture::new();
+    let app = app_with_portal_2_not_installed(&steam);
+    app.opener.fail_with(OpenError::Failed("the program could not be started".into()));
+
+    assert!(app.core.install("steam:620").is_err());
+}
+
+#[test]
+fn an_install_reaches_the_interface_in_the_shape_the_interface_expects() {
+    assert_eq!(serde_json::to_value(Install::Started).unwrap(), serde_json::json!({ "outcome": "started" }));
+    assert_eq!(
+        serde_json::to_value(Install::SteamNotFound).unwrap(),
         serde_json::json!({ "outcome": "steamNotFound" })
     );
 }

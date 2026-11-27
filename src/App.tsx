@@ -13,6 +13,7 @@ import { Tray } from './Tray';
 import { SortChoice, useLibrarySort } from './library/LibrarySort';
 import { StatusBadge } from './library/Status';
 import { LogSettings } from './settings/LogSettings';
+import { GameActionButton, useGameAction } from './library/GameAction';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -212,24 +213,11 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
         ? 'library.loadFailed'
         : 'library.readFailed';
 
-  // Why the last Launch did not start its Game, if it did not.
-  const [launchProblem, setLaunchProblem] = useState<{ message: MessageKey; title: string }>();
-  // Only the answer to the latest Launch counts; an earlier one may answer later.
-  const latestLaunch = useRef(0);
-  const launch = (game: Game) => {
-    const id = ++latestLaunch.current;
-    const report = (problem?: { message: MessageKey; title: string }) => {
-      if (id === latestLaunch.current) setLaunchProblem(problem);
-    };
-    operations.launch(game).then(
-      ({ outcome }) => report(outcome === 'steamNotFound' ? { message: 'launch.steamNotFound', title: game.title } : undefined),
-      () => report({ message: 'launch.failed', title: game.title }),
-    );
-  };
-
-  const launchNotice = launchProblem && (
+  // Launch or Install, and why the last of them did not work, if it did not.
+  const action = useGameAction(operations);
+  const launchNotice = action.problem && (
     <p className="note" role="alert">
-      {t(launchProblem.message, { title: launchProblem.title })}
+      {t(action.problem.message, { title: action.problem.title })}
     </p>
   );
 
@@ -241,11 +229,11 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
   const left = useRef<{ scrollTop: number; focus: Element | null }>(undefined);
   const open = (game: Game) => {
     left.current = { scrollTop: libraryView.current?.closest('main')?.scrollTop ?? 0, focus: document.activeElement };
-    setLaunchProblem(undefined);
+    action.clear();
     setOpened(game);
   };
   const back = () => {
-    setLaunchProblem(undefined);
+    action.clear();
     setOpened(undefined);
   };
   useLayoutEffect(() => {
@@ -289,7 +277,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           )}
           {isFiltering(filter) && games?.length === 0 && <NoMatch onReset={() => setFilter(NO_FILTER)} />}
           {games && games.length > 0 && (
-            <CoverGrid games={games} coverUrl={operations.coverUrl} onPlay={launch} onOpen={open} />
+            <CoverGrid games={games} coverUrl={operations.coverUrl} onPlay={action.play} onInstall={action.install} onOpen={open} />
           )}
         </Page>
       </div>
@@ -301,7 +289,8 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           syncs={syncs}
           cover={(game) => <Cover key={game.id} title={game.title} src={operations.coverUrl(game)} />}
           notice={launchNotice}
-          onPlay={launch}
+          onPlay={action.play}
+          onInstall={action.install}
           onStatusSet={() => setStatusChanges((count) => count + 1)}
           onBack={back}
         />
@@ -314,11 +303,14 @@ function CoverGrid({
   games,
   coverUrl,
   onPlay,
+  onInstall,
   onOpen,
 }: {
   games: Game[];
   coverUrl: Operations['coverUrl'];
   onPlay: (game: Game) => void;
+  /** Starts the installation of a Steam Game that is not Installed. */
+  onInstall: (game: Game) => void;
   /** Opens the Game's detail page. */
   onOpen: (game: Game) => void;
 }) {
@@ -336,16 +328,7 @@ function CoverGrid({
             >
               <Cover title={game.title} src={coverUrl(game)} />
             </button>
-            {game.installed && (
-              <button
-                type="button"
-                className="play"
-                aria-label={t('library.playGame', { title: game.title })}
-                onClick={() => onPlay(game)}
-              >
-                {t('library.play')}
-              </button>
-            )}
+            <GameActionButton game={game} className="play" onPlay={onPlay} onInstall={onInstall} />
           </div>
           <h2 className="game-title">{game.title}</h2>
           <StatusBadge status={game.status} />

@@ -86,6 +86,7 @@ function fakeOperations({
     showTrayMenu: async () => {},
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

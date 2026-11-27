@@ -122,6 +122,10 @@ _Avoid_: Offline mode, basic mode
 Starting a Game from the app.
 _Avoid_: Run, start, open
 
+**Install**:
+Asking Steam, from the app, to install a Steam Game that is owned but not Installed. Steam shows its own install dialog and does the installing; the Game counts as Installed once Steam reports it so.
+_Avoid_: Download, setup
+
 **Log**:
 The files on this computer the app writes its errors and notable events to, for the person to attach to a bug report themselves. It never holds the Steam Web API key or a full SteamID, and the app never sends it.
 _Avoid_: Crash report, telemetry, diagnostics
