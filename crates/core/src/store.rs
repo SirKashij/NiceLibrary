@@ -77,6 +77,7 @@ const CHOSEN_STEAM_ACCOUNT: &str = "chosen_steam_account";
 
 /// The setting that names the order the user chose for the Library.
 const LIBRARY_SORT: &str = "library_sort";
+
 /// The setting that holds the theme the user chose.
 const THEME: &str = "theme";
 
