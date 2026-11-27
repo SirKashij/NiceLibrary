@@ -16,6 +16,7 @@ mod steam_web_api;
 mod store;
 mod sync;
 mod theme;
+mod window;
 
 use std::fmt;
 use std::ops::ControlFlow;
@@ -34,6 +35,7 @@ pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
 pub use sync::{AutomaticSync, SyncOutcome};
 pub use theme::Theme;
+pub use window::WindowClose;
 
 /// The origin a Game is read from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -464,6 +466,24 @@ impl Core {
     /// a Collection that is gone already changes nothing.
     pub fn delete_collection(&self, id: i64) -> Result<(), Error> {
         self.store.delete_collection(id)
+    }
+
+    /// Whether closing the window keeps the app running in the Tray, so
+    /// tracking goes on. On until the user turns it off.
+    pub fn close_to_tray(&self) -> Result<bool, Error> {
+        window::close_to_tray(&self.store)
+    }
+
+    /// Turns close-to-tray on or off, from now on and after every restart.
+    pub fn set_close_to_tray(&self, on: bool) -> Result<(), Error> {
+        window::set_close_to_tray(&self.store, on)
+    }
+
+    /// What closing the window does: with close-to-tray on the app keeps
+    /// running in the Tray, and the very first time the window explains this
+    /// instead; with close-to-tray off the app quits.
+    pub fn close_window(&self) -> Result<WindowClose, Error> {
+        window::close_window(&self.store)
     }
 }
 

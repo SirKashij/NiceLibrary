@@ -119,3 +119,7 @@ _Avoid_: Run, start, open
 **Theme**:
 Whether the interface shows dark or light. Until the person chooses one in the settings, it follows the operating system's setting. The German interface calls it "Design".
 _Avoid_: Skin, mode, appearance
+
+**Tray**:
+The app's icon in the notification area of the Windows taskbar. While the window is closed the app keeps running there, so tracking goes on, unless the person turned close-to-tray off; its menu opens the window or quits the app. The German interface calls it "Infobereich".
+_Avoid_: System tray (in interface text), taskbar, background

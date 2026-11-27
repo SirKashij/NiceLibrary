@@ -142,4 +142,17 @@ export const de: Record<MessageKey, string> = {
   'game.never': 'Nie',
   'game.notKnown': 'Noch nicht bekannt',
   'game.gone': '{title} ist nicht mehr in deiner Bibliothek.',
+  'settings.window': 'Fenster',
+  'window.closeToTray': 'Beim Schließen des Fensters im Infobereich weiterlaufen',
+  'window.closeToTrayOn':
+    'Das geschlossene Fenster verschwindet, und NiceLibrary erfasst im Infobereich der Taskleiste weiter deine Spielzeit. Beenden kannst du es über das Menü des Symbols.',
+  'window.closeToTrayOff': 'Wenn du das Fenster schließt, wird NiceLibrary beendet und erfasst deine Spielzeit nicht mehr.',
+  'window.loadFailed': 'Die Fenstereinstellung konnte nicht geladen werden.',
+  'window.saveFailed': 'Die Fenstereinstellung konnte nicht gespeichert werden.',
+  'tray.open': 'NiceLibrary öffnen',
+  'tray.quit': 'Beenden',
+  'tray.noticeTitle': 'NiceLibrary läuft weiter',
+  'tray.notice':
+    'Wenn du das Fenster schließt, läuft NiceLibrary im Infobereich der Taskleiste weiter und erfasst weiter deine Spielzeit. Ein Klick auf das Symbol dort öffnet es wieder, über sein Menü beendest du es. Ändern kannst du das in den Einstellungen unter Fenster.',
+  'tray.ok': 'OK',
 };

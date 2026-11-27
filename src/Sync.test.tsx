@@ -78,6 +78,11 @@ function fakeOperations({
     theme: async () => 'system',
     chooseTheme: async () => {},
     filterLibrary: async () => [],
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
