@@ -156,6 +156,7 @@ export const de: Record<MessageKey, string> = {
   'steam.loadFailed': 'Steam konnte nicht geprüft werden.',
   'steam.accounts': 'Steam-Konten auf diesem Computer',
   'steam.noAccounts': 'Auf diesem Computer hat sich noch kein Steam-Konto angemeldet.',
+  'steam.accountsUnreadable': 'Steam wurde gefunden, aber die Liste der Steam-Konten konnte nicht gelesen werden.',
   'steam.mostRecent': 'Zuletzt verwendet',
   'steam.chooseAccount': 'Konto für deine Bibliothek',
   'steam.accountLoadFailed': 'Das verwendete Steam-Konto konnte nicht geladen werden.',

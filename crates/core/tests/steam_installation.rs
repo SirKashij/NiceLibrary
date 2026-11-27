@@ -94,6 +94,7 @@ fn lists_each_steam_account_by_display_name_with_the_most_recent_first() {
                 account("76561197960287931", "Player Two", true),
                 account("76561197960287930", "Player One", false),
             ],
+            accounts_unreadable: false,
         }
     );
 }
@@ -109,6 +110,7 @@ fn an_account_without_a_display_name_shows_its_account_name() {
         SteamInstallation::Found {
             path: steam.path().display().to_string(),
             accounts: vec![account("76561197960287930", "player_one", true)],
+            accounts_unreadable: false,
         }
     );
 }
@@ -130,6 +132,7 @@ fn without_a_most_recent_flag_the_latest_login_counts_as_most_recent() {
                 account("76561197960287930", "Player One", true),
                 account("76561197960287931", "Player Two", false),
             ],
+            accounts_unreadable: false,
         }
     );
 }
@@ -148,6 +151,7 @@ fn without_any_login_time_no_account_is_marked_most_recent() {
                 account("76561197960287930", "Player One", false),
                 account("76561197960287931", "Player Two", false),
             ],
+            accounts_unreadable: false,
         }
     );
 }
@@ -163,17 +167,39 @@ fn steam_without_any_login_has_no_accounts() {
 
     assert_eq!(
         core_with_steam_at(Some(steam.path())).steam_installation(),
-        SteamInstallation::Found { path: steam.path().display().to_string(), accounts: vec![] }
+        SteamInstallation::Found { path: steam.path().display().to_string(), accounts: vec![], accounts_unreadable: false }
     );
 }
 
 #[test]
-fn a_damaged_login_file_leaves_steam_found_without_accounts() {
+fn a_damaged_login_file_marks_the_account_list_as_unreadable() {
     let steam = steam_folder(Some(r#""users" { "76561197960287930" { "PersonaName" "#));
 
     assert_eq!(
         core_with_steam_at(Some(steam.path())).steam_installation(),
-        SteamInstallation::Found { path: steam.path().display().to_string(), accounts: vec![] }
+        SteamInstallation::Found { path: steam.path().display().to_string(), accounts: vec![], accounts_unreadable: true }
+    );
+}
+
+#[test]
+fn a_login_file_without_a_users_block_marks_the_account_list_as_unreadable() {
+    let steam = steam_folder(Some(r#""somethingelse" { }"#));
+
+    assert_eq!(
+        core_with_steam_at(Some(steam.path())).steam_installation(),
+        SteamInstallation::Found { path: steam.path().display().to_string(), accounts: vec![], accounts_unreadable: true }
+    );
+}
+
+#[test]
+fn a_login_file_that_cannot_be_read_marks_the_account_list_as_unreadable() {
+    // A folder where the file should be: it exists, but reading it fails.
+    let steam = tempfile::tempdir().unwrap();
+    fs::create_dir_all(steam.path().join("config").join("loginusers.vdf")).unwrap();
+
+    assert_eq!(
+        core_with_steam_at(Some(steam.path())).steam_installation(),
+        SteamInstallation::Found { path: steam.path().display().to_string(), accounts: vec![], accounts_unreadable: true }
     );
 }
 
@@ -182,6 +208,7 @@ fn reaches_the_interface_in_the_shape_the_interface_expects() {
     let found = SteamInstallation::Found {
         path: r"C:\Steam".into(),
         accounts: vec![account("76561197960287930", "Player One", true)],
+        accounts_unreadable: false,
     };
 
     assert_eq!(
@@ -189,8 +216,18 @@ fn reaches_the_interface_in_the_shape_the_interface_expects() {
         serde_json::json!({
             "state": "found",
             "path": r"C:\Steam",
-            "accounts": [{ "steamId": "76561197960287930", "displayName": "Player One", "mostRecent": true }]
+            "accounts": [{ "steamId": "76561197960287930", "displayName": "Player One", "mostRecent": true }],
+            "accountsUnreadable": false
         })
+    );
+    assert_eq!(
+        serde_json::to_value(SteamInstallation::Found {
+            path: r"C:\Steam".into(),
+            accounts: vec![],
+            accounts_unreadable: true,
+        })
+        .unwrap(),
+        serde_json::json!({ "state": "found", "path": r"C:\Steam", "accounts": [], "accountsUnreadable": true })
     );
     assert_eq!(
         serde_json::to_value(SteamInstallation::NotFound).unwrap(),

@@ -71,10 +71,14 @@ export interface SteamAccount {
   mostRecent: boolean;
 }
 
-/** The Steam installation on this computer. Mirrors `SteamInstallation` in crates/core. */
+/**
+ * The Steam installation on this computer. `accountsUnreadable` means Steam's
+ * list of accounts exists but could not be read; `accounts` is then empty.
+ * Mirrors `SteamInstallation` in crates/core.
+ */
 export type SteamInstallation =
   | { state: 'notFound' }
-  | { state: 'found'; path: string; accounts: SteamAccount[] };
+  | { state: 'found'; path: string; accounts: SteamAccount[]; accountsUnreadable: boolean };
 
 /** How choosing the Steam Account went, when nothing failed. Mirrors `SteamAccountChoice` in crates/core. */
 export type SteamAccountChoice = { outcome: 'chosen' } | { outcome: 'invalidSteamId' };
