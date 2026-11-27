@@ -42,6 +42,7 @@ function fakeOperations({ stored = false } = {}) {
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    game: async () => null,
   };
   return { operations, calls };
 }

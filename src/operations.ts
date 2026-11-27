@@ -114,6 +114,8 @@ export interface Operations {
    * the function that stops listening.
    */
   onAutomaticSync(listener: (event: AutomaticSync) => void): () => void;
+  /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
+  game(gameId: string): Promise<Game | null>;
 }
 
 export const tauriOperations: Operations = {
@@ -138,4 +140,5 @@ export const tauriOperations: Operations = {
       void listening.then((stop) => stop());
     };
   },
+  game: (gameId) => invoke<Game | null>('game', { gameId }),
 };

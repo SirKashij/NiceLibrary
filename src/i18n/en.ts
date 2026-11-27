@@ -75,6 +75,20 @@ export const en = {
   'key.dataTitle': 'What NiceLibrary stores',
   'key.data':
     'NiceLibrary keeps this Steam data only on this computer: your SteamID, the games you own, their playtime and when you last played them, your achievements with their unlock dates, names, descriptions, icons and rarity, and the games’ covers. Your key is kept in the Windows Credential Manager and is sent to no one but Steam.',
+  'library.openGame': 'Details for {title}',
+  'game.back': 'Back to the library',
+  'game.facts': 'About {title}',
+  'game.source': 'Source',
+  'game.sourceSteam': 'Steam',
+  'game.sourceLocal': 'Local',
+  'game.installed': 'Installed',
+  'game.yes': 'Yes',
+  'game.no': 'No',
+  'game.playtime': 'Playtime',
+  'game.lastPlayed': 'Last played',
+  'game.never': 'Never',
+  'game.notKnown': 'Not known yet',
+  'game.gone': '{title} is no longer in your library.',
 } as const;
 
 export type MessageKey = keyof typeof en;

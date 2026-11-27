@@ -58,6 +58,7 @@ function fakeOperations(
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => (account && lastSyncs[account]) || null,
     onAutomaticSync: () => () => {},
+    game: async () => null,
     launch: async () => ({ outcome: 'launched' }),
   };
   return { operations, chosen };
