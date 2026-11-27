@@ -30,6 +30,8 @@ function fakeOperations() {
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     onAutomaticSync: () => () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);

@@ -101,6 +101,12 @@ export const de: Record<MessageKey, string> = {
   'key.dataTitle': 'Was NiceLibrary speichert',
   'key.data':
     'NiceLibrary speichert diese Steam-Daten nur auf diesem Computer: deine SteamID, die Spiele, die du besitzt, ihre Spielzeit und wann du sie zuletzt gespielt hast, deine Trophäen mit Freischaltdatum, Name, Beschreibung, Symbol und Seltenheit sowie die Cover der Spiele. Dein Schlüssel liegt in der Windows-Anmeldeinformationsverwaltung und geht an niemanden außer Steam.',
+  'settings.theme': 'Design',
+  'theme.choose': 'Design der Oberfläche',
+  'theme.system': 'Wie im System',
+  'theme.dark': 'Dunkel',
+  'theme.light': 'Hell',
+  'theme.saveFailed': 'Das Design konnte nicht gespeichert werden.',
   'library.openGame': 'Details zu {title}',
   'game.back': 'Zurück zur Bibliothek',
   'game.facts': 'Über {title}',

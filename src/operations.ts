@@ -77,6 +77,9 @@ export type AddLocalGame =
   | { outcome: 'alreadyAdded'; /** The title the Game has in the Library. */ title: string }
   | { outcome: 'noTitle' }
   | { outcome: 'notFound' };
+
+/** The theme the user chose; `system` follows the operating system's dark or light setting. Mirrors `Theme` in crates/core. */
+export type Theme = 'system' | 'dark' | 'light';
 /** What the Library is narrowed to; every part that is set must match. Mirrors `LibraryFilter` in crates/core. */
 export interface LibraryFilter {
   /** Text the title must contain, ignoring case; empty matches every title. */
@@ -154,6 +157,10 @@ export interface Operations {
    * user confirmed or corrected. The same executable is never added twice.
    */
   addLocalGame(executable: string, title: string): Promise<AddLocalGame>;
+  /** The theme the user chose; `system` until they choose. */
+  theme(): Promise<Theme>;
+  /** Makes a theme the theme of the interface, also after a restart. */
+  chooseTheme(theme: Theme): Promise<void>;
   /** The Games in the stored Library that match the filter, ordered by title like `library`. */
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
@@ -184,6 +191,8 @@ export const tauriOperations: Operations = {
   },
   chooseLocalGameExecutable: () => invoke<ExecutableChoice>('choose_local_game_executable'),
   addLocalGame: (executable, title) => invoke<AddLocalGame>('add_local_game', { executable, title }),
+  theme: () => invoke<Theme>('theme'),
+  chooseTheme: (theme) => invoke<void>('choose_theme', { theme }),
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
 };

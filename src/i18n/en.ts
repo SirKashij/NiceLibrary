@@ -99,6 +99,12 @@ export const en = {
   'key.dataTitle': 'What NiceLibrary stores',
   'key.data':
     'NiceLibrary keeps this Steam data only on this computer: your SteamID, the games you own, their playtime and when you last played them, your achievements with their unlock dates, names, descriptions, icons and rarity, and the games’ covers. Your key is kept in the Windows Credential Manager and is sent to no one but Steam.',
+  'settings.theme': 'Theme',
+  'theme.choose': 'Interface theme',
+  'theme.system': 'Match system',
+  'theme.dark': 'Dark',
+  'theme.light': 'Light',
+  'theme.saveFailed': 'The theme could not be saved.',
   'library.openGame': 'Details for {title}',
   'game.back': 'Back to the library',
   'game.facts': 'About {title}',

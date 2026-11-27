@@ -75,6 +75,8 @@ function fakeOperations({
       return outcome;
     },
     lastSync: async () => last,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     filterLibrary: async () => [],
     onAutomaticSync: (listener) => {
       listeners.add(listener);

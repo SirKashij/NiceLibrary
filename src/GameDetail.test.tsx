@@ -52,6 +52,8 @@ function fakeOperations(
     openSteamWebApiKeyPage: async () => {},
     sync: options.sync ?? (async () => ({ outcome: 'noKey' })),
     lastSync: async () => null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     onAutomaticSync: () => () => {},
     filterLibrary: async () => games,
     game: async (gameId) => {
