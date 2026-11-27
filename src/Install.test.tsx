@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, InstallOutcome, Operations } from './operations';
 
 function steamGame(appId: number, title: string, installed: boolean): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', progress: null, favorite: false };
 }
 
 /** Fake operations over a stored Library; `install` records each Game it is asked to install. */
@@ -16,6 +16,15 @@ function fakeOperations(games: Game[], install: (game: Game) => Promise<InstallO
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -92,6 +101,7 @@ function fakeOperations(games: Game[], install: (game: Game) => Promise<InstallO
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
     sessions: async () => [],

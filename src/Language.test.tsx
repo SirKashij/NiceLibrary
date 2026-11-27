@@ -16,6 +16,7 @@ const played: Game = {
   playtimeMinutes: 90,
   lastPlayed: Date.UTC(2026, 2, 5, 12) / 1000,
   status: 'playing',
+  progress: null,
   favorite: false,
 };
 
@@ -31,6 +32,15 @@ function fakeOperations({
     library: async () => [played],
     readInstalledGames: async () => [played],
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -92,6 +102,7 @@ function fakeOperations({
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},

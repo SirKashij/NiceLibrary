@@ -175,6 +175,7 @@ impl App {
                 process_starter: Box::new(NothingStarted),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
+                export_file_picker: Box::new(NoExportFile),
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.join("covers")),
@@ -369,5 +370,18 @@ impl nicelibrary_core::ProcessStarter for NothingStarted {
         _working_directory: &std::path::Path,
     ) -> Result<(), String> {
         Err(format!("this test starts no process, not even {}", executable.display()))
+    }
+}
+
+/// No export or import is made here: the user cancels every file dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+
+    fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
     }
 }

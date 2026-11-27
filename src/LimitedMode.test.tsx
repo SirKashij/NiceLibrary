@@ -16,6 +16,7 @@ const PORTAL_2: Game = {
   lastPlayed: null,
   status: 'unplayed',
   favorite: false,
+  progress: null,
 };
 
 /**
@@ -116,6 +117,16 @@ function fakeOperations({
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    exportData: async () => ({ outcome: 'cancelled' }),
+    importData: async () => ({ outcome: 'cancelled' }),
     sessions: async () => [],
   };
   /** The core runs an automatic Sync that ends with `answer`. */

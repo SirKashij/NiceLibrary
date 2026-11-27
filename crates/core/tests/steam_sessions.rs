@@ -246,6 +246,7 @@ impl App {
                 autostart: Box::new(NoAutostart),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
+                export_file_picker: Box::new(NoExportFile),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -624,4 +625,17 @@ fn a_running_session_of_a_steam_game_is_marked_as_running() {
         app.core.sessions("steam:620").unwrap(),
         [Session { started_at: at(10, 0, 0), seconds: 30 * 60, running: false }]
     );
+}
+
+/// No export or import is made here: the user cancels every file dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+
+    fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

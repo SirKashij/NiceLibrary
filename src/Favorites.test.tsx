@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LibraryFilter, Operations } from './operations';
 
 function steamGame(appId: number, title: string, installed: boolean): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, progress: null, status: 'unplayed', favorite: false };
 }
 
 const LIBRARY = [steamGame(1145360, 'Hades', true), steamGame(220, 'Half-Life 2', false), steamGame(620, 'Portal 2', true)];
@@ -27,6 +27,11 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     library: async () => library(),
     readInstalledGames: async () => library(),
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -77,6 +82,7 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
     chooseCoverImage: async () => ({ outcome: 'cancelled' }),
     coverImageChosen: async () => false,
     removeCoverImage: async () => {},
@@ -107,6 +113,10 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),

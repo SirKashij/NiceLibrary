@@ -16,6 +16,7 @@ const PORTAL_2: Game = {
   lastPlayed: null,
   status: 'unplayed',
   favorite: false,
+  progress: null,
 };
 
 function achievement(id: string, name: string, unlockedAt: number | null, details: Partial<Achievement> = {}): Achievement {
@@ -130,6 +131,16 @@ function fakeOperations(achievements: GameAchievements): Operations {
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    exportData: async () => ({ outcome: 'cancelled' }),
+    importData: async () => ({ outcome: 'cancelled' }),
   };
   return operations;
 }

@@ -235,6 +235,7 @@ impl Computer {
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
                 executable_picker: Box::new(NoExecutableChosen),
+                export_file_picker: Box::new(NoExportFile),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -446,5 +447,18 @@ struct NothingRuns;
 impl nicelibrary_core::ProcessList for NothingRuns {
     fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
         Ok(Vec::new())
+    }
+}
+
+/// No export or import is made here: the user cancels every file dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+
+    fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
     }
 }

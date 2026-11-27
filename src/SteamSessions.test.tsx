@@ -17,6 +17,7 @@ const PORTAL_2: Game = {
   lastPlayed: LAST_WEEK,
   status: 'playing',
   favorite: false,
+  progress: null,
 };
 
 /**
@@ -110,6 +111,16 @@ function fakeOperations(initial: Game[]) {
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    exportData: async () => ({ outcome: 'cancelled' }),
+    importData: async () => ({ outcome: 'cancelled' }),
   };
   const session = (event: SessionEvent) => act(() => sessionListeners.forEach((listener) => listener(event)));
   const sync = (event: AutomaticSync) => act(() => syncListeners.forEach((listener) => listener(event)));

@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { App } from './App';
 import type { Collection, Game, LibraryFilter, Operations } from './operations';
 
-const PORTAL_2: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: 1260, lastPlayed: null, status: 'unplayed', favorite: false };
-const HADES: Game = { id: 'local:1', title: 'Hades', source: 'local', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
-const PORTAL: Game = { id: 'steam:400', title: 'Portal', source: 'steam', installed: false, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false };
+const PORTAL_2: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: 1260, lastPlayed: null, status: 'unplayed', favorite: false, progress: null };
+const HADES: Game = { id: 'local:1', title: 'Hades', source: 'local', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false, progress: null };
+const PORTAL: Game = { id: 'steam:400', title: 'Portal', source: 'steam', installed: false, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false, progress: null };
 
 /**
  * Fake operations whose Collections behave like the core's: a Game can be
@@ -44,6 +44,11 @@ function fakeOperations({
     library: async () => library,
     readInstalledGames: async () => library,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -136,6 +141,11 @@ function fakeOperations({
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),

@@ -5,9 +5,9 @@ import { App } from './App';
 import type { Game, LibraryLayout, Operations } from './operations';
 
 const LIBRARY: Game[] = [
-  { id: 'steam:1145360', title: 'Hades', source: 'steam', installed: true, playtimeMinutes: 600, lastPlayed: 1_700_000_000, status: 'playing', favorite: true },
-  { id: 'steam:220', title: 'Half-Life 2', source: 'steam', installed: false, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false },
-  { id: 'local:1', title: 'Portal 2', source: 'local', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false },
+  { id: 'steam:1145360', title: 'Hades', source: 'steam', installed: true, playtimeMinutes: 600, lastPlayed: 1_700_000_000, status: 'playing', favorite: true, progress: null },
+  { id: 'steam:220', title: 'Half-Life 2', source: 'steam', installed: false, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false, progress: null },
+  { id: 'local:1', title: 'Portal 2', source: 'local', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false, progress: null },
 ];
 
 /** A promise that never settles: the operation is still running. */
@@ -30,6 +30,11 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     library: async () => LIBRARY,
     readInstalledGames: async () => LIBRARY,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -111,6 +116,11 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
     sessions: async () => [],

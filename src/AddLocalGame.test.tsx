@@ -7,7 +7,7 @@ import type { AddLocalGame, ExecutableChoice, Game, Operations } from './operati
 const CELESTE = 'C:\\Games\\Celeste\\Celeste.exe';
 
 function localGame(id: number, title: string): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, progress: null, status: 'unplayed', favorite: false };
 }
 
 /**
@@ -28,6 +28,7 @@ function fakeOperations({
     library: async () => [...games],
     readInstalledGames: async () => [...games],
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -73,6 +74,10 @@ function fakeOperations({
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     sessions: async () => [],
     filterLibrary: async () => [...games],
     libraryLayout: async () => 'coverGrid',
@@ -92,6 +97,10 @@ function fakeOperations({
       games.push(game);
       return { outcome: 'added', game };
     },
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },
@@ -107,6 +116,7 @@ function fakeOperations({
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
   };
   return { operations, added };
 }

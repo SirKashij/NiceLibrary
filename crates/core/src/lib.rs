@@ -13,7 +13,9 @@ mod cover_hue;
 mod cover_match;
 mod covers;
 mod executables_in_folder;
+mod export;
 mod favorites;
+mod import;
 pub mod keyvalues;
 mod language;
 mod launch;
@@ -21,9 +23,12 @@ mod local_covers;
 mod limited_mode;
 mod local_games;
 mod library_filter;
+mod progress;
 mod library_layout;
 mod log;
+mod playtime_adjustment;
 mod sessions;
+mod statistics;
 mod status;
 mod steam;
 mod steam_app_list;
@@ -51,14 +56,18 @@ pub use collections::{Collection, CollectionNaming};
 pub use cover_hue::CoverHue;
 pub use covers::{Cover, CoverCache, Downloader};
 pub use executables_in_folder::{FolderSuggestions, SuggestedExecutable};
+pub use export::{DataExport, ExportFilePicker};
+pub use import::DataImport;
 pub use language::Language;
 pub use launch::{Install, Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use limited_mode::LimitedMode;
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
 pub use local_games::{AddLocalGame, EditLocalGame, ExecutableChoice, ExecutablePicker, LocalGame};
+pub use progress::ManualProgress;
 pub use log::Log;
 pub use sessions::{ProcessList, Session, Tracking};
+pub use statistics::{GamesByStatus, PlayedWeek, Statistics};
 pub use status::Status;
 pub use library_layout::LibraryLayout;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
@@ -94,6 +103,11 @@ pub struct Game {
     /// Last Played, in seconds since the Unix epoch; `None` for never or
     /// not known.
     pub last_played: Option<u64>,
+    /// Progress in percent, from 0 to 100, as its Source works it out (see
+    /// `progress`): for a Local Game its Manual Progress, for a Steam Game
+    /// the share of its unlocked Achievements. `None` when the Game has none,
+    /// such as a Steam Game without Achievements.
+    pub progress: Option<u8>,
     /// The person's own judgement of where they stand with the Game;
     /// Unplayed until they set it. No Sync changes it.
     pub status: Status,
@@ -102,8 +116,8 @@ pub struct Game {
 }
 
 impl Game {
-    /// The Steam Game with Steam's app id `app_id`, without Playtime and
-    /// Last Played.
+    /// The Steam Game with Steam's app id `app_id`, without Playtime, Last
+    /// Played and Progress.
     pub(crate) fn steam(app_id: u32, title: String, installed: bool) -> Self {
         Self {
             id: format!("steam:{app_id}"),
@@ -112,6 +126,7 @@ impl Game {
             installed,
             playtime_minutes: None,
             last_played: None,
+            progress: None,
             status: Status::Unplayed,
             favorite: false,
         }
@@ -164,6 +179,7 @@ pub struct Ports {
     pub process_starter: Box<dyn ProcessStarter>,
     pub icon_extractor: Box<dyn IconExtractor>,
     pub image_picker: Box<dyn ImagePicker>,
+    pub export_file_picker: Box<dyn ExportFilePicker>,
 }
 
 /// The application core. Each public method is one operation.
@@ -264,18 +280,31 @@ impl Core {
 
     /// Every Game of both Sources, Hidden Games too, ordered by title.
     fn every_game(&self) -> Result<Vec<Game>, Error> {
-        // Until the user chooses, the account read last: it holds the Games.
-        let account = self.chosen_steam_account_or(|| self.store.last_read_steam_account())?;
-        let mut games = match account {
-            Some(account) => self.store.steam_games(&account)?,
+        let mut games = match self.library_steam_account()? {
+            Some(account) => {
+                let mut games = self.store.steam_games(&account)?;
+                let achievements = self.store.achievement_counts(&account)?;
+                for game in &mut games {
+                    game.progress = steam_app_id(&game.id)
+                        .and_then(|app_id| achievements.get(&app_id))
+                        .and_then(|&(unlocked, total)| progress::of_steam_game(unlocked, total));
+                }
+                games
+            }
             None => Vec::new(),
         };
         let played = self.store.local_games_played()?;
+        let adjustments = self.store.playtime_adjustments()?;
         games.extend(self.store.local_games()?.into_iter().map(|game| {
-            let unplayed = Game::local(game.id, game.title);
-            match played.get(&game.id) {
+            let id = game.id;
+            let unplayed = Game::from_stored_local(game);
+            let played = match played.get(&id) {
                 Some(played) => played.into_game(unplayed),
                 None => unplayed,
+            };
+            match adjustments.get(&id) {
+                Some(&minutes) => playtime_adjustment::adjusted(played, minutes),
+                None => played,
             }
         }));
         let statuses = self.store.statuses()?;
@@ -285,6 +314,12 @@ impl Core {
         favorites::mark(&mut games, &self.store.favorites()?);
         games.sort_by(library_filter::by_title);
         Ok(games)
+    }
+
+    /// The Steam Account whose Steam Games the Library holds: the chosen
+    /// one, and until the user chooses, the account read last.
+    fn library_steam_account(&self) -> Result<Option<String>, Error> {
+        self.chosen_steam_account_or(|| self.store.last_read_steam_account())
     }
 
     /// The Games in the Library that match `filter`, as last stored, in the
@@ -895,6 +930,31 @@ impl Core {
         }
     }
 
+    /// Sets the Manual Progress of the Local Game `game_id` to `percent`, a
+    /// whole number from 0 to 100, or clears it with `None`; it is then the
+    /// Game's Progress. Anything outside 0 to 100, and any Game that is not a
+    /// Local Game, is refused and changes nothing. Fails when there is no
+    /// such Local Game.
+    pub fn set_manual_progress(&self, game_id: &str, percent: Option<i64>) -> Result<ManualProgress, Error> {
+        let Some(id) = local_game_id(game_id) else {
+            return Ok(ManualProgress::NotALocalGame);
+        };
+        let manual_progress = match percent {
+            Some(percent) => match progress::percent_in(percent) {
+                Some(percent) => Some(percent),
+                None => return Ok(ManualProgress::OutOfRange),
+            },
+            None => None,
+        };
+        if !self.store.set_manual_progress(id, manual_progress)? {
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
+        }
+        match self.game(game_id)? {
+            Some(game) => Ok(ManualProgress::Set { game }),
+            None => Err(Error::new(format!("no such game in the library: {game_id}"))),
+        }
+    }
+
     /// Asks the user to choose a folder of Games and suggests the executables
     /// in it as Local Games, each with a proposed title; those already in the
     /// Library are marked. Adds nothing: the user adds the ones they tick
@@ -1460,6 +1520,29 @@ impl Core {
         self.logged("unhide_game", unhidden)
     }
 
+    /// The Statistics of the Library as it shows: total Playtime, unlocked
+    /// Achievements of all and their share, Games at 100 % Progress, and
+    /// Games per Status, the Playtime of each of the last eight weeks from
+    /// the recorded Sessions, and the five most played Games. Hidden Games
+    /// count in none of them.
+    pub fn statistics(&self) -> Result<Statistics, Error> {
+        let statistics = self.stored_library().and_then(|games| {
+            let achievements = match self.library_steam_account()? {
+                Some(account) => self.store.achievement_counts(&account)?,
+                None => Default::default(),
+            };
+            let now = clock::seconds_since_epoch(self.ports.clock.now());
+            let sessions = self.store.sessions_ended_after(statistics::first_week_start(now))?;
+            Ok(statistics::of(
+                &games,
+                |game| steam_app_id(&game.id).and_then(|app_id| achievements.get(&app_id).copied()),
+                &sessions,
+                now,
+            ))
+        });
+        self.logged("statistics", statistics)
+    }
+
     /// Marks the Game `game_id` as a Favorite, or with `favorite` false
     /// unmarks it. The mark stays through Syncs and restarts, also while a
     /// Steam Game is out of the Library. Fails when the Game is not in the
@@ -1496,6 +1579,95 @@ impl Core {
         let opened =
             self.ports.opener.open_url(url).map_err(|error| Error::new(format!("{url} could not be opened: {error}")));
         self.logged("open_about_page", opened)
+    }
+
+    /// The Playtime Adjustment of the Game `game_id`, in minutes, negative
+    /// when time was removed; `None` when it has none. Steam Games never
+    /// have one.
+    pub fn playtime_adjustment(&self, game_id: &str) -> Result<Option<i32>, Error> {
+        let adjustment = match playtime_adjustment::local_game_number(game_id) {
+            Some(number) => self.store.playtime_adjustments().map(|adjustments| adjustments.get(&number).copied()),
+            None => Ok(None),
+        };
+        self.logged("playtime_adjustment", adjustment)
+    }
+
+    /// Makes `minutes` the Playtime Adjustment of the Local Game `game_id`,
+    /// from now on and after every restart, and answers the Game as the
+    /// Library now shows it: its Playtime is the sum of its Sessions plus
+    /// the adjustment, never below zero. `None` or zero clears it. A Steam
+    /// Game, or a Game that is not in the Library, is refused.
+    pub fn set_playtime_adjustment(&self, game_id: &str, minutes: Option<i32>) -> Result<Game, Error> {
+        self.logged("set_playtime_adjustment", self.record_playtime_adjustment(game_id, minutes))
+    }
+
+    fn record_playtime_adjustment(&self, game_id: &str, minutes: Option<i32>) -> Result<Game, Error> {
+        let not_in_library = || Error::new(format!("no such local game in the library: {game_id}"));
+        let number = playtime_adjustment::local_game_number(game_id).ok_or_else(not_in_library)?;
+        let in_library = |library: Vec<Game>| library.into_iter().find(|game| game.id == game_id);
+        if in_library(self.stored_library()?).is_none() {
+            return Err(not_in_library());
+        }
+        self.store.set_playtime_adjustment(number, playtime_adjustment::stored(minutes))?;
+        in_library(self.stored_library()?).ok_or_else(not_in_library)
+    }
+
+    /// Exports everything that is the person's own into one Export File
+    /// they choose in a "Save as" dialog, which offers a name with today's
+    /// date: Local Games with how they are launched and the Cover images
+    /// they chose, Sessions, Playtime Adjustments, Manual Progress,
+    /// Statuses, Favorites, Hidden Games, Collections and the settings
+    /// (docs/export-format.md). The Steam Web API key is never in it. A file
+    /// already there is replaced; cancelling writes nothing.
+    pub fn export_data(&self) -> Result<DataExport, Error> {
+        self.logged_outcome("export_data", self.write_export())
+    }
+
+    fn write_export(&self) -> Result<DataExport, Error> {
+        let now = clock::seconds_since_epoch(self.ports.clock.now());
+        let chosen = self
+            .ports
+            .export_file_picker
+            .choose_export_file(&export::suggested_name(now))
+            .map_err(|reason| Error::new(format!("file dialog: {reason}")))?;
+        let Some(file) = chosen else {
+            return Ok(DataExport::Cancelled);
+        };
+        let contents = export::contents(&self.store, &self.covers, self.ports.autostart.as_ref(), now)?;
+        export::write(&file, &contents)?;
+        Ok(DataExport::Exported { file: file.display().to_string() })
+    }
+
+    /// Imports an Export File the user chooses in an "Open" dialog: its
+    /// Local Games with how they are launched and the Cover images chosen
+    /// for them, Sessions, Playtime Adjustments, Manual Progress, Statuses,
+    /// Favorites, Hidden Games, Collections and settings replace those here,
+    /// all at once. Steam Games stay, and the Steam Web API key is never
+    /// touched. Each Local Game gets a new number here. A file of a newer
+    /// version, or one that is damaged or no Export File, is refused and
+    /// changes nothing; so does cancelling.
+    pub fn import_data(&self) -> Result<DataImport, Error> {
+        self.logged_outcome("import_data", self.read_import())
+    }
+
+    fn read_import(&self) -> Result<DataImport, Error> {
+        let chosen = self
+            .ports
+            .export_file_picker
+            .choose_import_file()
+            .map_err(|reason| Error::new(format!("file dialog: {reason}")))?;
+        let Some(file) = chosen else {
+            return Ok(DataImport::Cancelled);
+        };
+        let bytes =
+            std::fs::read(&file).map_err(|error| Error::new(format!("cannot read {}: {error}", file.display())))?;
+        let checked = match import::check(&bytes) {
+            Ok(checked) => checked,
+            Err(refused) => return Ok(refused),
+        };
+        import::replace(&self.store, &self.covers, self.ports.autostart.as_ref(), &checked)?;
+        let local_games = u32::try_from(checked.file.local_games.len()).unwrap_or(u32::MAX);
+        Ok(DataImport::Imported { file: file.display().to_string(), local_games })
     }
 
     /// The dominant hue of the Game `game_id`'s Cover, from which its Detail

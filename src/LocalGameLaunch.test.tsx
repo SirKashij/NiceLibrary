@@ -11,6 +11,7 @@ const CELESTE: Game = {
   installed: true,
   playtimeMinutes: 0,
   lastPlayed: null,
+  progress: null,
   status: 'unplayed',
   favorite: false,
 };
@@ -22,6 +23,7 @@ const PORTAL_2: Game = {
   installed: true,
   playtimeMinutes: null,
   lastPlayed: null,
+  progress: null,
   status: 'unplayed',
   favorite: false,
 };
@@ -49,6 +51,11 @@ function fakeOperations({
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -81,6 +88,10 @@ function fakeOperations({
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
@@ -112,6 +123,7 @@ function fakeOperations({
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},

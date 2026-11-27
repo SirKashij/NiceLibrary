@@ -22,7 +22,11 @@ import { WindowSettings } from './settings/WindowSettings';
 import { Tray } from './Tray';
 import { SortChoice, useLibrarySort } from './library/LibrarySort';
 import { StatusBadge } from './library/Status';
+import { ProgressBadge } from './library/Progress';
+import { ExportSettings } from './settings/ExportSettings';
+import { ImportReloadProvider, useImportReload } from './settings/importReload';
 import { LogSettings } from './settings/LogSettings';
+import { StatisticsPage } from './statistics/StatisticsPage';
 import { GameActionButton, useGameAction } from './library/GameAction';
 import { LimitedModeHint } from './LimitedModeHint';
 
@@ -37,17 +41,21 @@ const VIEWS: { view: View; label: MessageKey }[] = [
 /** The whole interface; `lang` is the system language, shown until the user chooses another. */
 export function App({ operations, lang }: { operations: Operations; lang: Lang }) {
   return (
-    <LanguageProvider operations={operations} system={lang}>
-      <ThemeProvider operations={operations}>
-        <Shell operations={operations} />
-      </ThemeProvider>
-    </LanguageProvider>
+    <ImportReloadProvider>
+      <LanguageProvider operations={operations} system={lang}>
+        <ThemeProvider operations={operations}>
+          <Shell operations={operations} />
+        </ThemeProvider>
+      </LanguageProvider>
+    </ImportReloadProvider>
   );
 }
 
 function Shell({ operations }: { operations: Operations }) {
   const t = useT();
-  const [view, setView] = useState<View>('library');
+  // After an import the interface starts over where the import was made.
+  const { imported } = useImportReload();
+  const [view, setView] = useState<View>(imported ? 'settings' : 'library');
   // How many Syncs succeeded while the app runs; each one changes the stored Library.
   const [syncs, setSyncs] = useState(0);
   // How often the user chose a Steam Account while the app runs; each choice changes whose Sync and Library are shown.
@@ -74,6 +82,17 @@ function Shell({ operations }: { operations: Operations }) {
   const show = (next: View) => {
     setToKeySettings(false);
     setView(next);
+  };
+  // The Game whose detail page the Library opens with, chosen on another page such as the Statistics.
+  const [opening, setOpening] = useState<Game>();
+  useEffect(() => {
+    if (view !== 'library') setOpening(undefined);
+  }, [view]);
+  const openGame = (game: Game) => {
+    setOpening(game);
+    show('library');
+    setFavoritesOnly(false);
+    setChosen(undefined);
   };
 
   return (
@@ -146,6 +165,7 @@ function Shell({ operations }: { operations: Operations }) {
             collection={chosen}
             collectionChanges={collectionChanges}
             onCollectionsChanged={collectionsChanged}
+            opening={opening}
             hint={
               <LimitedModeHint
                 key={accountChoices}
@@ -160,7 +180,7 @@ function Shell({ operations }: { operations: Operations }) {
             }
           />
         )}
-        {view === 'statistics' && <PlaceholderPage title="nav.statistics" note="statistics.empty" />}
+        {view === 'statistics' && <StatisticsPage operations={operations} syncs={changes} onOpen={openGame} />}
         {view === 'settings' && (
           <SettingsView
             operations={operations}
@@ -302,6 +322,7 @@ function LibraryView({
   collection,
   collectionChanges,
   onCollectionsChanged,
+  opening,
   hint,
 }: {
   operations: Operations;
@@ -319,18 +340,20 @@ function LibraryView({
   collectionChanges: number;
   /** Hears each change of what is in a Collection made on a detail page. */
   onCollectionsChanged: () => void;
+  /** The Game whose detail page shows when the Library opens. */
+  opening?: Game;
   /** The Limited Mode hint, shown above the Library. */
   hint: ReactNode;
 }) {
   const t = useT();
   // How many Local Games were added, edited or removed here; each one changes the stored Library.
   const [additions, setAdditions] = useState(0);
-  // How often the user set a Status while the app runs; each one changes the stored Library.
-  const [statusChanges, setStatusChanges] = useState(0);
+  // How often the user set a Status or a Manual Progress while the app runs; each one changes the stored Library.
+  const [gameChanges, setGameChanges] = useState(0);
   // How often a Game was hidden or unhidden here; each time changes the Library.
   const [hidings, setHidings] = useState(0);
   // A change of what is in a Collection changes which Games a chosen Collection shows.
-  const changes = syncs + additions + statusChanges + hidings + favoriteMarks + collectionChanges;
+  const changes = syncs + additions + gameChanges + hidings + favoriteMarks + collectionChanges;
   const changed = () => setAdditions((n) => n + 1);
   // The title of the Local Game removed last, which the Library then confirms.
   const [removed, setRemoved] = useState<string>();
@@ -397,7 +420,7 @@ function LibraryView({
 
   // The Game whose detail page is open. The Library stays mounted behind it,
   // so going back finds it as it was.
-  const [opened, setOpened] = useState<Game>();
+  const [opened, setOpened] = useState<Game | undefined>(opening);
   // Whether the Hidden Games are shown in place of the Library, which stays mounted behind them too.
   const [showingHidden, setShowingHidden] = useState(false);
   // The Game hidden last from its detail page, for the notice in the Library.
@@ -431,8 +454,11 @@ function LibraryView({
     onLibraryEdited();
   };
   // Choosing another Collection, the Favorites or the whole Library shows that list, not the Game
-  // or the Hidden Games opened before.
+  // or the Hidden Games opened before; the Game the Library opens with stays open.
+  const shownList = useRef({ chosenId, favoritesOnly });
   useEffect(() => {
+    if (shownList.current.chosenId === chosenId && shownList.current.favoritesOnly === favoritesOnly) return;
+    shownList.current = { chosenId, favoritesOnly };
     setOpened(undefined);
     setShowingHidden(false);
   }, [chosenId, favoritesOnly]);
@@ -542,7 +568,7 @@ function LibraryView({
           notice={launchNotice}
           onPlay={action.play}
           onInstall={action.install}
-          onStatusSet={() => setStatusChanges((count) => count + 1)}
+          onChanged={() => setGameChanges((count) => count + 1)}
           onFavorite={favorite.toggle}
           onBack={back}
           onHidden={hidden}
@@ -615,6 +641,7 @@ function CoverGrid({
           </div>
           <h2 className="game-title">{game.title}</h2>
           <StatusBadge status={game.status} />
+          <ProgressBadge progress={game.progress} />
           <Played game={game} />
           {!game.installed && <span className="muted">{t('library.notInstalled')}</span>}
         </li>
@@ -678,6 +705,7 @@ function SettingsView({
       <LanguageSettings />
       <WindowSettings operations={operations} />
       <SteamAppListSettings operations={operations} />
+      <ExportSettings operations={operations} />
       <LogSettings operations={operations} />
     </Page>
   );
@@ -987,15 +1015,6 @@ function SteamWebApiKeySettings({ operations }: { operations: Operations }) {
         <p className="muted">{t('key.data')}</p>
       </div>
     </section>
-  );
-}
-
-function PlaceholderPage({ title, note }: { title: MessageKey; note: MessageKey }) {
-  const t = useT();
-  return (
-    <Page title={title}>
-      <p className="note">{t(note)}</p>
-    </Page>
   );
 }
 

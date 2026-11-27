@@ -22,11 +22,28 @@ export interface Game {
   playtimeMinutes: number | null;
   /** Last Played, in seconds since the Unix epoch; `null` for never or not known. */
   lastPlayed: number | null;
+  /**
+   * Progress in percent, from 0 to 100, as the Game's Source works it out:
+   * for a Local Game its Manual Progress, for a Steam Game the share of its
+   * unlocked Achievements. `null` when the Game has none, such as a Steam Game
+   * without Achievements.
+   */
+  progress: number | null;
   /** Set by hand only, `unplayed` until then; no Sync changes it. */
   status: Status;
   /** Whether the user marked the Game as a Favorite. */
   favorite: boolean;
 }
+
+/**
+ * How setting or clearing a Local Game's Manual Progress went, when nothing
+ * failed. Every outcome but `set` changed nothing. Mirrors `ManualProgress`
+ * in crates/core.
+ */
+export type ManualProgress =
+  | { outcome: 'set'; /** The Game as the Library shows it now. */ game: Game }
+  | { outcome: 'outOfRange' }
+  | { outcome: 'notALocalGame' };
 
 /** How a Sync went, when nothing failed. Every outcome but `synced` changed nothing. Mirrors `SyncOutcome` in crates/core. */
 export type SyncOutcome =
@@ -185,7 +202,7 @@ export type AutomaticSteamAppListFetch =
  * Playtime (longest first). Games without a value come last, Games with the
  * same value by title. Mirrors `LibrarySort` in crates/core.
  */
-export type LibrarySort = 'recentlyPlayed' | 'name' | 'playtime';
+export type LibrarySort = 'recentlyPlayed' | 'name' | 'playtime' | 'progress';
 
 /**
  * What the Library is narrowed to, and in which order; every part that is set
@@ -408,6 +425,12 @@ export interface Operations {
   /** Makes `language` the interface language, also after a restart. */
   chooseLanguage(language: Language): Promise<void>;
   /**
+   * Sets a Local Game's Manual Progress to a whole number from 0 to 100, or
+   * clears it with `null`; it is then the Game's Progress. Anything outside
+   * 0 to 100 is `outOfRange`, a Steam Game `notALocalGame`; both change nothing.
+   */
+  setManualProgress(gameId: string, percent: number | null): Promise<ManualProgress>;
+  /**
    * Asks the user to choose an image in the operating system's file dialog
    * and makes it the Cover of a Local Game, in place of its executable's
    * icon. The image is copied into the app's data folder. Rejects for a Game
@@ -451,6 +474,18 @@ export interface Operations {
    * stops listening.
    */
   onSession(listener: (event: SessionEvent) => void): () => void;
+  /**
+   * The Playtime Adjustment of a Game in minutes, negative when time was
+   * removed; `null` when it has none. Steam Games never have one.
+   */
+  playtimeAdjustment(gameId: string): Promise<number | null>;
+  /**
+   * Makes `minutes` the Playtime Adjustment of a Local Game and answers the
+   * Game as the Library now shows it: its Playtime is its Sessions plus the
+   * adjustment, never below zero. `null` or zero clears it. Steam Games are
+   * refused.
+   */
+  setPlaytimeAdjustment(gameId: string, minutes: number | null): Promise<Game>;
   /**
    * The Sessions of a Game, newest first; one whose process still runs is
    * marked as running. Empty for a Game without Sessions.
@@ -496,6 +531,11 @@ export interface Operations {
    */
   removeLocalGame(gameId: string): Promise<void>;
   /**
+   * The Statistics of the Library as it shows, worked out by the core;
+   * Hidden Games count in none of them.
+   */
+  statistics(): Promise<Statistics>;
+  /**
    * Marks a Game as a Favorite, or with `false` unmarks it. The mark stays
    * through Syncs and restarts. Rejects when the Game is not in the Library.
    */
@@ -506,6 +546,12 @@ export interface Operations {
   about(): Promise<About>;
   /** Opens the project page or the license in the browser. */
   openAboutPage(page: AboutPage): Promise<void>;
+  /**
+   * Asks where to save an Export File and writes everything that is the
+   * user's own into it (docs/export-format.md); never the Steam Web API key.
+   * Answers where it was written, or that the user cancelled.
+   */
+  exportData(): Promise<DataExport>;
   /**
    * The dominant hue of the Game's Cover, from which its Detail Page takes
    * its Tint; `null` when it has no Cover or one without colour to speak of.
@@ -544,6 +590,15 @@ export interface Operations {
    * Library, and for an app id not in the Steam App List.
    */
   setCoverMatch(gameId: string, appId: number | null): Promise<void>;
+  /**
+   * Asks the user to choose an Export File in the operating system's "Open"
+   * dialog and replaces everything that is the user's own with what it holds
+   * (docs/export-format.md): Local Games, Sessions, Playtime Adjustments,
+   * Progress, Statuses, Favorites, Hidden Games, Collections and settings.
+   * Steam Games and the Steam Web API key stay. A newer, damaged or foreign
+   * file is refused with nothing changed. Rejects when that failed.
+   */
+  importData(): Promise<DataImport>;
 }
 
 /** One title of the Steam App List. Mirrors `SteamTitle` in crates/core. */
@@ -562,6 +617,19 @@ export interface CoverHue {
 
 /** How choosing an image as a Local Game's Cover went. Every outcome but `chosen` changed nothing. Mirrors `CoverImageChoice` in crates/core. */
 export type CoverImageChoice = { outcome: 'chosen' } | { outcome: 'cancelled' } | { outcome: 'notAnImage' };
+
+/** How exporting the data went: written to `file`, or cancelled with nothing written. Mirrors `DataExport` in crates/core. */
+export type DataExport = { outcome: 'exported'; file: string } | { outcome: 'cancelled' };
+
+/**
+ * How importing the data went. Every outcome but imported changed nothing: the user cancelled, the file
+ * was written by a newer version of the app, or it is damaged or no Export File. Mirrors DataImport in crates/core.
+ */
+export type DataImport =
+  | { outcome: 'imported'; file: string; localGames: number }
+  | { outcome: 'cancelled' }
+  | { outcome: 'newerVersion'; version: number }
+  | { outcome: 'damaged' };
 
 /** What the About dialog tells of the app itself. Mirrors `About` in crates/core. */
 export interface About {
@@ -651,6 +719,7 @@ export const tauriOperations: Operations = {
   showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
   librarySort: () => invoke<LibrarySort>('library_sort'),
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
+  setManualProgress: (gameId, percent) => invoke<ManualProgress>('set_manual_progress', { gameId, percent }),
   chooseCoverImage: (gameId) => invoke<CoverImageChoice>('choose_cover_image', { gameId }),
   coverImageChosen: (gameId) => invoke<boolean>('cover_image_chosen', { gameId }),
   removeCoverImage: (gameId) => invoke<void>('remove_cover_image', { gameId }),
@@ -669,6 +738,8 @@ export const tauriOperations: Operations = {
       void listening.then((stop) => stop());
     };
   },
+  playtimeAdjustment: (gameId) => invoke<number | null>('playtime_adjustment', { gameId }),
+  setPlaytimeAdjustment: (gameId, minutes) => invoke<Game>('set_playtime_adjustment', { gameId, minutes }),
   sessions: (gameId) => invoke<Session[]>('sessions', { gameId }),
   achievements: (gameId) => invoke<GameAchievements>('achievements', { gameId }),
   // Under the Game's address in the `cover` URL scheme (`cover_response` in src-tauri/src/lib.rs).
@@ -683,10 +754,12 @@ export const tauriOperations: Operations = {
   editLocalGame: (gameId, title, executable) =>
     invoke<EditLocalGame>('edit_local_game', { gameId, title, executable }),
   removeLocalGame: (gameId) => invoke<void>('remove_local_game', { gameId }),
+  statistics: () => invoke<Statistics>('statistics'),
   markFavorite: (gameId, favorite) => invoke<void>('mark_favorite', { gameId, favorite }),
   favoriteCount: () => invoke<number>('favorite_count'),
   about: () => invoke<About>('about'),
   openAboutPage: (page) => invoke<void>('open_about_page', { page }),
+  exportData: () => invoke<DataExport>('export_data'),
   coverHue: (gameId) => invoke<CoverHue | null>('cover_hue', { gameId }),
   install: (game) => invoke<InstallOutcome>('install', { gameId: game.id }),
   suggestExecutablesInFolder: () => invoke<FolderSuggestions>('suggest_executables_in_folder'),
@@ -694,4 +767,37 @@ export const tauriOperations: Operations = {
   proposeCoverMatch: (title) => invoke<SteamTitle | null>('propose_cover_match', { title }),
   coverMatch: (gameId) => invoke<SteamTitle | null>('cover_match', { gameId }),
   setCoverMatch: (gameId, appId) => invoke<void>('set_cover_match', { gameId, appId }),
+  importData: () => invoke<DataImport>('import_data'),
 };
+
+/** Mirrors `Statistics` in crates/core: the totals over the Games in the Library. */
+export interface Statistics {
+  /** How many Games the Library holds. */
+  games: number;
+  /** The Playtime of every Game together, in minutes. */
+  playtimeMinutes: number;
+  /** How many Achievements of all Steam Games are unlocked. */
+  achievementsUnlocked: number;
+  /** How many Achievements the Steam Games have together. */
+  achievementsTotal: number;
+  /** The share of unlocked Achievements in whole percent, rounded down; `null` while there are none. */
+  achievementShare: number | null;
+  /** How many Games are at 100 % Progress. */
+  completeGames: number;
+  /** How many Games have each Status. */
+  gamesByStatus: Record<Status, number>;
+  /** The Playtime of each of the last eight weeks, oldest first, from the recorded Sessions. */
+  weeks: PlayedWeek[];
+  /** The five Games with the most Playtime, most played first; a Game not played at all is none of them. */
+  mostPlayed: Game[];
+}
+
+/** Mirrors `PlayedWeek` in crates/core: the Playtime of the seven days up to `endsAt`. */
+export interface PlayedWeek {
+  /** Where the week starts, in seconds since the Unix epoch. */
+  startsAt: number;
+  /** Where the week ends, in seconds since the Unix epoch; the latest week ends now. */
+  endsAt: number;
+  /** How long Sessions ran within the week, in whole minutes. */
+  minutes: number;
+}

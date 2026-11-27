@@ -10,7 +10,7 @@ const THIS_MORNING = 1_795_776_300;
 const LAST_WEEK = 1_795_205_700;
 
 function localGame(id: number, title: string, details: Partial<Game> = {}): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false, ...details };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false, progress: null, ...details };
 }
 
 const CELESTE = localGame(1, 'Celeste', { playtimeMinutes: 115, lastPlayed: THIS_MORNING });
@@ -107,6 +107,16 @@ function fakeOperations(games: Game[], initial: Record<string, Session[]> = {}) 
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    exportData: async () => ({ outcome: 'cancelled' }),
+    importData: async () => ({ outcome: 'cancelled' }),
   };
   const send = (event: SessionEvent) => act(() => listeners.forEach((listener) => listener(event)));
   return { operations, asked, send, change: (next: Record<string, Session[]>) => (sessions = next) };

@@ -10,7 +10,7 @@ const HADES = 'C:\\Games\\Hades\\x64\\Hades.exe';
 const PORTAL = 'C:\\Games\\Portal 2\\portal2.exe';
 
 function localGame(id: number, title: string): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', progress: null, favorite: false };
 }
 
 /** The folder the user chooses: Celeste and Hades are new, Portal 2 is in the Library already. */
@@ -44,6 +44,15 @@ function fakeOperations({
     library: async () => [...games],
     readInstalledGames: async () => [...games],
     steamInstallation: async () => ({ state: 'notFound' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -123,6 +132,7 @@ function fakeOperations({
     setCoverMatch: async (gameId, appId) => {
       matched.push([gameId, appId]);
     },
+    importData: async () => ({ outcome: 'cancelled' }),
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
     sessions: async () => [],

@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LibraryFilter, Operations } from './operations';
 
 function steamGame(appId: number, title: string, installed: boolean): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, progress: null, status: 'unplayed', favorite: false };
 }
 
 const LIBRARY = [steamGame(1145360, 'Hades', true), steamGame(220, 'Half-Life 2', false), steamGame(620, 'Portal 2', true)];
@@ -20,6 +20,7 @@ function fakeOperations(library: Game[] = LIBRARY) {
     library: async () => library,
     readInstalledGames: async () => library,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -65,6 +66,10 @@ function fakeOperations(library: Game[] = LIBRARY) {
     hiddenGames: async () => [],
     hideGame: async () => {},
     unhideGame: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     sessions: async () => [],
     filterLibrary: async (filter) => {
       asked.push(filter);
@@ -84,6 +89,10 @@ function fakeOperations(library: Game[] = LIBRARY) {
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },
@@ -101,6 +110,7 @@ function fakeOperations(library: Game[] = LIBRARY) {
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
   };
   return { operations, asked };
 }

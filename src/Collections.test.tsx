@@ -34,6 +34,7 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     library: async () => library,
     readInstalledGames: async () => library,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -65,6 +66,10 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     unhideGame: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     sessions: async () => [],
     filterLibrary: async () => library,
     libraryLayout: async () => 'coverGrid',
@@ -86,6 +91,10 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     openLogFolder: async () => {},
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
@@ -106,6 +115,7 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
@@ -309,7 +319,7 @@ describe('Deleting a Collection', () => {
 
   it('removes no Game from the Library', async () => {
     const user = userEvent.setup();
-    const portal: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
+    const portal: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null, progress: null, status: 'unplayed', favorite: false };
     render(<App operations={fakeOperations([BACKLOG], [portal]).operations} lang="en" />);
 
     await user.click(await screen.findByRole('button', { name: 'Delete Backlog' }));

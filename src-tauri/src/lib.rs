@@ -8,8 +8,9 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     About, AboutPage, AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
-    CoverHue, CoverImageChoice, EditLocalGame, Error, ExecutableChoice, FolderSuggestions, Game, GameAchievements, Install, Language, Launch, LaunchOptions,
-    LibraryFilter, LibraryLayout, LimitedMode, LibrarySort, LocalGame, Log, Session, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
+    CoverHue, CoverImageChoice, DataExport, DataImport, EditLocalGame, Error, ExecutableChoice, FolderSuggestions, Game,
+    GameAchievements, Install, Language, Launch, LaunchOptions, LibraryFilter, LibraryLayout, LimitedMode, LibrarySort,
+    LocalGame, Log, ManualProgress, Session, Statistics, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
     SteamInstallation, SteamTitle, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
 };
 use percent_encoding::percent_decode_str;
@@ -126,6 +127,28 @@ fn starts_with_windows(core: tauri::State<'_, Core>) -> Result<bool, Error> {
 #[tauri::command]
 fn set_start_with_windows(core: tauri::State<'_, Core>, on: bool) -> Result<(), Error> {
     core.set_start_with_windows(on)
+}
+
+#[tauri::command]
+fn playtime_adjustment(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<i32>, Error> {
+    core.playtime_adjustment(&game_id)
+}
+
+#[tauri::command]
+fn set_playtime_adjustment(core: tauri::State<'_, Core>, game_id: String, minutes: Option<i32>) -> Result<Game, Error> {
+    core.set_playtime_adjustment(&game_id, minutes)
+}
+
+/// Async, so the window stays responsive while the "Save as" dialog is open.
+#[tauri::command]
+async fn export_data(core: tauri::State<'_, Core>) -> Result<DataExport, Error> {
+    core.export_data()
+}
+
+/// Async, so the window stays responsive while the "Open" dialog is open and the file is read.
+#[tauri::command]
+async fn import_data(core: tauri::State<'_, Core>) -> Result<DataImport, Error> {
+    core.import_data()
 }
 
 /// Async, so the window stays responsive while the file dialog is open.
@@ -259,6 +282,15 @@ async fn fetch_steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppLi
     core.fetch_steam_app_list()
 }
 
+#[tauri::command]
+fn set_manual_progress(
+    core: tauri::State<'_, Core>,
+    game_id: String,
+    percent: Option<i64>,
+) -> Result<ManualProgress, Error> {
+    core.set_manual_progress(&game_id, percent)
+}
+
 /// Async, so the window stays responsive while the file dialog is open.
 #[tauri::command]
 async fn choose_cover_image(core: tauri::State<'_, Core>, game_id: String) -> Result<CoverImageChoice, Error> {
@@ -326,6 +358,11 @@ fn hide_game(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Error>
 #[tauri::command]
 fn unhide_game(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Error> {
     core.unhide_game(&game_id)
+}
+
+#[tauri::command]
+fn statistics(core: tauri::State<'_, Core>) -> Result<Statistics, Error> {
+    core.statistics()
 }
 
 #[tauri::command]
@@ -478,6 +515,7 @@ pub fn run() {
             set_close_to_tray,
             close_window,
             show_tray_menu,
+            set_manual_progress,
             choose_cover_image,
             cover_image_chosen,
             remove_cover_image,
@@ -501,6 +539,7 @@ pub fn run() {
             choose_executable_for,
             edit_local_game,
             remove_local_game,
+            statistics,
             mark_favorite,
             favorite_count,
             about,
@@ -510,6 +549,10 @@ pub fn run() {
             cover_hue,
             install,
             suggest_executables_in_folder,
+            playtime_adjustment,
+            set_playtime_adjustment,
+            export_data,
+            import_data,
             sessions
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
