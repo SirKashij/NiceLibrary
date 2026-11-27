@@ -212,6 +212,21 @@ fn set_launch_options(core: tauri::State<'_, Core>, game_id: String, options: La
     core.set_launch_options(&game_id, &options)
 }
 
+#[tauri::command]
+fn hidden_games(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
+    core.hidden_games()
+}
+
+#[tauri::command]
+fn hide_game(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Error> {
+    core.hide_game(&game_id)
+}
+
+#[tauri::command]
+fn unhide_game(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Error> {
+    core.unhide_game(&game_id)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 /// Achievement icons come from `<game id>/achievements/<icon>` under the same scheme
@@ -306,7 +321,10 @@ pub fn run() {
             set_start_with_windows,
             achievements,
             launch_options,
-            set_launch_options
+            set_launch_options,
+            hidden_games,
+            hide_game,
+            unhide_game
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

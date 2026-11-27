@@ -3,6 +3,7 @@ import { Collections } from './Collections';
 import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import { AddLocalGameButton } from './library/AddLocalGame';
+import { HiddenGamesPage } from './library/HiddenGames';
 import { useSessionChanges } from './library/Sessions';
 import { whyNotLaunched } from './launchProblem';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
@@ -182,7 +183,9 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
   const [additions, setAdditions] = useState(0);
   // How often the user set a Status while the app runs; each one changes the stored Library.
   const [statusChanges, setStatusChanges] = useState(0);
-  const changes = syncs + additions + statusChanges;
+  // How often a Game was hidden or unhidden here; each time changes the Library.
+  const [hidings, setHidings] = useState(0);
+  const changes = syncs + additions + statusChanges + hidings;
   // The stored Library answers at once; reading Steam again replaces it.
   const stored = useOperation(operations, (o) => o.library());
   const fromSteam = useOperation(operations, (o) => o.readInstalledGames());
@@ -243,35 +246,63 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
   // The Game whose detail page is open. The Library stays mounted behind it,
   // so going back finds it as it was.
   const [opened, setOpened] = useState<Game>();
+  // Whether the Hidden Games are shown in place of the Library, which stays mounted behind them too.
+  const [showingHidden, setShowingHidden] = useState(false);
+  // The Game hidden last from its detail page, for the notice in the Library.
+  const [hiddenLast, setHiddenLast] = useState<Game>();
   const libraryView = useRef<HTMLDivElement>(null);
-  // Where the Library was scrolled to and what had the focus when a Game was opened.
+  // Where the Library was scrolled to and what had the focus when a Game or the Hidden Games were opened.
   const left = useRef<{ scrollTop: number; focus: Element | null }>(undefined);
-  const open = (game: Game) => {
+  const leave = () => {
     left.current = { scrollTop: libraryView.current?.closest('main')?.scrollTop ?? 0, focus: document.activeElement };
     setLaunchProblem(undefined);
+    setHiddenLast(undefined);
+  };
+  const open = (game: Game) => {
+    leave();
     setOpened(game);
+  };
+  const showHidden = () => {
+    leave();
+    setShowingHidden(true);
   };
   const back = () => {
     setLaunchProblem(undefined);
     setOpened(undefined);
+    setShowingHidden(false);
+  };
+  const hidden = (game: Game) => {
+    back();
+    setHiddenLast(game);
+    setHidings((n) => n + 1);
   };
   useLayoutEffect(() => {
     const main = libraryView.current?.closest('main');
     if (!main) return;
-    if (opened) {
+    if (opened || showingHidden) {
       main.scrollTop = 0;
     } else if (left.current) {
       if (left.current.focus instanceof HTMLElement) left.current.focus.focus({ preventScroll: true });
       main.scrollTop = left.current.scrollTop;
       left.current = undefined;
     }
-  }, [opened]);
+  }, [opened, showingHidden]);
 
   return (
     <>
-      <div ref={libraryView} hidden={opened !== undefined}>
+      <div ref={libraryView} hidden={opened !== undefined || showingHidden}>
         <Page title="nav.library">
-          <AddLocalGameButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
+          <div className="library-actions">
+            <AddLocalGameButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
+            <button type="button" className="button" onClick={showHidden}>
+              {t('hidden.title')}
+            </button>
+          </div>
+          {hiddenLast && (
+            <p className="note" role="status">
+              {t('hidden.hidden', { title: hiddenLast.title })}
+            </p>
+          )}
           <LibraryToolbar filter={filter} onChange={setFilter}>
             <SortChoice sort={librarySort.sort} choose={librarySort.choose} />
           </LibraryToolbar>
@@ -311,7 +342,11 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           onPlay={launch}
           onStatusSet={() => setStatusChanges((count) => count + 1)}
           onBack={back}
+          onHidden={hidden}
         />
+      )}
+      {showingHidden && (
+        <HiddenGamesPage operations={operations} onUnhidden={() => setHidings((n) => n + 1)} onBack={back} />
       )}
     </>
   );

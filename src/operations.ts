@@ -365,6 +365,12 @@ export interface Operations {
    * Rejects for anything but a Local Game in the Library.
    */
   setLaunchOptions(gameId: string, options: LaunchOptions): Promise<void>;
+  /** The Hidden Games, ordered by title like `library`. They stay hidden through Syncs and restarts. */
+  hiddenGames(): Promise<Game[]>;
+  /** Hides a Game: it leaves the Library and every view built on it without being deleted. */
+  hideGame(gameId: string): Promise<void>;
+  /** Brings a Hidden Game back into the Library. */
+  unhideGame(gameId: string): Promise<void>;
 }
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
@@ -447,4 +453,7 @@ export const tauriOperations: Operations = {
   achievementIconUrl: (game, icon) => convertFileSrc(`${game.id}/achievements/${icon}`, 'cover'),
   launchOptions: (gameId) => invoke<LaunchOptions | null>('launch_options', { gameId }),
   setLaunchOptions: (gameId, options) => invoke<void>('set_launch_options', { gameId, options }),
+  hiddenGames: () => invoke<Game[]>('hidden_games'),
+  hideGame: (gameId) => invoke<void>('hide_game', { gameId }),
+  unhideGame: (gameId) => invoke<void>('unhide_game', { gameId }),
 };

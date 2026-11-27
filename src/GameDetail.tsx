@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Achievements } from './Achievements';
 import { useFormat, useT, type MessageKey } from './i18n';
 import { LaunchOptionsForm } from './LaunchOptions';
+import { HideGameButton } from './library/HiddenGames';
 import { StatusChoice } from './library/Status';
 import type { Game, Operations, Source, Status } from './operations';
 
@@ -26,6 +27,7 @@ export function GameDetail({
   onPlay,
   onStatusSet,
   onBack,
+  onHidden,
 }: {
   operations: Operations;
   /** The Game as the Library showed it when it was opened. */
@@ -39,6 +41,8 @@ export function GameDetail({
   /** Hears that the Game's Status was set, which changes the Library. */
   onStatusSet: (game: Game) => void;
   onBack: () => void;
+  /** Hears the Game once the user hid it. */
+  onHidden: (game: Game) => void;
 }) {
   const t = useT();
   const format = useFormat();
@@ -136,6 +140,7 @@ export function GameDetail({
                   {t('status.setFailed', { title: game.title })}
                 </p>
               )}
+              <HideGameButton operations={operations} game={game} onHidden={onHidden} />
               {game.source === 'local' && <LaunchOptionsForm operations={operations} game={game} />}
             </>
           )}
