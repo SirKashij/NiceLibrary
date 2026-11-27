@@ -113,3 +113,7 @@ _Avoid_: Offline mode, basic mode
 **Launch**:
 Starting a Game from the app.
 _Avoid_: Run, start, open
+
+**Tray**:
+The app's icon in the notification area of the Windows taskbar. While the window is closed the app keeps running there, so tracking goes on, unless the person turned close-to-tray off; its menu opens the window or quits the app. The German interface calls it "Infobereich".
+_Avoid_: System tray (in interface text), taskbar, background

@@ -128,6 +128,32 @@ export interface Operations {
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /** Whether closing the window keeps the app running in the Tray. On until the user turns it off. */
+  closeToTray(): Promise<boolean>;
+  /** Turns close-to-tray on or off, also after a restart. */
+  setCloseToTray(on: boolean): Promise<void>;
+  /**
+   * Closes the window as its close button does: with close-to-tray on the
+   * window hides and the app keeps running in the Tray, otherwise it quits.
+   */
+  closeWindow(): Promise<void>;
+  /**
+   * Hears the first close of the window with close-to-tray on. The window
+   * then stays open to explain the Tray, and `closeWindow` closes it once
+   * the user has read that. Answers the function that stops listening.
+   */
+  onTrayNotice(listener: () => void): () => void;
+  /** Gives the Tray icon its tooltip and menu, in the interface language. */
+  showTrayMenu(texts: TrayMenuTexts): Promise<void>;
+}
+
+/** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
+export interface TrayMenuTexts {
+  tooltip: string;
+  /** The menu entry that opens the window. */
+  open: string;
+  /** The menu entry that quits the app. */
+  quit: string;
 }
 
 export const tauriOperations: Operations = {
@@ -154,4 +180,15 @@ export const tauriOperations: Operations = {
   },
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  closeToTray: () => invoke<boolean>('close_to_tray'),
+  setCloseToTray: (on) => invoke<void>('set_close_to_tray', { on }),
+  closeWindow: () => invoke<void>('close_window'),
+  onTrayNotice: (listener) => {
+    // TRAY_NOTICE_EVENT in src-tauri/src/tray.rs.
+    const listening = listen('tray-notice', () => listener());
+    return () => {
+      void listening.then((stop) => stop());
+    };
+  },
+  showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
 };

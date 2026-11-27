@@ -99,6 +99,19 @@ export const en = {
   'game.never': 'Never',
   'game.notKnown': 'Not known yet',
   'game.gone': '{title} is no longer in your library.',
+  'settings.window': 'Window',
+  'window.closeToTray': 'Keep running in the tray when the window is closed',
+  'window.closeToTrayOn':
+    'Closing the window hides it, and NiceLibrary keeps tracking your playtime in the tray. Quit it from the tray icon’s menu.',
+  'window.closeToTrayOff': 'Closing the window quits NiceLibrary, and your playtime is no longer tracked.',
+  'window.loadFailed': 'The window setting could not be loaded.',
+  'window.saveFailed': 'The window setting could not be saved.',
+  'tray.open': 'Open NiceLibrary',
+  'tray.quit': 'Quit',
+  'tray.noticeTitle': 'NiceLibrary keeps running',
+  'tray.notice':
+    'When you close the window, NiceLibrary keeps running in the tray so it can go on tracking your playtime. Click its tray icon to open it again, or quit it from the icon’s menu. You can change this in the Settings under Window.',
+  'tray.ok': 'OK',
 } as const;
 
 export type MessageKey = keyof typeof en;

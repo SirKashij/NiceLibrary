@@ -22,7 +22,10 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 nicelibrary-core = { path = "../crates/core" }
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
+# Starting the app a second time brings the running one forward (src/tray.rs).
+tauri-plugin-single-instance = "2"
+serde = { workspace = true }
 # HTTP client for Covers. The OS's TLS (schannel on Windows) with the OS's
 # root certificates, so no certificate bundle ships with the app.
 percent-encoding = "2"
