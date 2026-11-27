@@ -37,6 +37,9 @@ function fakeOperations() {
     createCollection: async () => ({ outcome: 'named', id: 1 }),
     renameCollection: async (id) => ({ outcome: 'named', id }),
     deleteCollection: async () => {},
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);
       return LIBRARY.filter(

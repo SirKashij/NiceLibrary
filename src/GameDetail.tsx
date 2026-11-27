@@ -9,7 +9,7 @@ const SOURCES: Record<Source, MessageKey> = {
 
 /**
  * The detail page of one Game: its large Cover, title, Source, whether it is
- * Installed, Playtime, Last Played and the main action, and the way back to
+ * Installed, Playtime, Last Played, its Collections and the main action, and the way back to
  * the Library. Shows the Game as opened at once and as the core answers it
  * then, again after each Sync.
  */
@@ -18,6 +18,7 @@ export function GameDetail({
   game: opened,
   syncs,
   cover,
+  collections,
   notice,
   onPlay,
   onBack,
@@ -28,6 +29,8 @@ export function GameDetail({
   /** Changes with each successful Sync, which may change the Game. */
   syncs: number;
   cover: (game: Game) => ReactNode;
+  /** Which Collections the Game is in, shown while it is in the Library. */
+  collections?: ReactNode;
   /** Why the last Launch did not start, if it did not. */
   notice?: ReactNode;
   onPlay: (game: Game) => void;
@@ -103,6 +106,7 @@ export function GameDetail({
                   <dd>{lastPlayed}</dd>
                 </div>
               </dl>
+              {collections}
             </>
           )}
         </div>

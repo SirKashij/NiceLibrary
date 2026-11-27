@@ -16,6 +16,9 @@ pub struct LibraryFilter {
     pub source: Option<Source>,
     /// Only Installed Games.
     pub installed_only: bool,
+    /// Only Games in the Collection with this id, the one chosen in the
+    /// sidebar; `None` for every Game. A Collection that is gone holds none.
+    pub collection: Option<i64>,
 }
 
 impl LibraryFilter {

@@ -178,3 +178,9 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .game-facts dt { color: var(--color-text-muted); }
 .game-facts dd { margin: 0; }
 .game-detail[data-installed='false'] .cover { filter: var(--filter-not-installed); }
+/* A Game's Collections on its detail page: one checkbox per Collection; choosing one in the sidebar narrows the Library. */
+.game-collections { display: grid; gap: var(--space-2); margin: 0; padding: 0; border: 0; min-width: 0; }
+.game-collections legend { padding: 0; margin-bottom: var(--space-2); font-weight: var(--weight-medium); }
+.game-collection-list { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); }
+.collection-name { text-align: left; color: var(--color-text-muted); }
+.collection-name:hover, .collection-name[aria-current='page'] { color: var(--color-text); }

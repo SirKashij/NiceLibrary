@@ -1,9 +1,10 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Collections } from './Collections';
+import { GameCollections } from './GameCollections';
 import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import { AddLocalGameButton } from './library/AddLocalGame';
-import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
+import type { Collection, Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { ThemeSettings } from './settings/ThemeSettings';
 import { ThemeProvider } from './theme';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
@@ -33,6 +34,11 @@ function Shell({ operations }: { operations: Operations }) {
   const [syncs, setSyncs] = useState(0);
   // How often the user chose a Steam Account while the app runs; each choice changes whose Sync and Library are shown.
   const [accountChoices, setAccountChoices] = useState(0);
+  // The Collection the Library is narrowed to, chosen in the sidebar.
+  const [chosen, setChosen] = useState<Collection>();
+  // How often Collections or what is in them changed while the app runs; each change may change the counts.
+  const [collectionChanges, setCollectionChanges] = useState(0);
+  const collectionsChanged = () => setCollectionChanges((n) => n + 1);
 
   return (
     <div className="shell">
@@ -46,19 +52,41 @@ function Shell({ operations }: { operations: Operations }) {
             <button
               key={v.view}
               type="button"
-              aria-current={view === v.view ? 'page' : undefined}
-              onClick={() => setView(v.view)}
+              aria-current={view === v.view && !(v.view === 'library' && chosen) ? 'page' : undefined}
+              onClick={() => {
+                setView(v.view);
+                if (v.view === 'library') setChosen(undefined);
+              }}
             >
               {t(v.label)}
             </button>
           ))}
         </nav>
-        <Collections operations={operations} />
+        <Collections
+          operations={operations}
+          changes={syncs + accountChoices + collectionChanges}
+          chosen={chosen}
+          current={view === 'library'}
+          onChoose={(collection) => {
+            setChosen(collection);
+            setView('library');
+          }}
+          onChosenChanged={setChosen}
+          onChanged={collectionsChanged}
+        />
         {/* Starts over for each chosen account: shows its last Sync, never one of the account chosen before. */}
         <SyncStatus key={accountChoices} operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
       </aside>
       <main className="main">
-        {view === 'library' && <LibraryView operations={operations} syncs={syncs} />}
+        {view === 'library' && (
+          <LibraryView
+            operations={operations}
+            syncs={syncs}
+            collection={chosen}
+            collectionChanges={collectionChanges}
+            onCollectionsChanged={collectionsChanged}
+          />
+        )}
         {view === 'statistics' && <PlaceholderPage title="nav.statistics" note="statistics.empty" />}
         {view === 'settings' && (
           <SettingsView operations={operations} onAccountChosen={() => setAccountChoices((n) => n + 1)} />
@@ -165,11 +193,27 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
   );
 }
 
-function LibraryView({ operations, syncs }: { operations: Operations; syncs: number }) {
+function LibraryView({
+  operations,
+  syncs,
+  collection,
+  collectionChanges,
+  onCollectionsChanged,
+}: {
+  operations: Operations;
+  syncs: number;
+  /** The Collection chosen in the sidebar: the Library shows only its Games. */
+  collection?: Collection;
+  /** Changes whenever Collections or what is in them changed. */
+  collectionChanges: number;
+  /** Hears each change of what is in a Collection made on a detail page. */
+  onCollectionsChanged: () => void;
+}) {
   const t = useT();
   // How many Local Games were added here; each one changes the stored Library.
   const [additions, setAdditions] = useState(0);
-  const changes = syncs + additions;
+  // A change of what is in a Collection changes which Games a chosen Collection shows.
+  const changes = syncs + additions + collectionChanges;
   // The stored Library answers at once; reading Steam again replaces it.
   const stored = useOperation(operations, (o) => o.library());
   const fromSteam = useOperation(operations, (o) => o.readInstalledGames());
@@ -193,7 +237,9 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
 
   const library = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
   const [filter, setFilter] = useState(NO_FILTER);
-  const filtered = useFilteredLibrary(operations, filter, library);
+  const chosenId = collection?.id;
+  const narrowed = useMemo(() => (chosenId === undefined ? filter : { ...filter, collection: chosenId }), [filter, chosenId]);
+  const filtered = useFilteredLibrary(operations, narrowed, library, changes);
   const games = filtered.state === 'ready' ? filtered.games : undefined;
   const failure: MessageKey | undefined =
     fromSteam.state !== 'failed'
@@ -238,6 +284,8 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     setLaunchProblem(undefined);
     setOpened(undefined);
   };
+  // Choosing another Collection, or the whole Library, shows that list, not the Game opened before.
+  useEffect(() => setOpened(undefined), [chosenId]);
   useLayoutEffect(() => {
     const main = libraryView.current?.closest('main');
     if (!main) return;
@@ -253,7 +301,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
   return (
     <>
       <div ref={libraryView} hidden={opened !== undefined}>
-        <Page title="nav.library">
+        <Page title="nav.library" heading={collection?.name}>
           <AddLocalGameButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
           <LibraryToolbar filter={filter} onChange={setFilter} />
           {filtered.state === 'failed' && (
@@ -267,9 +315,10 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
             </p>
           )}
           {!opened && launchNotice}
-          {!isFiltering(filter) && fromSteam.state === 'ready' && games?.length === 0 && (
+          {!isFiltering(narrowed) && fromSteam.state === 'ready' && games?.length === 0 && (
             <p className="note">{t('library.empty')}</p>
           )}
+          {collection && !isFiltering(filter) && games?.length === 0 && <p className="note">{t('collections.empty')}</p>}
           {isFiltering(filter) && games?.length === 0 && <NoMatch onReset={() => setFilter(NO_FILTER)} />}
           {games && games.length > 0 && (
             <CoverGrid games={games} coverUrl={operations.coverUrl} onPlay={launch} onOpen={open} />
@@ -283,6 +332,15 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           game={opened}
           syncs={syncs}
           cover={(game) => <Cover key={game.id} title={game.title} src={operations.coverUrl(game)} />}
+          collections={
+            <GameCollections
+              operations={operations}
+              gameId={opened.id}
+              title={opened.title}
+              changes={collectionChanges}
+              onChanged={onCollectionsChanged}
+            />
+          }
           notice={launchNotice}
           onPlay={launch}
           onBack={back}
@@ -697,11 +755,12 @@ function PlaceholderPage({ title, note }: { title: MessageKey; note: MessageKey 
   );
 }
 
-function Page({ title, children }: { title: MessageKey; children: ReactNode }) {
+/** A page under its title; `heading`, when given, is shown in place of the title's text. */
+function Page({ title, heading, children }: { title: MessageKey; heading?: string; children: ReactNode }) {
   const t = useT();
   return (
     <section className="page">
-      <h1>{t(title)}</h1>
+      <h1>{heading ?? t(title)}</h1>
       {children}
     </section>
   );

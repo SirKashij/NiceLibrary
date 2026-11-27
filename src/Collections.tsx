@@ -20,9 +20,33 @@ const NAMING_PROBLEMS: Record<Exclude<CollectionNaming['outcome'], 'named'>, Mes
 /**
  * The Collections in the sidebar, each with how many Games are in it, and
  * creating, renaming and deleting them. The list always comes from the
- * core, which orders it and decides which names are allowed.
+ * core, which orders it and decides which names are allowed; it is read
+ * again whenever `changes` changes. Choosing a Collection narrows the
+ * Library to its Games (`onChoose`).
  */
-export function Collections({ operations }: { operations: Operations }) {
+export function Collections({
+  operations,
+  changes = 0,
+  chosen,
+  current = false,
+  onChoose = () => {},
+  onChosenChanged = () => {},
+  onChanged = () => {},
+}: {
+  operations: Operations;
+  /** Changes whenever the counts may have changed: after a Sync or a change of what is in a Collection. */
+  changes?: number;
+  /** The Collection the Library is narrowed to, if any. */
+  chosen?: Collection;
+  /** Whether the Library narrowed to `chosen` is the page shown. */
+  current?: boolean;
+  /** Hears the Collection the user chose. */
+  onChoose?: (collection: Collection) => void;
+  /** Hears the chosen Collection again with its new name after a rename, and nothing once it is deleted. */
+  onChosenChanged?: (collection: Collection | undefined) => void;
+  /** Hears each Collection created, renamed or deleted here. */
+  onChanged?: () => void;
+}) {
   const t = useT();
   const headingId = useId();
   const [collections, setCollections] = useState<Collection[]>();
@@ -42,13 +66,25 @@ export function Collections({ operations }: { operations: Operations }) {
   useEffect(() => {
     let active = true;
     operations.collections().then(
-      (answer) => active && setCollections(answer),
+      (answer) => {
+        if (!active) return;
+        setCollections(answer);
+        setLoadFailed(false);
+      },
       () => active && setLoadFailed(true),
     );
     return () => {
       active = false;
     };
-  }, [operations]);
+  }, [operations, changes]);
+
+  // The chosen Collection as the core answers it now: renamed, or gone.
+  useEffect(() => {
+    if (!chosen || !collections) return;
+    const now = collections.find((collection) => collection.id === chosen.id);
+    if (now?.name !== chosen.name) onChosenChanged(now);
+    // Only a new answer from the core can rename or remove the chosen Collection.
+  }, [collections]);
 
   /** Begins `next`, or with nothing ends what the user was doing. */
   const start = (next?: Editing) => {
@@ -64,6 +100,7 @@ export function Collections({ operations }: { operations: Operations }) {
         if (answer.outcome === 'named') {
           setEditing(undefined);
           setProblem(undefined);
+          onChanged();
           return reload();
         }
         setProblem({ message: NAMING_PROBLEMS[answer.outcome], name: attempted.trim() });
@@ -75,6 +112,7 @@ export function Collections({ operations }: { operations: Operations }) {
     operations.deleteCollection(collection.id).then(
       () => {
         setEditing(undefined);
+        onChanged();
         return reload();
       },
       () => {
@@ -108,7 +146,14 @@ export function Collections({ operations }: { operations: Operations }) {
                 />
               ) : (
                 <div className="collection-row">
-                  <span className="collection-name">{collection.name}</span>
+                  <button
+                    type="button"
+                    className="collection-name"
+                    aria-current={current && chosen?.id === collection.id ? 'page' : undefined}
+                    onClick={() => onChoose(collection)}
+                  >
+                    {collection.name}
+                  </button>
                   <span className="collection-count">
                     <span aria-hidden="true">{collection.gameCount}</span>
                     <span className="visually-hidden">

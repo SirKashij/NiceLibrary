@@ -155,6 +155,10 @@ impl Core {
     pub fn filter_library(&self, filter: &LibraryFilter) -> Result<Vec<Game>, Error> {
         let mut games = self.library()?;
         games.retain(|game| filter.matches(game));
+        if let Some(collection) = filter.collection {
+            let members = self.store.games_in_collection(collection)?;
+            games.retain(|game| members.contains(&game.id));
+        }
         Ok(games)
     }
 
@@ -464,6 +468,36 @@ impl Core {
     /// a Collection that is gone already changes nothing.
     pub fn delete_collection(&self, id: i64) -> Result<(), Error> {
         self.store.delete_collection(id)
+    }
+
+    /// The ids of the Collections the Game `game_id` is in, ordered like
+    /// [`Self::collections`]; empty when it is in none.
+    pub fn game_collections(&self, game_id: &str) -> Result<Vec<i64>, Error> {
+        let members = self.store.collection_games()?;
+        Ok(self
+            .collections()?
+            .into_iter()
+            .map(|collection| collection.id)
+            .filter(|id| members.iter().any(|(of, game)| of == id && game == game_id))
+            .collect())
+    }
+
+    /// Puts the Game `game_id` into the Collection `collection`, besides any
+    /// other Collections it is in; a Game already in it stays there once.
+    /// Fails when there is no such Collection or the Game is not in the
+    /// Library.
+    pub fn add_game_to_collection(&self, collection: i64, game_id: &str) -> Result<(), Error> {
+        if self.game(game_id)?.is_none() {
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
+        }
+        self.store.add_game_to_collection(collection, game_id)
+    }
+
+    /// Takes the Game `game_id` out of the Collection `collection`; it stays
+    /// in the Library and in its other Collections. Changes nothing when it
+    /// is not in that Collection.
+    pub fn remove_game_from_collection(&self, collection: i64, game_id: &str) -> Result<(), Error> {
+        self.store.remove_game_from_collection(collection, game_id)
     }
 }
 

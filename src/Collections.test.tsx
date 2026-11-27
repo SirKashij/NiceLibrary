@@ -58,6 +58,9 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
   };
   return { operations, calls };
 }

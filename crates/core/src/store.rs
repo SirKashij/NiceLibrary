@@ -265,6 +265,44 @@ impl Store {
         Ok(games)
     }
 
+    /// The ids of the Games in the Collection `collection`; none when there
+    /// is no such Collection.
+    pub(crate) fn games_in_collection(&self, collection: i64) -> Result<std::collections::HashSet<String>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare("SELECT game_id FROM collection_games WHERE collection_id = ?1")?;
+        let games = statement.query_map([collection], |row| row.get(0))?.collect::<Result<_, _>>()?;
+        Ok(games)
+    }
+
+    /// Records that the Game `game_id` is in the Collection `collection`,
+    /// once however often. Fails when there is no such Collection.
+    pub(crate) fn add_game_to_collection(&self, collection: i64, game_id: &str) -> Result<(), Error> {
+        let mut connection = self.connection();
+        // Checked and written at once, so a Collection deleted meanwhile gets no Game.
+        let transaction = connection.transaction()?;
+        let exists: bool =
+            transaction.query_row("SELECT EXISTS (SELECT 1 FROM collections WHERE id = ?1)", [collection], |row| row.get(0))?;
+        if !exists {
+            return Err(Error::new(format!("no such collection: {collection}")));
+        }
+        transaction.execute(
+            "INSERT OR IGNORE INTO collection_games (collection_id, game_id) VALUES (?1, ?2)",
+            params![collection, game_id],
+        )?;
+        transaction.commit()?;
+        Ok(())
+    }
+
+    /// Forgets that the Game `game_id` is in the Collection `collection`;
+    /// nothing when it is not.
+    pub(crate) fn remove_game_from_collection(&self, collection: i64, game_id: &str) -> Result<(), Error> {
+        self.connection().execute(
+            "DELETE FROM collection_games WHERE collection_id = ?1 AND game_id = ?2",
+            params![collection, game_id],
+        )?;
+        Ok(())
+    }
+
     /// Gives the Collection `id` the name `name`, already trimmed and not
     /// empty, or creates a Collection with it when `id` is `None`. Refused
     /// when another Collection has the name in any case. Fails for an `id`

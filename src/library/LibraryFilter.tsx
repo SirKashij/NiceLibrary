@@ -7,7 +7,7 @@ export const NO_FILTER: LibraryFilter = { search: '', source: null, installedOnl
 
 /** Whether `filter` narrows the Library at all. */
 export function isFiltering(filter: LibraryFilter): boolean {
-  return filter.search !== '' || filter.source !== null || filter.installedOnly;
+  return filter.search !== '' || filter.source !== null || filter.installedOnly || filter.collection !== undefined;
 }
 
 /** What the Library shows for a filter: the Games, or that the core could not filter. */
@@ -16,13 +16,15 @@ export type FilteredLibrary = { state: 'ready'; games: Game[] | undefined } | { 
 /**
  * The Games to show for `filter`. Without a filter that is `library` itself;
  * otherwise the core answers (see `filterLibrary` in src/operations.ts),
- * asked again whenever the filter or the Library changes. Until the answer
- * for a new filter arrives, the answer before stays.
+ * asked again whenever the filter, the Library or `changes` changes. Until
+ * the answer for a new filter arrives, the answer before stays.
  */
 export function useFilteredLibrary(
   operations: Operations,
   filter: LibraryFilter,
   library: Game[] | undefined,
+  /** Changes whenever the core may answer the same filter differently, as after a change of what is in a Collection. */
+  changes = 0,
 ): FilteredLibrary {
   const filtering = isFiltering(filter);
   const [answer, setAnswer] = useState<FilteredLibrary>({ state: 'ready', games: undefined });
@@ -40,7 +42,7 @@ export function useFilteredLibrary(
     return () => {
       latest = false;
     };
-  }, [operations, filter, filtering, library]);
+  }, [operations, filter, filtering, library, changes]);
 
   if (!filtering) return { state: 'ready', games: library };
   if (answer.state === 'ready' && answer.games === undefined) return { state: 'ready', games: library };
