@@ -116,6 +116,13 @@ impl Profile {
                 secrets: Box::new(NoSecretsNoWebApi),
                 web_api: Box::new(NoSecretsNoWebApi),
                 clock: Box::new(StoppedClock),
+                executable_picker: Box::new(NoExecutableChosen),
+                icon_extractor: Box::new(NoIconsNoImages),
+                image_picker: Box::new(NoIconsNoImages),
+                data_file_picker: Box::new(NoExportFile),
+                autostart: Box::new(NoAutostart),
+                processes: Box::new(NothingRuns),
+                process_starter: Box::new(NothingStarted),
             },
             Store::open(&self.0.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.0.path().join("covers")),
@@ -284,4 +291,77 @@ impl nicelibrary_core::Clock for StoppedClock {
     }
 
     fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
+}
+
+/// A computer whose user chooses no executable; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+}
+
+/// A computer whose executables show no icon and whose user chooses no
+/// image; these tests need neither.
+struct NoIconsNoImages;
+
+impl nicelibrary_core::IconExtractor for NoIconsNoImages {
+    fn largest_icon(&self, _executable: &std::path::Path) -> Result<Option<nicelibrary_core::Icon>, String> {
+        Ok(None)
+    }
+}
+
+impl nicelibrary_core::ImagePicker for NoIconsNoImages {
+    fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+/// A computer on which no process runs; these tests record no Sessions.
+struct NothingRuns;
+
+impl nicelibrary_core::ProcessList for NothingRuns {
+    fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
+        Ok(Vec::new())
+    }
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
+    }
+}
+
+/// No export or import is made here: the user cancels every file dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::DataFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+
+    fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

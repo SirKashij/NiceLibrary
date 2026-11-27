@@ -1,5 +1,7 @@
 /* Vitrine design tokens (ADR-0007). The only file with raw colour, type, radius and spacing values.
-   Neutral graphite surfaces, no brand accent: the accent is the text colour itself. */
+   Neutral graphite surfaces, no brand accent: the accent is the text colour itself.
+   Two themes: dark here, light below. The interface picks one with `data-theme` on the root (src/theme.tsx).
+   Their contrast is checked in contrast.test.ts. */
 :root {
   color-scheme: dark;
 
@@ -7,11 +9,18 @@
   --color-bg: #121314;
   --color-surface: #1a1b1d;
   --color-surface-raised: #242628;
+  /* Hairlines between sections; they separate, they identify no control. */
   --color-line: #2e3033;
+  /* The outline that marks a button or a field as one: 3:1 against every surface. */
+  --color-control-border: #6e706c;
   --color-text: #ecebe8;
   --color-text-muted: #9b9c98;
   --color-accent: var(--color-text);
   --color-accent-ink: var(--color-bg);
+  /* Behind a dialog: the window dimmed. */
+  --color-backdrop: rgb(0 0 0 / 0.6);
+  /* A complete Progress, 100 %: the colour of having completed a Game (ADR-0007). */
+  --color-complete: #7fc99a;
 
   /* Type */
   --font-display: 'Bricolage Grotesque Variable', sans-serif;
@@ -48,9 +57,48 @@
   --brand-mark-width: 14px;
   --brand-mark-height: 20px;
   --note-max-width: 56ch;
+  --icon-size: 14px;
+  --icon-stroke: 1.75;
 
   /* Covers: Steam's upright library image is 600 x 900. Not Installed: desaturated (ADR-0007). */
   --cover-min-width: 158px;
   --cover-aspect: 2 / 3;
   --filter-not-installed: grayscale(1);
+
+  /* Game detail page: the large Cover. */
+  --detail-cover-width: 300px;
+
+  /* Achievements on the detail page: Steam's icons are 64 px squares. */
+  --achievement-icon-size: 48px;
+  --achievement-locked-opacity: 0.55;
+  /* Library as a list: the small Cover of a row and the width of its fact columns. */
+  --list-cover-width: 40px;
+  --list-fact-width: 120px;
+
+  /* Statistics charts: thin neutral bars, rounded only at the data end; the Covers keep the colour (ADR-0007). */
+  --chart-height: 160px;
+  --chart-bar-width: 24px;
+  --chart-bar-thin: 4px;
+  --radius-bar: 4px;
+  --chart-title-width: 24ch;
+
+  /* Playtime Adjustment: an hours or minutes field, wide enough for four digits. */
+  --adjustment-field-width: 10ch;
+}
+
+/* The light theme: the same roles on warm paper surfaces. */
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --color-bg: #f2f2f0;
+  --color-surface: #fafaf9;
+  --color-surface-raised: #e5e5e2;
+  --color-line: #d4d4d0;
+  --color-control-border: #7b7c78;
+  --color-text: #1a1b1c;
+  --color-text-muted: #5c5d59;
+  --color-accent: var(--color-text);
+  --color-accent-ink: var(--color-bg);
+  --color-backdrop: rgb(26 27 28 / 0.4);
+  --color-complete: #256a3f;
 }

@@ -22,7 +22,10 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 nicelibrary-core = { path = "../crates/core" }
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["tray-icon"] }
+# Starting the app a second time brings the running one forward (src/tray.rs).
+tauri-plugin-single-instance = "2"
+serde = { workspace = true }
 # HTTP client for Covers. The OS's TLS (schannel on Windows) with the OS's
 # root certificates, so no certificate bundle ships with the app.
 percent-encoding = "2"
@@ -33,9 +36,18 @@ winreg = "0.56"
 # ShellExecuteExW, to open steam:// URLs (src/ports/opener_windows.rs).
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
+    # Drawing an executable's icon into pixels (src/ports/icon_windows.rs).
+    "Win32_Graphics_Gdi",
+    # Reading an executable's icon from its resources (src/ports/icon_windows.rs).
+    "Win32_System_LibraryLoader",
+    # GetOpenFileNameW, to choose a Local Game's executable (src/ports/file_dialog_windows.rs).
+    "Win32_UI_Controls_Dialogs",
     # CredReadW and friends, for the Steam Web API key (src/ports/secrets_windows.rs).
     "Win32_Security_Credentials",
     "Win32_System_Com",
+    # CreateToolhelp32Snapshot and QueryFullProcessImageNameW, to see which Games run (src/ports/processes_windows.rs).
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Threading",
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }

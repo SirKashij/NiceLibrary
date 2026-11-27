@@ -43,18 +43,32 @@ export function useT(): Translate {
 export interface Format {
   /** A Playtime: minutes below an hour, hours with one decimal above. */
   playtime(minutes: number): string;
+  /** A length of time in whole hours and minutes, or minutes alone below an hour, such as `2 h 30 min`. */
+  duration(minutes: number): string;
   /** The day of a moment given in seconds since the Unix epoch. */
   date(seconds: number): string;
   /** The day and time of a moment given in seconds since the Unix epoch. */
   dateTime(seconds: number): string;
+  /** A whole number, with the interface language's digit grouping. */
+  count(n: number): string;
+  /**
+   * A percent given from 0 to 100, with one decimal and the interface language's percent sign.
+   * A share above 0 that would round to 0.0 is shown as below 0.1, such as `<0.1%`.
+   */
+  percent(percent: number): string;
+  /** A whole percent from 0 to 100, such as a Progress, with the interface language's percent sign. */
+  wholePercent(percent: number): string;
 }
 
 export function useFormat(): Format {
   const lang = useContext(LangContext);
   const t = useT();
-  const { number, date, dateTime } = useMemo(
+  const { number, count, percent, wholePercent, date, dateTime } = useMemo(
     () => ({
       number: new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }),
+      count: new Intl.NumberFormat(lang, { maximumFractionDigits: 0 }),
+      percent: new Intl.NumberFormat(lang, { style: 'percent', minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+      wholePercent: new Intl.NumberFormat(lang, { style: 'percent', maximumFractionDigits: 0 }),
       date: new Intl.DateTimeFormat(lang, { dateStyle: 'medium' }),
       dateTime: new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }),
     }),
@@ -65,7 +79,14 @@ export function useFormat(): Format {
       minutes < 60
         ? t('format.minutes', { n: number.format(minutes) })
         : t('format.hours', { n: number.format(minutes / 60) }),
+    duration: (minutes) =>
+      minutes < 60
+        ? t('format.minutes', { n: count.format(minutes) })
+        : t('format.hoursMinutes', { hours: count.format(Math.floor(minutes / 60)), minutes: count.format(minutes % 60) }),
     date: (seconds) => date.format(seconds * 1000),
     dateTime: (seconds) => dateTime.format(seconds * 1000),
+    count: (n) => count.format(n),
+    percent: (n) => (n > 0 && n < 0.05 ? t('format.below', { n: percent.format(0.001) }) : percent.format(n / 100)),
+    wholePercent: (n) => wholePercent.format(n / 100),
   };
 }

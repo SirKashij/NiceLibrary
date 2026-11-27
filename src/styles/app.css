@@ -37,6 +37,29 @@ button:focus-visible, input:focus-visible {
 }
 .sidebar nav button:hover { color: var(--color-text); }
 .sidebar nav button[aria-current='page'] { color: var(--color-text); box-shadow: inset var(--nav-indicator) 0 0 var(--color-text); }
+/* Collections in the sidebar: name, count, and quiet actions that show on hover or focus. */
+.collections { display: grid; gap: var(--space-2); padding-right: var(--space-3); font-size: var(--text-size-label); }
+.sidebar-heading { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.collection-list { display: grid; }
+.collection-row { display: flex; align-items: center; gap: var(--space-2); min-height: var(--nav-item-height); }
+.collection-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collection-count { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.collection-actions { display: flex; gap: var(--space-1); opacity: 0; }
+.collection-row:hover .collection-actions, .collection-row:focus-within .collection-actions { opacity: 1; }
+.text-button { display: inline-flex; padding: var(--space-1); color: var(--color-text-muted); border-radius: var(--radius-control); }
+.text-button:hover { color: var(--color-text); }
+.icon { width: var(--icon-size); height: var(--icon-size); fill: none; stroke: currentColor; stroke-width: var(--icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
+.collection-form, .delete-question { display: grid; gap: var(--space-2); padding: var(--space-1) 0; }
+.collection-form input {
+  min-width: 0; font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
+.collections .note { font-size: var(--text-size-label); }
+/* Read by screen readers, not shown. */
+.visually-hidden {
+  position: absolute; width: var(--hairline); height: var(--hairline); overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
 /* The last Sync and Sync now, at the bottom of the sidebar. */
 .sync { margin-top: auto; display: grid; justify-items: start; gap: var(--space-2); padding-right: var(--space-3); }
 .sync .note { font-size: var(--text-size-label); }
@@ -63,15 +86,15 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .field-row { display: flex; gap: var(--space-2); }
 .field-row input {
   flex: 1; min-width: 0; font: inherit; color: var(--color-text); background: var(--color-surface);
-  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
 }
 .button {
-  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control);
   padding: var(--space-1) var(--space-3); background: var(--color-surface-raised);
 }
 .button:hover { border-color: var(--color-text-muted); }
 .button:disabled { color: var(--color-text-muted); cursor: default; }
-.button:disabled:hover { border-color: var(--color-line); }
+.button:disabled:hover { border-color: var(--color-control-border); }
 .settings-actions { display: flex; gap: var(--space-2); }
 /* The guided step for the Steam Web API key. */
 .key-form { display: grid; gap: var(--space-2); }
@@ -114,3 +137,268 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 }
 .game:hover .play, .game:focus-within .play { opacity: 1; }
 .game[data-installed='false'] .game-title { color: var(--color-text-muted); }
+
+/* Adding a Local Game: a button above the Library, then the proposal as a form. */
+.add-local-game { display: grid; gap: var(--space-2); justify-items: start; }
+.local-game-form { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); }
+.local-game-form > label { color: var(--color-text-muted); font-size: var(--text-size-label); }
+
+/* Adding Local Games from a folder: one row per suggested executable. */
+.suggested-executables { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.suggested-executable { display: grid; gap: var(--space-1); }
+
+/* The theme: following the system, dark or light. */
+.theme-choice { display: grid; gap: var(--space-1); }
+.theme-choice label { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; cursor: pointer; }
+
+/* Library toolbar: search, Source, Status and Installed only; the empty state when nothing matches. */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding-bottom: var(--space-2); }
+.toolbar-search {
+  flex: 1; min-width: 0; max-width: var(--note-max-width); font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
+.segmented { display: flex; border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); }
+.segmented button { padding: var(--space-1) var(--space-3); color: var(--color-text-muted); }
+.segmented button + button { border-left: var(--hairline) solid var(--color-line); }
+.segmented button:hover { color: var(--color-text); }
+.segmented button[aria-pressed='true'] { color: var(--color-text); background: var(--color-surface-raised); }
+.toolbar-toggle { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; color: var(--color-text-muted); }
+.toolbar-toggle input { margin: 0; accent-color: var(--color-accent); }
+.toolbar-sort { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted); }
+.toolbar-sort select {
+  font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
+.empty-state { display: grid; justify-items: start; gap: var(--space-2); padding-top: var(--space-5); }
+
+/* Open a Game's detail page from its Cover. */
+.open-game { display: block; width: 100%; border-radius: var(--radius-cover); }
+
+/* Game detail page: the large Cover beside its title, main action and facts. */
+.back { justify-self: start; color: var(--color-text-muted); font-size: var(--text-size-label); }
+.back:hover { color: var(--color-text); }
+.game-detail-body { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-7); padding-top: var(--space-3); }
+.game-detail-cover { flex: 0 0 var(--detail-cover-width); }
+.game-detail-info { display: grid; justify-items: start; gap: var(--space-5); flex: 1; min-width: 0; }
+.game-detail-info h1:focus { outline: none; }
+.play-main { background: var(--color-accent); color: var(--color-accent-ink); border-color: var(--color-accent); font-weight: var(--weight-medium); }
+.game-facts { display: grid; margin: 0; min-width: min(100%, var(--note-max-width)); }
+.game-facts > div { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) 0; border-top: var(--hairline) solid var(--color-line); }
+.game-facts dt { color: var(--color-text-muted); }
+.game-facts dd { margin: 0; }
+.game-detail[data-installed='false'] .cover { filter: var(--filter-not-installed); }
+/* A Game's Collections on its detail page: one checkbox per Collection; choosing one in the sidebar narrows the Library. */
+.game-collections { display: grid; gap: var(--space-2); margin: 0; padding: 0; border: 0; min-width: 0; }
+.game-collections legend { padding: 0; margin-bottom: var(--space-2); font-weight: var(--weight-medium); }
+.game-collection-list { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); }
+.collection-name { text-align: left; color: var(--color-text-muted); }
+.collection-name:hover, .collection-name[aria-current='page'] { color: var(--color-text); }
+
+/* Library as a list: one row per Game. The small Cover opens it, and so does the rest of the row;
+   the main action sits above that and stays its own button. */
+.game-list { padding-top: var(--space-3); }
+.game-row {
+  position: relative; display: grid; align-items: center; gap: var(--space-4);
+  grid-template-columns: var(--list-cover-width) minmax(0, 1fr) repeat(5, var(--list-fact-width));
+  padding: var(--space-2); border-top: var(--hairline) solid var(--color-line);
+}
+.game-list-head { border-top: 0; color: var(--color-text-muted); font-size: var(--text-size-label); }
+.game-row .cover { margin-bottom: 0; }
+/* The title with the Game's Progress under it, as on its Cover card. */
+.game-row-title { display: grid; min-width: 0; }
+.open-row { display: block; border-radius: var(--radius-cover); }
+.open-row::after { content: ''; position: absolute; inset: 0; }
+.game-list li:hover { background: var(--color-surface); }
+.game-row-fact { color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-row-action { position: relative; justify-self: end; display: flex; align-items: center; gap: var(--space-2); }
+/* The Favorite star sits before the main action, shown like on a Cover: on hover, on focus and when marked. */
+.game-row .favorite-toggle { position: static; }
+.game-row:hover .favorite-toggle, .game-row:focus-within .favorite-toggle { opacity: 1; }
+.game-row[data-installed='false'] .cover { filter: var(--filter-not-installed); }
+.game-row[data-installed='false'] .game-title { color: var(--color-text-muted); }
+
+/* The Tint (src/coverTint.ts) sets the page's own background and accent; the background fills the main area. */
+.game-detail[data-tint='cover'] {
+  margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-7));
+  padding: var(--space-6) var(--space-7);
+  min-height: calc(100% + 2 * var(--space-6));
+  align-content: start;
+  background: var(--color-bg);
+}
+/* Close-to-tray setting and the Tray notice (src/settings/WindowSettings.tsx, src/Tray.tsx). */
+.checkbox-row { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
+.tray-notice-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: var(--color-backdrop); }
+.tray-notice {
+  display: grid; gap: var(--space-3); justify-items: start; max-width: var(--note-max-width); padding: var(--space-5);
+  background: var(--color-surface-raised); border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control);
+}
+.tray-notice h2 { font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display); }
+/* A Local Game's Cover choice below its Cover on the detail page (src/LocalGameCover.tsx). */
+.cover-choice { display: grid; justify-items: start; gap: var(--space-2); padding-top: var(--space-2); }
+
+/* Language settings: the same column of choices as the theme. */
+.language-choice { display: grid; gap: var(--space-1); }
+.language-choice label { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; cursor: pointer; }
+
+/* Manual Progress of a Local Game, on its detail page. */
+.manual-progress { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); }
+.manual-progress h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.manual-progress form { display: grid; gap: var(--space-2); }
+.manual-progress .field-row { align-items: center; }
+.field-row .manual-progress-field { flex: none; width: calc(var(--space-7) + var(--space-5)); text-align: right; }
+/* Status: a quiet label under each Cover, a choice on the detail page, a select in the toolbar. */
+.status-badge { color: var(--color-text-muted); font-size: var(--text-size-label); }
+.status-badge[data-status='playing'] { color: var(--color-text); }
+/* Progress: a quiet label under each Cover and a value on the detail page; a complete Game, 100 %, in its own colour. */
+.game-progress { color: var(--color-text-muted); font-size: var(--text-size-label); }
+.game-progress[data-complete='true'], .progress-value[data-complete='true'] { color: var(--color-complete); }
+.game-facts .segmented { display: inline-flex; flex-wrap: wrap; }
+.toolbar-select {
+  font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
+
+/* Playtime Adjustment of a Local Game on its detail page (src/library/PlaytimeAdjustment.tsx). */
+.playtime-adjustment { display: grid; gap: var(--space-2); min-width: min(100%, var(--note-max-width)); max-width: var(--note-max-width); padding-top: var(--space-3); border-top: var(--hairline) solid var(--color-line); }
+.playtime-adjustment h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.playtime-adjustment-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); }
+.playtime-adjustment-form label { display: grid; gap: var(--space-1); color: var(--color-text-muted); font-size: var(--text-size-label); }
+.playtime-adjustment-form input {
+  width: var(--adjustment-field-width); font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
+
+/* Sessions on the detail page (src/library/SessionList.tsx): hairline rows, the running one marked in words. */
+.game-sessions { display: grid; gap: var(--space-3); padding-top: var(--space-7); max-width: var(--note-max-width); }
+.game-sessions h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.session-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.session-list li { display: flex; gap: var(--space-4); padding: var(--space-2) 0; border-top: var(--hairline) solid var(--color-line); }
+.session-list time { flex: 1; color: var(--color-text-muted); }
+.session-list li[data-running='true'] time { color: var(--color-text); }
+.session-running { font-size: var(--text-size-label); font-weight: var(--weight-medium); }
+
+/* Achievements on the detail page: hairlines between them, locked ones dimmed and marked as locked. */
+.achievements { display: grid; gap: var(--space-3); padding-top: var(--space-7); max-width: var(--note-max-width); }
+.achievements-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
+.achievements-heading h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.achievement-list { list-style: none; padding: 0; display: grid; }
+.achievement { display: flex; align-items: flex-start; gap: var(--space-4); padding: var(--space-3) 0; border-top: var(--hairline) solid var(--color-line); }
+.achievement-icon { flex: 0 0 var(--achievement-icon-size); height: var(--achievement-icon-size); border-radius: var(--radius-mark); background: var(--color-surface-raised); overflow: hidden; }
+.achievement-icon img { display: block; width: 100%; height: 100%; }
+.achievement-text { display: grid; gap: var(--space-1); min-width: 0; }
+.achievement-text h3 { font-size: var(--text-size-body); font-weight: var(--weight-medium); }
+.achievement-text p { color: var(--color-text-muted); }
+.achievement-status,
+.achievement-rarity { font-size: var(--text-size-label); }
+.achievement[data-unlocked='false'] .achievement-icon,
+.achievement[data-unlocked='false'] .achievement-text { opacity: var(--achievement-locked-opacity); }
+/* Launch Options of a Local Game, on its detail page below the facts. */
+.launch-options { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); padding-top: var(--space-5); border-top: var(--hairline) solid var(--color-line); }
+.launch-options h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.launch-options label { color: var(--color-text-muted); font-size: var(--text-size-label); }
+.launch-options input {
+  font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
+/* Hidden Games: the way to them above the Library, hiding on the detail page, and their list. */
+.library-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-2); }
+.hide-game { display: grid; justify-items: start; gap: var(--space-2); }
+.hidden-games-list { display: grid; max-width: var(--note-max-width); padding-top: var(--space-3); }
+.hidden-games-list li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); padding: var(--space-2) 0; border-top: var(--hairline) solid var(--color-line); }
+.hidden-games h1:focus { outline: none; }
+/* Statistics page (src/statistics/StatisticsPage.tsx): figures in rows with hairlines, like the facts of a Game. */
+.statistics { display: grid; gap: var(--space-5); align-content: start; }
+.statistics-figures, .statistics-by-status { display: grid; margin: 0; max-width: var(--note-max-width); }
+.statistics-figures > div, .statistics-by-status > div { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) 0; border-top: var(--hairline) solid var(--color-line); }
+.statistics-figures dt, .statistics-by-status dt { color: var(--color-text-muted); }
+.statistics-figures dd, .statistics-by-status dd { margin: 0; font-variant-numeric: tabular-nums; }
+.statistics-figures dd { font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display); }
+.statistics-section { display: grid; gap: var(--space-2); }
+.statistics-section h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.statistics-section > .muted { margin: 0; font-size: var(--text-size-label); }
+
+/* Playtime per week (src/statistics/WeeklyPlaytime.tsx): eight columns on one baseline, value above, week below. */
+.week-chart {
+  display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-2);
+  margin: 0; padding: 0; list-style: none; max-width: var(--note-max-width);
+}
+.week-chart li { display: grid; grid-template-rows: auto var(--chart-height) auto; justify-items: center; gap: var(--space-1); }
+.week-chart .week-value, .week-chart .week-label { font-size: var(--text-size-label); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.week-chart .week-label { color: var(--color-text-muted); }
+.week-chart .week-track {
+  display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%;
+  border-bottom: var(--hairline) solid var(--color-line);
+}
+.week-chart .week-bar {
+  width: 100%; max-width: var(--chart-bar-width);
+  border-radius: var(--radius-bar) var(--radius-bar) 0 0; background: var(--color-text-muted);
+}
+.week-chart li[aria-current='date'] .week-bar { background: var(--color-text); }
+.week-chart li[aria-current='date'] .week-label { color: var(--color-text); }
+.week-chart li:hover .week-bar { opacity: 0.8; }
+
+/* The most played Games (src/statistics/MostPlayed.tsx): rows with hairlines, a thin bar for each one's share. */
+.most-played { display: grid; margin: 0; padding: 0; list-style: none; max-width: var(--note-max-width); }
+.most-played li { border-top: var(--hairline) solid var(--color-line); }
+.most-played button {
+  display: grid; grid-template-columns: auto minmax(0, var(--chart-title-width)) 1fr auto; align-items: center;
+  gap: var(--space-3); width: 100%; padding: var(--space-2) 0; text-align: start;
+}
+.most-played button:hover .most-played-title { text-decoration: underline; }
+.most-played-rank, .most-played-playtime { font-variant-numeric: tabular-nums; color: var(--color-text-muted); }
+.most-played-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.most-played-share { display: block; height: var(--chart-bar-thin); }
+.most-played-share > span { display: block; height: 100%; border-radius: var(--radius-bar); background: var(--color-text-muted); }
+
+/* Favorites: the sidebar entry with its count, and the star on a Cover that marks a Favorite. */
+.favorites-entry {
+  display: flex; align-items: center; justify-content: space-between; margin-right: var(--space-3);
+  height: var(--nav-item-height); padding-left: var(--space-4);
+  color: var(--color-text-muted); font-weight: var(--weight-medium);
+}
+.favorites-entry:hover { color: var(--color-text); }
+.favorites-entry[aria-current='page'] { color: var(--color-text); box-shadow: inset var(--nav-indicator) 0 0 var(--color-text); }
+.favorites-count { font-size: var(--text-size-label); font-variant-numeric: tabular-nums; }
+.game-detail-cover { position: relative; }
+.favorite-toggle {
+  position: absolute; top: var(--space-2); right: var(--space-2); display: inline-flex; padding: var(--space-1);
+  border-radius: var(--radius-control); background: var(--color-bg); color: var(--color-text);
+  opacity: 0;
+}
+.favorite-toggle[aria-pressed='true'] { opacity: 1; }
+.favorite-toggle[aria-pressed='true'] .icon { fill: currentColor; }
+.game:hover .favorite-toggle, .game:focus-within .favorite-toggle,
+.game-detail-cover .favorite-toggle, .favorite-toggle:focus-visible { opacity: 1; }
+/* About NiceLibrary (src/About.tsx): a quiet entry under the last Sync, the dialog like the Tray notice. */
+.about-button { font-size: var(--text-size-label); color: var(--color-text-muted); }
+.about-button:hover { color: var(--color-text); }
+.about-backdrop { position: fixed; inset: 0; display: grid; place-items: center; padding: var(--space-5); background: var(--color-backdrop); }
+.about {
+  display: grid; gap: var(--space-3); justify-items: start; max-width: var(--note-max-width); max-height: 100%; overflow: auto;
+  padding: var(--space-5); background: var(--color-surface-raised); border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control);
+}
+.about h2 { font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display); }
+.about h3 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.about-facts { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.about-links { display: flex; gap: var(--space-2); }
+.about-section { display: grid; gap: var(--space-2); padding-top: var(--space-3); border-top: var(--hairline) solid var(--color-line); }
+/* The main action on a Game carries an icon: play for Launch, a download arrow for Install. */
+.play, .play-main { display: inline-flex; align-items: center; gap: var(--space-1); }
+.action-icon { flex: none; }
+
+/* Cover Match: the Steam title a Local Game borrows its Cover from, proposed when adding, changed on the detail page. */
+.cover-match-proposal { display: grid; gap: var(--space-2); margin: 0; padding: 0; border: 0; min-width: 0; }
+.cover-match-proposal legend { padding: 0; margin-bottom: var(--space-2); color: var(--color-text-muted); font-size: var(--text-size-label); }
+.cover-match, .cover-match-search { display: grid; justify-items: start; gap: var(--space-2); width: 100%; }
+.cover-match-search { justify-items: stretch; }
+.cover-match-search > label { color: var(--color-text-muted); font-size: var(--text-size-label); }
+.cover-match-title { display: flex; align-items: center; gap: var(--space-3); }
+.cover-match-title p { margin: 0; }
+.cover-match-preview { width: var(--list-cover-width); flex: 0 0 auto; }
+.cover-match-results { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.cover-match-result { text-align: left; color: var(--color-text-muted); }
+.cover-match-result:hover, .cover-match-result:focus-visible { color: var(--color-text); }
+/* The Limited Mode hint above the Library: quiet, a hairline beside it, no card (ADR-0007). */
+.limited-mode { display: grid; gap: var(--space-2); max-width: var(--note-max-width); padding-left: var(--space-3); border-left: var(--hairline) solid var(--color-line); }
+.limited-mode h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }

@@ -1,9 +1,10 @@
 //! Covers: resolves a Game's Cover and caches the image on disk.
 //!
 //! Covers are downloaded from Steam at runtime and kept only on this computer
-//! (ADR-0005). A Steam Game's Cover is its upright library image.
+//! (ADR-0005). A Steam Game's Cover is its upright library image; a Local
+//! Game's is found in `local_covers`.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -30,18 +31,35 @@ pub struct Cover {
 }
 
 /// The folder on this computer that keeps downloaded Covers, one file per
-/// Game, named after it.
+/// Game, named after it, and the folder that keeps the images the user chose
+/// as Covers.
 pub struct CoverCache {
     folder: PathBuf,
     /// The Steam Games Steam had no image for since the app started. They
     /// are asked again on the next start, in case Steam added one.
     without_image: Mutex<HashSet<u32>>,
+    /// Where the images the user chose are kept: data, not cache, since they
+    /// cannot be fetched again.
+    pub(crate) chosen_images: PathBuf,
+    /// The Covers made from executables' icons since the app started, by
+    /// executable; `None` for one without an icon.
+    pub(crate) icon_covers: Mutex<HashMap<String, Option<Cover>>>,
 }
 
 impl CoverCache {
-    /// The cache in `folder`; the folder is created when the first Cover is kept.
+    /// The cache in `folder`; the folder is created when the first Cover is
+    /// kept. Images the user chooses are kept in its `chosen` folder unless
+    /// [`Self::with_chosen_images_in`] names another.
     pub fn new(folder: PathBuf) -> Self {
-        Self { folder, without_image: Mutex::default() }
+        let chosen_images = folder.join("chosen");
+        Self { folder, without_image: Mutex::default(), chosen_images, icon_covers: Mutex::default() }
+    }
+
+    /// Keeps the images the user chooses as Covers in `folder`, which
+    /// belongs in the app's data folder: a cache may be cleared, and a
+    /// chosen image cannot be fetched again.
+    pub fn with_chosen_images_in(self, folder: PathBuf) -> Self {
+        Self { chosen_images: folder, ..self }
     }
 
     fn without_image(&self) -> MutexGuard<'_, HashSet<u32>> {
@@ -55,7 +73,7 @@ impl CoverCache {
     /// Fails when Steam cannot be reached; that says nothing about whether
     /// the Game has a Cover.
     pub(crate) fn steam_cover(&self, downloader: &dyn Downloader, app_id: u32) -> Result<Option<Cover>, Error> {
-        let file = self.folder.join(format!("steam-{app_id}"));
+        let file = self.folder.join(file_name(&format!("steam:{app_id}")));
         if let Some(cover) = fs::read(&file).ok().and_then(Cover::from_bytes) {
             return Ok(Some(cover));
         }
@@ -64,7 +82,10 @@ impl CoverCache {
         }
         let cover = download(downloader, app_id)?;
         match &cover {
-            Some(cover) => self.keep(&file, &cover.bytes),
+            // A Cover that cannot be kept is downloaded again next time.
+            Some(cover) => {
+                let _ = keep(&self.folder, &file, &cover.bytes);
+            }
             None => {
                 self.without_image().insert(app_id);
             }
@@ -72,28 +93,61 @@ impl CoverCache {
         Ok(cover)
     }
 
-    /// Writes `bytes` to `file` in one step, so that a crash never leaves a
-    /// half-written Cover behind. A Cover that cannot be kept is downloaded
-    /// again next time.
-    fn keep(&self, file: &Path, bytes: &[u8]) {
-        static WRITES: AtomicU64 = AtomicU64::new(0);
-        let partial = file.with_extension(format!(
-            "partial-{}-{}",
-            std::process::id(),
-            WRITES.fetch_add(1, Ordering::Relaxed)
-        ));
-        let kept = fs::create_dir_all(&self.folder)
-            .and_then(|()| fs::write(&partial, bytes))
-            .and_then(|()| fs::rename(&partial, file));
-        if kept.is_err() {
-            let _ = fs::remove_file(&partial);
-        }
+    /// Deletes the kept Cover of the Game `game_id` and the image the user
+    /// chose as its Cover (`local-<number>`, see `local_covers`), if there
+    /// are any. A file that cannot be deleted now stays as a file nothing
+    /// reads.
+    pub(crate) fn forget(&self, game_id: &str) {
+        let _ = fs::remove_file(self.folder.join(file_name(game_id)));
+        let _ = fs::remove_file(self.chosen_images.join(file_name(game_id)));
     }
+
+    /// The Achievement icon `icon` of the Steam Game `app_id`, kept beside
+    /// the Covers: from the cache when it is there, else downloaded from
+    /// Steam and kept. `icon` is Steam's name for the image, a hash, so the
+    /// image under it never changes.
+    pub(crate) fn achievement_icon(&self, downloader: &dyn Downloader, app_id: u32, icon: &str) -> Result<Option<Cover>, Error> {
+        let file = self.folder.join(format!("achievement-{app_id}-{icon}"));
+        if let Some(cover) = fs::read(&file).ok().and_then(Cover::from_bytes) {
+            return Ok(Some(cover));
+        }
+        let url = crate::achievements::icon_url(app_id, icon);
+        let Some(bytes) = downloader.download(&url).map_err(|reason| Error::new(format!("cannot download {url}: {reason}")))?
+        else {
+            return Ok(None);
+        };
+        let icon = Cover::from_bytes(bytes).ok_or_else(|| Error::new(format!("{url} did not answer with an image")))?;
+        // An icon that cannot be kept is downloaded again next time.
+        let _ = keep(&self.folder, &file, &icon.bytes);
+        Ok(Some(icon))
+    }
+}
+
+/// Writes `bytes` to `file` in `folder` in one step, so that a crash never
+/// leaves a half-written Cover behind.
+pub(crate) fn keep(folder: &Path, file: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    static WRITES: AtomicU64 = AtomicU64::new(0);
+    let partial =
+        file.with_extension(format!("partial-{}-{}", std::process::id(), WRITES.fetch_add(1, Ordering::Relaxed)));
+    let kept = fs::create_dir_all(folder)
+        .and_then(|()| fs::write(&partial, bytes))
+        .and_then(|()| fs::rename(&partial, file));
+    if kept.is_err() {
+        let _ = fs::remove_file(&partial);
+    }
+    kept
+}
+
+/// The name of the file that keeps the Cover of the Game `game_id`: its id
+/// with `-` for the `:`, which Windows does not allow in a file name
+/// (`steam-620`, `local-3`).
+fn file_name(game_id: &str) -> String {
+    game_id.replace(':', "-")
 }
 
 impl Cover {
     /// The Cover in `bytes`, if they hold an image in a format a Cover may have.
-    fn from_bytes(bytes: Vec<u8>) -> Option<Self> {
+    pub(crate) fn from_bytes(bytes: Vec<u8>) -> Option<Self> {
         let media_type = media_type(&bytes)?;
         Some(Self { bytes, media_type })
     }

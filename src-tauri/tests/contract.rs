@@ -231,6 +231,11 @@ mod downloader {
 /// `HKCU\Software\Classes\nicelibrary-contract-<name>-<process id>`, whose
 /// program writes the URL it receives to a file, and delete them again. They
 /// never open a `steam://` URL, so Steam does not start.
+///
+/// `open_folder`: `Ok` once File Explorer has the folder; anything that is
+/// not an existing folder is refused with `Err(Failed)` and nothing starts.
+/// The test that shows a folder leaves one Explorer window open on an empty
+/// temporary folder.
 #[cfg(windows)]
 mod opener {
     use std::fs;
@@ -330,6 +335,35 @@ mod opener {
             let refused = WindowsOpener.open_url(&target);
             assert!(matches!(refused, Err(OpenError::Failed(_))), "{target} was not refused: {refused:?}");
         }
+        std::thread::sleep(Duration::from_secs(1));
+        assert!(!marker.exists(), "the program was started");
+    }
+
+    /// Opens one File Explorer window, on an empty temporary folder.
+    #[test]
+    fn shows_an_existing_folder_in_file_explorer() {
+        let folder = tempfile::tempdir().unwrap();
+
+        assert_eq!(WindowsOpener.open_folder(folder.path()), Ok(()));
+    }
+
+    #[test]
+    fn a_folder_that_does_not_exist_is_refused() {
+        let folder = tempfile::tempdir().unwrap();
+
+        let refused = WindowsOpener.open_folder(&folder.path().join("missing"));
+
+        assert!(matches!(refused, Err(OpenError::Failed(_))), "{refused:?}");
+    }
+
+    #[test]
+    fn a_program_is_refused_as_a_folder_and_not_started() {
+        let folder = tempfile::tempdir().unwrap();
+        let (program, marker) = marker_program(folder.path());
+
+        let refused = WindowsOpener.open_folder(&program);
+
+        assert!(matches!(refused, Err(OpenError::Failed(_))), "{refused:?}");
         std::thread::sleep(Duration::from_secs(1));
         assert!(!marker.exists(), "the program was started");
     }
@@ -574,5 +608,1106 @@ mod secret_store {
         test.open().write("key", text).unwrap();
 
         assert_eq!(test.open().read("key"), Ok(Some(text.to_owned())));
+    }
+}
+
+/// `Autostart` (crates/core): off while there is no entry; `turn_on` makes
+/// it on, `turn_off` off again and is `Ok` when there is nothing to remove;
+/// an entry removed or disabled outside the app, or one for another program,
+/// is off.
+///
+/// The tests write their entries under
+/// `HKCU\Software\NiceLibraryContractTests\autostart-<test>-<process id>`
+/// instead of Windows' own startup keys and delete them again; the app's
+/// real entry is only read.
+#[cfg(windows)]
+mod autostart {
+    use std::path::PathBuf;
+
+    use nicelibrary_core::Autostart;
+    use nicelibrary_lib::ports::WindowsAutostart;
+    use winreg::enums::{HKEY_CURRENT_USER, REG_BINARY};
+    use winreg::{RegKey, RegValue};
+
+    const PARENT: &str = r"Software\NiceLibraryContractTests";
+    const NAME: &str = "NiceLibrary";
+
+    /// The startup keys of one test, removed when dropped.
+    struct TestKeys {
+        path: String,
+    }
+
+    impl TestKeys {
+        fn new(test: &str) -> Self {
+            let path = format!(r"{PARENT}\autostart-{test}-{}", std::process::id());
+            // Created up front, so another test's clean-up no longer removes
+            // the parent while it is empty; that may happen while this one
+            // creates it, so it tries again.
+            let user = RegKey::predef(HKEY_CURRENT_USER);
+            let mut created = user.create_subkey(&path);
+            for _ in 0..10 {
+                if created.is_ok() {
+                    break;
+                }
+                created = user.create_subkey(&path);
+            }
+            created.unwrap();
+            Self { path }
+        }
+
+        fn run_key(&self) -> String {
+            format!(r"{}\Run", self.path)
+        }
+
+        fn approved_key(&self) -> String {
+            format!(r"{}\StartupApproved\Run", self.path)
+        }
+
+        /// The autostart of `program`, as the app would see it after a start.
+        fn autostart_of(&self, program: &str) -> WindowsAutostart {
+            WindowsAutostart::under(&self.run_key(), &self.approved_key(), NAME, Some(PathBuf::from(program)))
+        }
+
+        fn autostart(&self) -> WindowsAutostart {
+            self.autostart_of(PROGRAM)
+        }
+
+        /// The command the entry runs, as Windows reads it.
+        fn command(&self) -> Option<String> {
+            RegKey::predef(HKEY_CURRENT_USER).open_subkey(self.run_key()).ok()?.get_value(NAME).ok()
+        }
+
+        /// The user removes the entry outside the app.
+        fn remove_entry(&self) {
+            let key = RegKey::predef(HKEY_CURRENT_USER).create_subkey(self.run_key()).unwrap().0;
+            key.delete_value(NAME).unwrap();
+        }
+
+        /// The user turns the entry off or on in the Task Manager's startup
+        /// apps, which records it as Windows does: the first of 12 bytes is
+        /// odd for disabled.
+        fn mark_in_startup_apps(&self, first_byte: u8) {
+            let key = RegKey::predef(HKEY_CURRENT_USER).create_subkey(self.approved_key()).unwrap().0;
+            let mut bytes = vec![0; 12];
+            bytes[0] = first_byte;
+            key.set_raw_value(NAME, &RegValue { bytes: bytes.into(), vtype: REG_BINARY }).unwrap();
+        }
+
+        fn has_startup_apps_mark(&self) -> bool {
+            RegKey::predef(HKEY_CURRENT_USER)
+                .open_subkey(self.approved_key())
+                .and_then(|key| key.get_raw_value(NAME))
+                .is_ok()
+        }
+    }
+
+    impl Drop for TestKeys {
+        fn drop(&mut self) {
+            let user = RegKey::predef(HKEY_CURRENT_USER);
+            let _ = user.delete_subkey_all(&self.path);
+            // Fails while other tests still hold keys below it; the last one removes it.
+            let _ = user.delete_subkey(PARENT);
+        }
+    }
+
+    /// A program path with a space, as under `C:\Program Files`. The tests
+    /// never run it.
+    const PROGRAM: &str = r"C:\Program Files\NiceLibrary Contract Tests\nicelibrary.exe";
+
+    #[test]
+    fn without_an_entry_it_is_off() {
+        let keys = TestKeys::new("none");
+
+        assert_eq!(keys.autostart().is_on(), Ok(false));
+    }
+
+    #[test]
+    fn turning_it_on_adds_an_entry_that_starts_the_program_with_the_arguments() {
+        let keys = TestKeys::new("on");
+
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+
+        assert_eq!(keys.autostart().is_on(), Ok(true));
+        assert_eq!(keys.command().as_deref(), Some(format!("\"{PROGRAM}\" --autostart").as_str()));
+    }
+
+    #[test]
+    fn turning_it_off_removes_the_entry_and_turning_it_off_again_is_fine() {
+        let keys = TestKeys::new("off");
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+
+        keys.autostart().turn_off().unwrap();
+
+        assert_eq!(keys.autostart().is_on(), Ok(false));
+        assert_eq!(keys.command(), None);
+        assert_eq!(keys.autostart().turn_off(), Ok(()));
+    }
+
+    #[test]
+    fn an_entry_removed_outside_the_app_is_off() {
+        let keys = TestKeys::new("removed");
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+
+        keys.remove_entry();
+
+        assert_eq!(keys.autostart().is_on(), Ok(false));
+    }
+
+    #[test]
+    fn an_entry_disabled_in_the_startup_apps_is_off_until_it_is_turned_on_again() {
+        let keys = TestKeys::new("disabled");
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+
+        keys.mark_in_startup_apps(0x03);
+        assert_eq!(keys.autostart().is_on(), Ok(false));
+
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+        assert_eq!(keys.autostart().is_on(), Ok(true));
+    }
+
+    #[test]
+    fn an_entry_enabled_in_the_startup_apps_is_on() {
+        let keys = TestKeys::new("enabled");
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+
+        keys.mark_in_startup_apps(0x02);
+
+        assert_eq!(keys.autostart().is_on(), Ok(true));
+    }
+
+    #[test]
+    fn turning_it_off_also_forgets_the_startup_apps_mark() {
+        let keys = TestKeys::new("forget");
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+        keys.mark_in_startup_apps(0x03);
+
+        keys.autostart().turn_off().unwrap();
+
+        assert!(!keys.has_startup_apps_mark());
+    }
+
+    #[test]
+    fn an_entry_for_another_program_is_off_and_turning_it_on_replaces_it() {
+        let keys = TestKeys::new("moved");
+        keys.autostart_of(r"C:\Old Place\nicelibrary.exe").turn_on(&["--autostart"]).unwrap();
+
+        assert_eq!(keys.autostart().is_on(), Ok(false));
+
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+        assert_eq!(keys.autostart().is_on(), Ok(true));
+        assert_eq!(keys.command().as_deref(), Some(format!("\"{PROGRAM}\" --autostart").as_str()));
+    }
+
+    #[test]
+    fn the_apps_own_entry_can_be_read() {
+        // Only reads Windows' startup keys for the running program.
+        assert!(WindowsAutostart::new().is_on().is_ok());
+    }
+}
+
+/// `ExecutablePicker`, `ImagePicker` and `DataFilePicker` (crates/core):
+/// `Some` with the absolute path of the file the user chose, `None` when
+/// they cancel; blocks until they decide. The "Save as" dialog of
+/// `DataFilePicker` offers the suggested name and adds `.json` to a name
+/// typed without an extension; its "Open" dialog answers the file to import.
+///
+/// The tests play the user: they find the dialog this process opens, type a
+/// path into its file name box and confirm, or cancel it. A dialog shows on
+/// the screen briefly; nothing on disk changes but a temporary folder.
+#[cfg(windows)]
+mod executable_picker {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::Mutex;
+    use std::thread::JoinHandle;
+    use std::time::{Duration, Instant};
+
+    use nicelibrary_core::{ExecutablePicker, DataFilePicker, ImagePicker};
+    use nicelibrary_lib::ports::{WindowsExecutablePicker, WindowsDataFilePicker, WindowsImagePicker};
+    use windows_sys::Win32::Foundation::{HWND, LPARAM, WPARAM};
+    use windows_sys::Win32::UI::Shell::{SHELLFLAGSTATE, SHGetSettings, SSF_SHOWEXTENSIONS};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        BM_CLICK, EnumChildWindows, EnumWindows, GetClassNameW, GetDlgCtrlID, GetDlgItem, GetWindowThreadProcessId,
+        IDCANCEL, IDOK, IsWindowVisible, PostMessageW, SendMessageW, WM_COMMAND, WM_GETTEXT, WM_SETTEXT,
+    };
+
+    /// The id of the file name box in Windows' "Open" dialog (`cmb13`).
+    const FILE_NAME_BOX: i32 = 0x47c;
+
+    /// The id of the box labelled "Folder" in Windows' "Select Folder" dialog (`edt1`).
+    const FOLDER_BOX: i32 = 0x480;
+
+    /// One dialog at a time, so each test finds its own.
+    static ONE_DIALOG: Mutex<()> = Mutex::new(());
+
+    fn open_dialog() -> JoinHandle<Result<Option<PathBuf>, String>> {
+        std::thread::spawn(|| WindowsExecutablePicker.choose_executable())
+    }
+
+    /// The visible file dialog of this process, waiting for it up to ten seconds.
+    fn the_dialog() -> HWND {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while Instant::now() < deadline {
+            let mut found: HWND = std::ptr::null_mut();
+            // SAFETY: the callback only writes through the pointer it is given, which outlives the call.
+            unsafe { EnumWindows(Some(remember_dialog), &mut found as *mut HWND as LPARAM) };
+            // The file name box exists once the dialog is ready for input.
+            if !found.is_null() && !file_name_box(found).is_null() {
+                return found;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        panic!("no file dialog appeared");
+    }
+
+    /// The file name box of `dialog`, or null: in the "Open" dialog a child
+    /// of its own, in the "Select Folder" dialog one further down.
+    fn file_name_box(dialog: HWND) -> HWND {
+        // SAFETY: a plain Win32 call on a window handle Windows gave us.
+        let open = unsafe { GetDlgItem(dialog, FILE_NAME_BOX) };
+        if open.is_null() { visible_control(dialog, FOLDER_BOX) } else { open }
+    }
+
+    /// The visible control with the id `id` anywhere below `dialog`, or null.
+    fn visible_control(dialog: HWND, id: i32) -> HWND {
+        let mut search: (i32, HWND) = (id, std::ptr::null_mut());
+        // SAFETY: the callback only uses the pointer it is given, which outlives the call.
+        unsafe { EnumChildWindows(dialog, Some(remember_control), &mut search as *mut (i32, HWND) as LPARAM) };
+        search.1
+    }
+
+    unsafe extern "system" fn remember_control(window: HWND, search: LPARAM) -> i32 {
+        // SAFETY: `search` is the `&mut (i32, HWND)` handed to EnumChildWindows.
+        let search = unsafe { &mut *(search as *mut (i32, HWND)) };
+        // SAFETY: plain Win32 calls on a window handle Windows just gave us.
+        if unsafe { GetDlgCtrlID(window) } == search.0 && unsafe { IsWindowVisible(window) } != 0 {
+            search.1 = window;
+            return 0;
+        }
+        1
+    }
+
+    /// Types `path` into the file name box of `dialog`, as the user would.
+    fn type_path(dialog: HWND, path: &std::path::Path) {
+        let typed: Vec<u16> = path.display().to_string().encode_utf16().chain([0]).collect();
+        // SAFETY: SendMessageW returns only once the dialog has copied the text.
+        unsafe { SendMessageW(file_name_box(dialog), WM_SETTEXT, 0, typed.as_ptr() as LPARAM) };
+    }
+
+    unsafe extern "system" fn remember_dialog(window: HWND, found: LPARAM) -> i32 {
+        let mut process = 0;
+        let mut class = [0u16; 16];
+        // SAFETY: plain Win32 calls on a window handle Windows just gave us.
+        let (ours, length) = unsafe {
+            GetWindowThreadProcessId(window, &mut process);
+            (process == std::process::id() && IsWindowVisible(window) != 0, GetClassNameW(window, class.as_mut_ptr(), 16))
+        };
+        // "#32770" is the window class of dialogs.
+        if ours && String::from_utf16_lossy(&class[..length as usize]) == "#32770" {
+            // SAFETY: `found` is the `&mut HWND` handed to EnumWindows.
+            unsafe { *(found as *mut HWND) = window };
+            return 0;
+        }
+        1
+    }
+
+    /// Clicks `button` of `dialog`. The "Select Folder" dialog does not hear
+    /// a command sent to the dialog itself, only a click on the button.
+    fn press(dialog: HWND, button: i32) {
+        let target = visible_control(dialog, button);
+        // SAFETY: plain Win32 calls; the messages carry no pointers.
+        unsafe {
+            if target.is_null() {
+                PostMessageW(dialog, WM_COMMAND, button as WPARAM, 0);
+            } else {
+                PostMessageW(target, BM_CLICK, 0, 0);
+            }
+        }
+    }
+
+    #[test]
+    fn answers_the_file_the_user_chose() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let folder = tempfile::tempdir().unwrap();
+        let game = folder.path().join("Celeste.exe");
+        fs::write(&game, b"MZ").unwrap();
+        let answer = open_dialog();
+
+        let dialog = the_dialog();
+        type_path(dialog, &game);
+        press(dialog, IDOK);
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen file");
+        assert_eq!(fs::canonicalize(chosen).unwrap(), fs::canonicalize(&game).unwrap());
+    }
+
+    #[test]
+    fn answers_none_when_the_user_cancels() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = open_dialog();
+
+        press(the_dialog(), IDCANCEL);
+
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+
+    #[test]
+    fn leaves_the_working_folder_where_it_was() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let before = std::env::current_dir().unwrap();
+        let folder = tempfile::tempdir().unwrap();
+        let game = folder.path().join("game.exe");
+        fs::write(&game, b"MZ").unwrap();
+        let answer = open_dialog();
+
+        let dialog = the_dialog();
+        type_path(dialog, &game);
+        press(dialog, IDOK);
+        answer.join().unwrap().unwrap();
+
+        assert_eq!(std::env::current_dir().unwrap(), before);
+    }
+
+    fn open_folder_dialog() -> JoinHandle<Result<Option<PathBuf>, String>> {
+        std::thread::spawn(|| WindowsExecutablePicker.choose_folder())
+    }
+
+    #[test]
+    fn answers_the_folder_the_user_chose() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let disk = tempfile::tempdir().unwrap();
+        let games = disk.path().join("Games");
+        fs::create_dir(&games).unwrap();
+        let answer = open_folder_dialog();
+
+        let dialog = the_dialog();
+        type_path(dialog, &games);
+        press(dialog, IDOK);
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen folder");
+        assert!(chosen.is_absolute(), "{}", chosen.display());
+        assert_eq!(fs::canonicalize(chosen).unwrap(), fs::canonicalize(&games).unwrap());
+    }
+
+    #[test]
+    fn answers_no_folder_when_the_user_cancels() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = open_folder_dialog();
+
+        press(the_dialog(), IDCANCEL);
+
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+
+    #[test]
+    fn choosing_a_folder_leaves_the_working_folder_where_it_was() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let before = std::env::current_dir().unwrap();
+        let disk = tempfile::tempdir().unwrap();
+        let answer = open_folder_dialog();
+
+        let dialog = the_dialog();
+        type_path(dialog, disk.path());
+        press(dialog, IDOK);
+        answer.join().unwrap().unwrap();
+
+        assert_eq!(std::env::current_dir().unwrap(), before);
+    }
+
+    #[test]
+    fn answers_the_image_the_user_chose() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let folder = tempfile::tempdir().unwrap();
+        let image = folder.path().join("Celeste cover.png");
+        fs::write(&image, b"\x89PNG\r\n\x1a\n").unwrap();
+        let answer = std::thread::spawn(|| WindowsImagePicker.choose_image());
+
+        let dialog = the_dialog();
+        let typed: Vec<u16> = image.display().to_string().encode_utf16().chain([0]).collect();
+        // SAFETY: SendMessageW returns only once the dialog has copied the text.
+        unsafe { SendMessageW(GetDlgItem(dialog, FILE_NAME_BOX), WM_SETTEXT, 0, typed.as_ptr() as LPARAM) };
+        press(dialog, IDOK);
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen image");
+        assert_eq!(fs::canonicalize(chosen).unwrap(), fs::canonicalize(&image).unwrap());
+    }
+
+    #[test]
+    fn answers_no_image_when_the_user_cancels() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = std::thread::spawn(|| WindowsImagePicker.choose_image());
+
+        press(the_dialog(), IDCANCEL);
+
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+
+    fn open_save_dialog() -> JoinHandle<Result<Option<PathBuf>, String>> {
+        std::thread::spawn(|| WindowsDataFilePicker.choose_export_file("NiceLibrary-2027-01-15.json"))
+    }
+
+    /// The id of the file name box in Windows' "Save as" dialog (`edt1`):
+    /// an edit field deep inside the dialog, not a direct child.
+    const SAVE_NAME_BOX: i32 = 0x3e9;
+
+    /// The visible "Save as" dialog of this process and its file name box,
+    /// waiting up to ten seconds for them and for the dialog to have filled
+    /// in the suggested name, so nothing typed is overwritten afterwards.
+    fn the_save_dialog() -> (HWND, HWND) {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while Instant::now() < deadline {
+            let mut dialog: HWND = std::ptr::null_mut();
+            // SAFETY: the callback only writes through the pointer it is given, which outlives the call.
+            unsafe { EnumWindows(Some(remember_dialog), &mut dialog as *mut HWND as LPARAM) };
+            if !dialog.is_null() {
+                let mut name_box: HWND = std::ptr::null_mut();
+                // SAFETY: as above.
+                unsafe { EnumChildWindows(dialog, Some(remember_name_box), &mut name_box as *mut HWND as LPARAM) };
+                if !name_box.is_null() && !text_of(name_box).is_empty() {
+                    return (dialog, name_box);
+                }
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        panic!("no save dialog appeared");
+    }
+
+    /// The text `window` holds.
+    fn text_of(window: HWND) -> String {
+        let mut text = [0u16; 1024];
+        // SAFETY: the buffer outlives the call and its length is passed along.
+        let length = unsafe { SendMessageW(window, WM_GETTEXT, text.len(), text.as_mut_ptr() as LPARAM) };
+        String::from_utf16_lossy(&text[..length as usize])
+    }
+
+    /// Whether Windows shows the extensions of known file types. When it
+    /// hides them, so does the "Save as" dialog in its file name box.
+    fn extensions_shown() -> bool {
+        let mut state = SHELLFLAGSTATE { _bitfield: 0 };
+        // SAFETY: a plain Win32 call that fills in the state it is given.
+        unsafe { SHGetSettings(&mut state, SSF_SHOWEXTENSIONS) };
+        // fShowExtensions is the second bit of SHELLFLAGSTATE.
+        state._bitfield & 0b10 != 0
+    }
+
+    unsafe extern "system" fn remember_name_box(window: HWND, found: LPARAM) -> i32 {
+        let mut class = [0u16; 16];
+        // SAFETY: plain Win32 calls on a window handle Windows just gave us.
+        let (id, length) = unsafe { (GetDlgCtrlID(window), GetClassNameW(window, class.as_mut_ptr(), 16)) };
+        if id == SAVE_NAME_BOX
+            && String::from_utf16_lossy(&class[..length as usize]) == "Edit"
+            // SAFETY: as above.
+            && unsafe { IsWindowVisible(window) } != 0
+        {
+            // SAFETY: `found` is the `&mut HWND` handed to EnumChildWindows.
+            unsafe { *(found as *mut HWND) = window };
+            return 0;
+        }
+        1
+    }
+
+    /// `EM_SETSEL` and `EM_REPLACESEL` of an edit field (winuser.h).
+    const EM_SETSEL: u32 = 0x00b1;
+    const EM_REPLACESEL: u32 = 0x00c2;
+
+    /// Types `path` into the file name box of the "Save as" dialog, in place
+    /// of the suggested name, and confirms. It replaces the selected text as
+    /// typing does, which marks the box as changed: with extensions hidden the
+    /// dialog keeps its own suggested name for a box changed by WM_SETTEXT.
+    fn type_and_save(path: &str) {
+        let (dialog, name_box) = the_save_dialog();
+        let typed: Vec<u16> = path.encode_utf16().chain([0]).collect();
+        // SAFETY: SendMessageW returns only once the box has copied the text.
+        unsafe {
+            SendMessageW(name_box, EM_SETSEL, 0, -1);
+            SendMessageW(name_box, EM_REPLACESEL, 1, typed.as_ptr() as LPARAM);
+        }
+        let held = text_of(name_box);
+        // Confirms only what was typed; otherwise closes the dialog before failing.
+        press(dialog, if held == path { IDOK } else { IDCANCEL });
+        assert_eq!(held, path, "the typed name is in the file name box");
+    }
+
+    #[test]
+    fn the_save_dialog_offers_the_suggested_name() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = open_save_dialog();
+
+        let (dialog, name_box) = the_save_dialog();
+        let offered = text_of(name_box);
+        press(dialog, IDCANCEL);
+
+        // Windows shows ".json" only where it shows the extensions of known file types.
+        let shown = if extensions_shown() { "NiceLibrary-2027-01-15.json" } else { "NiceLibrary-2027-01-15" };
+        assert_eq!(offered, shown);
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+
+    #[test]
+    fn answers_the_file_the_user_chose_to_save_to_without_writing_it() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let folder = tempfile::tempdir().unwrap();
+        let file = folder.path().join("backup.json");
+        let answer = open_save_dialog();
+
+        type_and_save(&file.display().to_string());
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen file");
+        assert_eq!(chosen.file_name(), file.file_name());
+        assert_eq!(fs::canonicalize(chosen.parent().unwrap()).unwrap(), fs::canonicalize(folder.path()).unwrap());
+        assert!(!file.exists(), "the dialog only chooses; the core writes");
+    }
+
+    #[test]
+    fn a_name_without_an_extension_gets_json() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let folder = tempfile::tempdir().unwrap();
+        let answer = open_save_dialog();
+
+        type_and_save(&folder.path().join("backup").display().to_string());
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen file");
+        assert_eq!(chosen.file_name().unwrap(), "backup.json");
+    }
+
+    #[test]
+    fn answers_no_file_when_the_user_cancels_saving() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = open_save_dialog();
+
+        press(the_save_dialog().0, IDCANCEL);
+
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+
+    fn open_import_dialog() -> JoinHandle<Result<Option<PathBuf>, String>> {
+        std::thread::spawn(|| WindowsDataFilePicker.choose_import_file())
+    }
+
+    #[test]
+    fn answers_the_export_file_the_user_chose_to_import_without_changing_it() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let folder = tempfile::tempdir().unwrap();
+        let file = folder.path().join("backup.json");
+        fs::write(&file, b"{}").unwrap();
+        let answer = open_import_dialog();
+
+        let dialog = the_dialog();
+        type_path(dialog, &file);
+        press(dialog, IDOK);
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen file");
+        assert_eq!(fs::canonicalize(chosen).unwrap(), fs::canonicalize(&file).unwrap());
+        assert_eq!(fs::read(&file).unwrap(), b"{}", "the dialog only chooses; the core reads");
+    }
+
+    #[test]
+    fn answers_no_file_when_the_user_cancels_importing() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = open_import_dialog();
+
+        press(the_dialog(), IDCANCEL);
+
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+}
+
+/// `IconExtractor` (crates/core): `Some` with the largest image of the
+/// executable's first icon, at its own size, as straight RGBA; `None` for an
+/// executable without an icon; `Err` for a file that is not an executable.
+///
+/// The tests copy Windows' `cmd.exe` into a temporary folder and replace all
+/// resources of the copy with icons generated for the test; the original is
+/// only read. One test reads the icon of Windows' own `explorer.exe`.
+#[cfg(windows)]
+mod icon_extractor {
+    use std::fs;
+    use std::path::{Path, PathBuf};
+
+    use nicelibrary_core::{Icon, IconExtractor};
+    use nicelibrary_lib::ports::WindowsIconExtractor;
+    use tempfile::TempDir;
+    use windows_sys::Win32::System::LibraryLoader::{BeginUpdateResourceW, EndUpdateResourceW, UpdateResourceW};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{RT_GROUP_ICON, RT_ICON};
+    use windows_sys::core::PCWSTR;
+
+    const RED: [u8; 4] = [220, 30, 40, 255];
+    const GREEN: [u8; 4] = [30, 180, 60, 255];
+    const BLUE: [u8; 4] = [30, 60, 220, 255];
+
+    /// One image of an icon as an executable keeps it.
+    struct Image {
+        size: u32,
+        bit_count: u16,
+        bytes: Vec<u8>,
+    }
+
+    /// A square PNG image in one colour; the left half transparent when `half_transparent`.
+    fn png_image(size: u32, rgba: [u8; 4], half_transparent: bool) -> Image {
+        let mut pixels = Vec::new();
+        for _ in 0..size {
+            for x in 0..size {
+                pixels.extend(if half_transparent && x < size / 2 { [0, 0, 0, 0] } else { rgba });
+            }
+        }
+        let mut bytes = Vec::new();
+        let mut encoder = png::Encoder::new(&mut bytes, size, size);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder.write_header().unwrap();
+        writer.write_image_data(&pixels).unwrap();
+        writer.finish().unwrap();
+        Image { size, bit_count: 32, bytes }
+    }
+
+    /// A square bitmap image in one colour as icons keep them: the colours,
+    /// bottom row first, then a mask whose set bits are transparent. With 32
+    /// bits per pixel the alpha channel says what is transparent; with 24
+    /// the left half is masked out.
+    fn bitmap_image(size: u32, rgba: [u8; 4], bit_count: u16) -> Image {
+        let mut bytes = Vec::new();
+        bytes.extend(40u32.to_le_bytes());
+        bytes.extend((size as i32).to_le_bytes());
+        bytes.extend((size as i32 * 2).to_le_bytes());
+        bytes.extend(1u16.to_le_bytes());
+        bytes.extend(bit_count.to_le_bytes());
+        bytes.extend([0u8; 24]);
+        let masked = |x: u32| bit_count == 24 && x < size / 2;
+        for _ in 0..size {
+            let mut row = Vec::new();
+            for x in 0..size {
+                let [r, g, b, a] = if masked(x) { [0; 4] } else { rgba };
+                row.extend(if bit_count == 32 { vec![b, g, r, a] } else { vec![b, g, r] });
+            }
+            row.resize(row.len().div_ceil(4) * 4, 0);
+            bytes.extend(row);
+        }
+        let mask_row = size.div_ceil(32) as usize * 4;
+        for _ in 0..size {
+            let mut row = vec![0u8; mask_row];
+            for x in 0..size {
+                if masked(x) {
+                    row[x as usize / 8] |= 0x80 >> (x % 8);
+                }
+            }
+            bytes.extend(row);
+        }
+        Image { size, bit_count, bytes }
+    }
+
+    /// A copy of Windows' `cmd.exe` whose resources are only `icons`, each a
+    /// list of images; the icons are numbered from 1 in order, their images
+    /// from 100 on.
+    fn executable_with(folder: &TempDir, icons: &[Vec<Image>]) -> PathBuf {
+        let windows = std::env::var_os("SystemRoot").expect("SystemRoot is set on Windows");
+        let path = folder.path().join("game.exe");
+        fs::copy(Path::new(&windows).join("System32").join("cmd.exe"), &path).unwrap();
+        let wide: Vec<u16> = path.to_str().unwrap().encode_utf16().chain([0]).collect();
+        let mut next_image = 100u16;
+        // SAFETY: plain Win32 calls; every buffer outlives the call it is handed to.
+        unsafe {
+            // TRUE: the copy's own resources, its icon among them, are removed.
+            let update = BeginUpdateResourceW(wide.as_ptr(), 1);
+            assert!(!update.is_null(), "{}", std::io::Error::last_os_error());
+            for (number, images) in icons.iter().enumerate() {
+                let mut group = Vec::new();
+                group.extend([0u16, 1, images.len() as u16].iter().flat_map(|value| value.to_le_bytes()));
+                for image in images {
+                    let id = next_image;
+                    next_image += 1;
+                    let added = UpdateResourceW(
+                        update,
+                        RT_ICON,
+                        id as usize as PCWSTR,
+                        0,
+                        image.bytes.as_ptr().cast(),
+                        image.bytes.len() as u32,
+                    );
+                    assert_ne!(added, 0, "{}", std::io::Error::last_os_error());
+                    let width = if image.size >= 256 { 0 } else { image.size as u8 };
+                    group.extend([width, width, 0, 0]);
+                    group.extend(1u16.to_le_bytes());
+                    group.extend(image.bit_count.to_le_bytes());
+                    group.extend((image.bytes.len() as u32).to_le_bytes());
+                    group.extend(id.to_le_bytes());
+                }
+                let name = (number + 1) as PCWSTR;
+                let added = UpdateResourceW(update, RT_GROUP_ICON, name, 0, group.as_ptr().cast(), group.len() as u32);
+                assert_ne!(added, 0, "{}", std::io::Error::last_os_error());
+            }
+            assert_ne!(EndUpdateResourceW(update, 0), 0, "{}", std::io::Error::last_os_error());
+        }
+        path
+    }
+
+    fn pixel(icon: &Icon, x: u32, y: u32) -> [u8; 4] {
+        let at = ((y * icon.width + x) * 4) as usize;
+        icon.rgba[at..at + 4].try_into().unwrap()
+    }
+
+    fn largest_icon(path: &Path) -> Icon {
+        WindowsIconExtractor.largest_icon(path).unwrap().expect("an icon")
+    }
+
+    #[test]
+    fn answers_the_largest_image_of_the_icon_at_its_own_size() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(
+            &folder,
+            &[vec![bitmap_image(32, BLUE, 32), png_image(256, RED, false), bitmap_image(48, GREEN, 32)]],
+        );
+
+        let icon = largest_icon(&game);
+
+        assert_eq!((icon.width, icon.height, icon.rgba.len()), (256, 256, 256 * 256 * 4));
+        assert_eq!(pixel(&icon, 128, 128), RED);
+    }
+
+    #[test]
+    fn an_icon_with_bitmaps_only_answers_its_largest_bitmap() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(&folder, &[vec![bitmap_image(48, GREEN, 32), bitmap_image(32, BLUE, 32)]]);
+
+        let icon = largest_icon(&game);
+
+        assert_eq!((icon.width, icon.height), (48, 48));
+        assert_eq!(pixel(&icon, 0, 0), GREEN);
+        assert_eq!(pixel(&icon, 47, 47), GREEN);
+    }
+
+    #[test]
+    fn transparent_pixels_stay_transparent() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(&folder, &[vec![png_image(256, RED, true)]]);
+
+        let icon = largest_icon(&game);
+
+        assert_eq!(pixel(&icon, 10, 128)[3], 0, "the left half is transparent");
+        assert_eq!(pixel(&icon, 200, 128), RED);
+    }
+
+    #[test]
+    fn an_icon_without_alpha_is_transparent_where_its_mask_says() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(&folder, &[vec![bitmap_image(32, BLUE, 24)]]);
+
+        let icon = largest_icon(&game);
+
+        assert_eq!((icon.width, icon.height), (32, 32));
+        assert_eq!(pixel(&icon, 3, 16)[3], 0, "the masked half is transparent");
+        assert_eq!(pixel(&icon, 28, 16), BLUE);
+    }
+
+    #[test]
+    fn the_first_icon_is_the_one_answered() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(&folder, &[vec![bitmap_image(32, BLUE, 32)], vec![png_image(256, RED, false)]]);
+
+        let icon = largest_icon(&game);
+
+        assert_eq!(pixel(&icon, 16, 16), BLUE);
+    }
+
+    #[test]
+    fn an_executable_without_an_icon_has_none() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(&folder, &[]);
+
+        assert_eq!(WindowsIconExtractor.largest_icon(&game), Ok(None));
+    }
+
+    #[test]
+    fn a_file_that_is_not_an_executable_is_an_error() {
+        let folder = tempfile::tempdir().unwrap();
+        let notes = folder.path().join("notes.exe");
+        fs::write(&notes, b"not an executable").unwrap();
+
+        assert!(WindowsIconExtractor.largest_icon(&notes).is_err());
+    }
+
+    #[test]
+    fn a_file_that_is_gone_is_an_error() {
+        let folder = tempfile::tempdir().unwrap();
+
+        assert!(WindowsIconExtractor.largest_icon(&folder.path().join("gone.exe")).is_err());
+    }
+
+    #[test]
+    fn reads_the_icon_of_a_program_of_windows() {
+        let windows = std::env::var_os("SystemRoot").expect("SystemRoot is set on Windows");
+
+        let icon = largest_icon(&Path::new(&windows).join("explorer.exe"));
+
+        assert_eq!(icon.width, icon.height);
+        assert!(icon.width >= 48, "{} pixels is not the largest size", icon.width);
+        assert!(icon.rgba.chunks(4).any(|pixel| pixel[3] == 255), "something is opaque");
+    }
+}
+
+/// `ProcessList` (crates/core): the absolute path of the executable of every
+/// running process the user may see, once per process; a process that has
+/// ended is no longer listed.
+///
+/// The tests copy this test program into a temporary folder and start the
+/// copy as a stand-in Game that only waits, then end it again; they stop no
+/// process but the one they started.
+#[cfg(windows)]
+mod process_list {
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::process::{Child, Command};
+    use std::time::{Duration, Instant};
+
+    use nicelibrary_core::ProcessList;
+    use nicelibrary_lib::ports::WindowsProcessList;
+
+    /// Not a test of its own: the body of the stand-in Game, which runs
+    /// until it is ended.
+    #[test]
+    #[ignore = "started by the process list tests as a stand-in Game"]
+    fn stand_in_game() {
+        std::thread::sleep(Duration::from_secs(120));
+    }
+
+    /// A running copy of this test program at its own path; ended when dropped.
+    struct StandInGame {
+        child: Child,
+        executable: PathBuf,
+        /// The folder of the copy, held by the stand-in that made it.
+        _folder: Option<tempfile::TempDir>,
+    }
+
+    impl StandInGame {
+        fn start() -> Self {
+            let folder = tempfile::tempdir().unwrap();
+            let executable = folder.path().join("StandInGame.exe");
+            fs::copy(std::env::current_exe().unwrap(), &executable).unwrap();
+            Self { child: run(&executable), executable, _folder: Some(folder) }
+        }
+
+        /// One more stand-in Game of the same executable.
+        fn start_again(&self) -> Self {
+            Self { child: run(&self.executable), executable: self.executable.clone(), _folder: None }
+        }
+
+        fn end(&mut self) {
+            // Only the process this test started, through its own handle.
+            let _ = self.child.kill();
+            let _ = self.child.wait();
+        }
+    }
+
+    impl Drop for StandInGame {
+        fn drop(&mut self) {
+            self.end();
+        }
+    }
+
+    fn run(executable: &Path) -> Child {
+        Command::new(executable)
+            .args(["--ignored", "--exact", "process_list::stand_in_game", "--quiet"])
+            .spawn()
+            .unwrap()
+    }
+
+    fn listed(executable: &Path) -> usize {
+        let wanted = fs::canonicalize(executable).unwrap();
+        WindowsProcessList
+            .running_executables()
+            .unwrap()
+            .iter()
+            .filter(|listed| fs::canonicalize(listed).ok().as_ref() == Some(&wanted))
+            .count()
+    }
+
+    /// Waits up to ten seconds for `executable` to be listed `times` times.
+    fn until_listed(executable: &Path, times: usize) -> usize {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        loop {
+            let count = listed(executable);
+            if count == times || Instant::now() > deadline {
+                return count;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+    }
+
+    #[test]
+    fn lists_a_started_process_by_its_executable_until_it_ends() {
+        let mut game = StandInGame::start();
+        assert_eq!(until_listed(&game.executable, 1), 1, "the stand-in Game runs");
+
+        game.end();
+
+        assert_eq!(listed(&game.executable), 0, "the stand-in Game has ended");
+    }
+
+    #[test]
+    fn lists_each_process_of_one_executable() {
+        let first = StandInGame::start();
+        let _second = first.start_again();
+
+        assert_eq!(until_listed(&first.executable, 2), 2);
+    }
+
+    #[test]
+    fn lists_absolute_paths_and_this_test_program_among_them() {
+        let running = WindowsProcessList.running_executables().unwrap();
+
+        assert!(running.iter().all(|path| path.is_absolute()), "{running:?}");
+        let this = fs::canonicalize(std::env::current_exe().unwrap()).unwrap();
+        assert!(running.iter().any(|path| fs::canonicalize(path).ok().as_ref() == Some(&this)), "{running:?}");
+    }
+}
+
+/// `ProcessStarter` (crates/core): starts an executable directly, never
+/// through a shell, with each argument as given, in the working directory;
+/// returns without waiting for the process to end.
+///
+/// The program the tests start is this test executable itself, running only
+/// its `probe`, which writes the arguments and working directory it was
+/// started with to a file in a temporary folder. Nothing else is started.
+#[cfg(windows)]
+mod process_starter {
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::time::{Duration, Instant};
+
+    use nicelibrary_core::ProcessStarter;
+    use nicelibrary_lib::ports::WindowsProcessStarter;
+
+    /// In the working directory, tells the `probe` that a test started it.
+    const STARTED_BY_TEST: &str = "started-by-test";
+    /// In the working directory, tells the `probe` to wait for `RELEASE` before it records.
+    const WAIT: &str = "wait";
+    const RELEASE: &str = "release";
+    /// What the `probe` writes, once it is complete.
+    const RECORD: &str = "record.txt";
+    /// Separates the arguments for libtest from the arguments under test.
+    const UNDER_TEST: &str = "--";
+
+    /// The program a test starts: this executable, running only the `probe`,
+    /// then each of `arguments`.
+    fn probe_arguments(arguments: &[&str]) -> Vec<String> {
+        let libtest = ["--ignored", "--exact", "--test-threads=1", "process_starter::probe", UNDER_TEST];
+        libtest.iter().chain(arguments).map(|argument| argument.to_string()).collect()
+    }
+
+    fn this_executable() -> PathBuf {
+        std::env::current_exe().unwrap()
+    }
+
+    /// A working directory for one test, with a space in its name.
+    fn working_directory() -> tempfile::TempDir {
+        let folder = tempfile::Builder::new().prefix("NiceLibrary contract ").tempdir().unwrap();
+        fs::write(folder.path().join(STARTED_BY_TEST), "").unwrap();
+        folder
+    }
+
+    /// What the `probe` started in `folder` recorded: its working directory
+    /// and its arguments under test; waits for it up to ten seconds.
+    fn recorded(folder: &Path) -> Option<(PathBuf, Vec<String>)> {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while Instant::now() < deadline {
+            if let Ok(text) = fs::read_to_string(folder.join(RECORD)) {
+                let mut parts = text.split('\0').map(str::to_owned);
+                let directory = PathBuf::from(parts.next()?);
+                return Some((directory, parts.collect()));
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        None
+    }
+
+    fn same_folder(a: &Path, b: &Path) -> bool {
+        fs::canonicalize(a).unwrap() == fs::canonicalize(b).unwrap()
+    }
+
+    /// Not a test of its own: the program the other tests start. It records
+    /// only in a working directory a test prepared.
+    #[test]
+    #[ignore = "started by the process_starter tests"]
+    fn probe() {
+        let directory = std::env::current_dir().unwrap();
+        if !directory.join(STARTED_BY_TEST).exists() {
+            return;
+        }
+        if directory.join(WAIT).exists() {
+            let deadline = Instant::now() + Duration::from_secs(20);
+            while !directory.join(RELEASE).exists() && Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(50));
+            }
+        }
+        let arguments: Vec<String> = std::env::args().skip_while(|argument| argument != UNDER_TEST).skip(1).collect();
+        let text = std::iter::once(directory.display().to_string()).chain(arguments).collect::<Vec<_>>().join("\0");
+        // Written aside and renamed, so a test never reads half a record.
+        fs::write(directory.join("record.partial"), text).unwrap();
+        fs::rename(directory.join("record.partial"), directory.join(RECORD)).unwrap();
+    }
+
+    #[test]
+    fn starts_the_executable_with_each_argument_as_given_in_the_working_directory() {
+        let folder = working_directory();
+        let arguments = [
+            "-windowed",
+            "two words",
+            r#"say "hi""#,
+            r"C:\Saves\",
+            "",
+            "Größe 100 %",
+            "%PATH%",
+            "a & echo injected> injected.txt",
+            "| more",
+        ];
+
+        WindowsProcessStarter.start(&this_executable(), &probe_arguments(&arguments), folder.path()).unwrap();
+
+        let (directory, received) = recorded(folder.path()).expect("the program recorded nothing");
+        assert!(same_folder(&directory, folder.path()), "{}", directory.display());
+        assert_eq!(received, arguments);
+        assert!(!folder.path().join("injected.txt").exists(), "an argument was run by a shell");
+    }
+
+    #[test]
+    fn returns_while_the_process_still_runs() {
+        let folder = working_directory();
+        fs::write(folder.path().join(WAIT), "").unwrap();
+
+        WindowsProcessStarter.start(&this_executable(), &probe_arguments(&["waited"]), folder.path()).unwrap();
+
+        assert!(!folder.path().join(RECORD).exists(), "start waited for the process to end");
+        fs::write(folder.path().join(RELEASE), "").unwrap();
+        assert_eq!(recorded(folder.path()).expect("the program recorded nothing").1, ["waited"]);
+    }
+
+    #[test]
+    fn a_missing_executable_is_an_error() {
+        let folder = working_directory();
+
+        assert!(WindowsProcessStarter.start(&folder.path().join("gone.exe"), &[], folder.path()).is_err());
+    }
+
+    #[test]
+    fn a_missing_working_directory_is_an_error_and_starts_nothing() {
+        let folder = working_directory();
+        let gone = folder.path().join("gone");
+
+        assert!(WindowsProcessStarter.start(&this_executable(), &probe_arguments(&[]), &gone).is_err());
+        std::thread::sleep(Duration::from_secs(1));
+        assert!(!folder.path().join(RECORD).exists());
+    }
+
+    #[test]
+    fn a_batch_file_is_refused_and_not_started() {
+        let folder = working_directory();
+        let marker = folder.path().join("started.txt");
+        for name in ["game.cmd", "game.bat"] {
+            let program = folder.path().join(name);
+            fs::write(&program, format!("@echo started> \"{}\"\r\n", marker.display())).unwrap();
+
+            assert!(WindowsProcessStarter.start(&program, &[], folder.path()).is_err(), "{name} was not refused");
+        }
+        std::thread::sleep(Duration::from_secs(1));
+        assert!(!marker.exists(), "a batch file was started");
     }
 }

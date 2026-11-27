@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
-    AutomaticSync, Clock, Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, SteamLocator,
+    AutomaticSync, Clock, Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, Status, SteamLocator,
     SteamWebApiKeyCheck, Store, SyncOutcome, Wakeup, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
@@ -82,6 +82,11 @@ impl SteamWebApi {
 
     fn asked(&self) -> Vec<String> {
         self.asked.lock().unwrap().clone()
+    }
+
+    /// The URLs asked for the owned games; a Sync asks for Achievements too.
+    fn asked_for_owned_games(&self) -> Vec<String> {
+        self.asked().into_iter().filter(|url| url.contains("/GetOwnedGames/")).collect()
     }
 }
 
@@ -312,6 +317,13 @@ impl Computer {
                 secrets: Box::new(self.secrets.clone()),
                 web_api: api,
                 clock: Box::new(self.clock.clone()),
+                executable_picker: Box::new(NoExecutableChosen),
+                icon_extractor: Box::new(NoIconsNoImages),
+                image_picker: Box::new(NoIconsNoImages),
+                data_file_picker: Box::new(NoExportFile),
+                autostart: Box::new(NoAutostart),
+                processes: Box::new(NothingRuns),
+                process_starter: Box::new(NothingStarted),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -327,6 +339,9 @@ fn steam_game(app_id: u32, title: &str, installed: bool, minutes: u32, last_play
         installed,
         playtime_minutes: Some(minutes),
         last_played,
+        progress: None,
+        status: Status::Unplayed,
+        favorite: false,
     }
 }
 
@@ -431,8 +446,8 @@ fn the_sync_asks_steam_over_https_for_the_chosen_steam_account() {
 
     assert_eq!(core.library().unwrap(), [steam_game(70, "Half-Life", false, 30, Some(LAST_WEEK))]);
     let asked = steam.asked();
-    assert_eq!(asked.len(), 1, "{asked:?}");
-    assert!(asked[0].starts_with("https://api.steampowered.com/"), "{}", asked[0]);
+    assert_eq!(steam.asked_for_owned_games().len(), 1, "{asked:?}");
+    assert!(asked.iter().all(|url| url.starts_with("https://api.steampowered.com/")), "{asked:?}");
 }
 
 #[test]
@@ -741,7 +756,7 @@ fn an_automatic_sync_reports_that_it_starts_before_it_asks_steam() {
     });
 
     assert_eq!(asked_when_started, Some(0));
-    assert_eq!(steam.asked().len(), 1);
+    assert_eq!(steam.asked_for_owned_games().len(), 1);
 }
 
 #[test]
@@ -761,7 +776,7 @@ fn two_syncs_never_run_at_the_same_time() {
         }
     });
 
-    assert_eq!(steam.asked().len(), 3);
+    assert_eq!(steam.asked_for_owned_games().len(), 3);
     assert_eq!(*slow.most_at_once.lock().unwrap(), 1);
 }
 
@@ -794,6 +809,13 @@ fn an_automatic_sync_that_fails_in_the_app_reaches_the_interface_with_its_reason
             secrets: Box::new(LockedSecrets),
             web_api: Box::new(SteamWebApi::owning(vec![])),
             clock: Box::new(computer.clock.clone()),
+            executable_picker: Box::new(NoExecutableChosen),
+            icon_extractor: Box::new(NoIconsNoImages),
+            image_picker: Box::new(NoIconsNoImages),
+            data_file_picker: Box::new(NoExportFile),
+            autostart: Box::new(NoAutostart),
+            processes: Box::new(NothingRuns),
+            process_starter: Box::new(NothingStarted),
         },
         Store::open(&computer.profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(computer.profile.path().join("covers")),
@@ -849,5 +871,78 @@ impl WebApi for SlowSteam {
         let answer = self.steam.get(url);
         *self.running.lock().unwrap() -= 1;
         answer
+    }
+}
+
+/// A computer whose user chooses no executable; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+}
+
+/// A computer whose executables show no icon and whose user chooses no
+/// image; these tests need neither.
+struct NoIconsNoImages;
+
+impl nicelibrary_core::IconExtractor for NoIconsNoImages {
+    fn largest_icon(&self, _executable: &std::path::Path) -> Result<Option<nicelibrary_core::Icon>, String> {
+        Ok(None)
+    }
+}
+
+impl nicelibrary_core::ImagePicker for NoIconsNoImages {
+    fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+/// A computer on which no process runs; these tests record no Sessions.
+struct NothingRuns;
+
+impl nicelibrary_core::ProcessList for NothingRuns {
+    fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
+        Ok(Vec::new())
+    }
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
+    }
+}
+
+/// No export or import is made here: the user cancels every file dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::DataFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+
+    fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
     }
 }

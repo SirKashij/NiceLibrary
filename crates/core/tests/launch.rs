@@ -1,12 +1,14 @@
 //! An Installed Steam Game is launched through Steam itself, by opening its
 //! `steam://rungameid/<app id>` URL, never by starting its executable
 //! (ADR-0002). Steam keeps handling overlay, cloud saves and its own Playtime.
+//! A Steam Game that is owned but not Installed is installed through Steam
+//! too: its `steam://install/<app id>` URL opens Steam's install dialog.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use nicelibrary_core::{Core, CoverCache, Downloader, Launch, OpenError, Opener, Ports, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, Install, Launch, OpenError, Opener, Ports, SteamLocator, Store};
 use tempfile::TempDir;
 
 /// A computer whose secret store holds nothing and whose network reaches no
@@ -145,6 +147,13 @@ impl App {
                 secrets: Box::new(NoSecretsNoWebApi),
                 web_api: Box::new(NoSecretsNoWebApi),
                 clock: Box::new(StoppedClock),
+                executable_picker: Box::new(NoExecutableChosen),
+                icon_extractor: Box::new(NoIconsNoImages),
+                image_picker: Box::new(NoIconsNoImages),
+                data_file_picker: Box::new(NoExportFile),
+                autostart: Box::new(NoAutostart),
+                processes: Box::new(NothingRuns),
+                process_starter: Box::new(NothingStarted),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -228,6 +237,81 @@ fn a_launch_reaches_the_interface_in_the_shape_the_interface_expects() {
     );
 }
 
+/// The app knowing Portal 2 as a Steam Game whose files are not on this computer.
+fn app_with_portal_2_not_installed(steam: &SteamFixture) -> App {
+    steam.install(620, "Portal 2");
+    let app = App::start(steam);
+    steam.uninstall(620);
+    app.core.read_installed_games().unwrap();
+    app
+}
+
+#[test]
+fn installing_a_steam_game_that_is_not_installed_opens_steams_install_dialog_for_it() {
+    let steam = SteamFixture::new();
+    let app = app_with_portal_2_not_installed(&steam);
+
+    assert_eq!(app.core.install("steam:620"), Ok(Install::Started));
+    assert_eq!(app.opener.opened(), ["steam://install/620"]);
+}
+
+#[test]
+fn an_installed_steam_game_is_not_installed_again() {
+    let steam = SteamFixture::new();
+    steam.install(620, "Portal 2");
+    let app = App::start(&steam);
+
+    assert!(app.core.install("steam:620").is_err());
+    assert!(app.opener.opened().is_empty());
+}
+
+#[test]
+fn a_game_that_is_not_in_the_library_is_not_installed() {
+    let steam = SteamFixture::new();
+    let app = App::start(&steam);
+
+    assert!(app.core.install("steam:620").is_err());
+    assert!(app.core.install(r"C:\Windows\notepad.exe").is_err());
+    assert!(app.opener.opened().is_empty());
+}
+
+#[test]
+fn when_steam_is_no_longer_installed_the_install_says_so_and_opens_nothing() {
+    let steam = SteamFixture::new();
+    let app = app_with_portal_2_not_installed(&steam);
+    app.steam.uninstall_steam();
+
+    assert_eq!(app.core.install("steam:620"), Ok(Install::SteamNotFound));
+    assert!(app.opener.opened().is_empty());
+}
+
+#[test]
+fn when_steam_no_longer_handles_its_urls_the_install_says_steam_is_missing() {
+    let steam = SteamFixture::new();
+    let app = app_with_portal_2_not_installed(&steam);
+    app.opener.fail_with(OpenError::NoProgram);
+
+    assert_eq!(app.core.install("steam:620"), Ok(Install::SteamNotFound));
+}
+
+#[test]
+fn an_install_fails_when_the_url_cannot_be_opened() {
+    let steam = SteamFixture::new();
+    let app = app_with_portal_2_not_installed(&steam);
+    app.opener.fail_with(OpenError::Failed("the program could not be started".into()));
+
+    assert!(app.core.install("steam:620").is_err());
+}
+
+#[test]
+fn an_install_reaches_the_interface_in_the_shape_the_interface_expects() {
+    assert_eq!(serde_json::to_value(Install::Started).unwrap(), serde_json::json!({ "outcome": "started" }));
+    assert_eq!(
+        serde_json::to_value(Install::SteamNotFound).unwrap(),
+        serde_json::json!({ "outcome": "steamNotFound" })
+    );
+}
+
 /// A clock that stands still; these tests do not depend on the time.
 struct StoppedClock;
 
@@ -237,4 +321,77 @@ impl nicelibrary_core::Clock for StoppedClock {
     }
 
     fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
+}
+
+/// A computer whose user chooses no executable; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+}
+
+/// A computer whose executables show no icon and whose user chooses no
+/// image; these tests need neither.
+struct NoIconsNoImages;
+
+impl nicelibrary_core::IconExtractor for NoIconsNoImages {
+    fn largest_icon(&self, _executable: &std::path::Path) -> Result<Option<nicelibrary_core::Icon>, String> {
+        Ok(None)
+    }
+}
+
+impl nicelibrary_core::ImagePicker for NoIconsNoImages {
+    fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
+}
+
+/// A computer on which no process runs; these tests record no Sessions.
+struct NothingRuns;
+
+impl nicelibrary_core::ProcessList for NothingRuns {
+    fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
+        Ok(Vec::new())
+    }
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
+    }
+}
+
+/// No export or import is made here: the user cancels every file dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::DataFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+
+    fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

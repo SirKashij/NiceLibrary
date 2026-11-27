@@ -5,15 +5,35 @@
 //! a database from any earlier version is brought up to date on open. Every
 //! Steam-derived row carries the Steam Account it belongs to.
 
+mod export;
+mod hidden_games;
+mod import;
+mod playtime_adjustments;
+mod steam_app_list;
+
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard};
 
 use rusqlite::{Connection, params};
 
-use crate::steam::InstalledApp;
+use crate::collections::{self, CollectionNaming};
+use crate::language::Language;
+use crate::library_layout::LibraryLayout;
+use crate::local_games::StoredLocalGame;
+use crate::sessions::{Played, Tracked};
+use crate::statistics::Recorded;
+use crate::steam::{InstalledApp, LocalPlaytime};
 use crate::sync::OwnedGame;
-use crate::{Error, Game};
+use crate::theme::Theme;
+use crate::{Error, Game, LaunchOptions, Status};
+
+mod achievements;
+
+mod favorites;
+
+mod cover_matches;
 
 /// The schema changes, oldest first. Never edit or reorder a released entry;
 /// append a new one instead.
@@ -38,6 +58,121 @@ const MIGRATIONS: &[&str] = &[
          steam_account TEXT    PRIMARY KEY,
          synced_at     INTEGER NOT NULL
      );",
+    // 3: Local Games, each with the path of its executable as chosen.
+    "CREATE TABLE local_games (
+         id         INTEGER PRIMARY KEY AUTOINCREMENT,
+         title      TEXT    NOT NULL,
+         executable TEXT    NOT NULL UNIQUE
+     );",
+    // 4: Collections and which Games are in them; they belong to the person, not to a Steam Account.
+    "CREATE TABLE collections (
+         id   INTEGER PRIMARY KEY,
+         name TEXT    NOT NULL
+     );
+     CREATE TABLE collection_games (
+         collection_id INTEGER NOT NULL REFERENCES collections (id),
+         game_id       TEXT    NOT NULL,
+         PRIMARY KEY (collection_id, game_id)
+     );",
+    // 5: The Steam App List. Steam's, not a Steam Account's, so its rows carry none.
+    "CREATE TABLE steam_app_list (
+         app_id INTEGER PRIMARY KEY,
+         name   TEXT    NOT NULL,
+         search TEXT    NOT NULL
+     );",
+    // 6: The Status the person set on a Game, by the Game's id, which is unique across Sources.
+    "CREATE TABLE game_statuses (
+         game_id TEXT PRIMARY KEY,
+         status  TEXT NOT NULL
+     );",
+    // 7: Sessions of Local Games, each from its first to its last look, in seconds since 1970.
+    "CREATE TABLE local_game_sessions (
+         id         INTEGER PRIMARY KEY AUTOINCREMENT,
+         local_game INTEGER NOT NULL REFERENCES local_games (id) ON DELETE CASCADE,
+         started_at INTEGER NOT NULL,
+         ended_at   INTEGER NOT NULL
+     );
+     CREATE INDEX local_game_sessions_by_game ON local_game_sessions (local_game);",
+    // 8: Achievements: their definitions per Steam Game, which belong to no
+    // Steam Account, the account's state of each, when they were last
+    // fetched, and how many Web API calls were made each day.
+    "CREATE TABLE steam_achievement_definitions (
+         app_id      INTEGER NOT NULL,
+         api_name    TEXT    NOT NULL,
+         position    INTEGER NOT NULL,
+         name        TEXT    NOT NULL,
+         description TEXT,
+         secret      INTEGER NOT NULL,
+         icon        TEXT,
+         icon_locked TEXT,
+         PRIMARY KEY (app_id, api_name)
+     );
+     CREATE TABLE steam_achievements (
+         steam_account TEXT    NOT NULL,
+         app_id        INTEGER NOT NULL,
+         api_name      TEXT    NOT NULL,
+         unlocked      INTEGER NOT NULL,
+         unlocked_at   INTEGER,
+         PRIMARY KEY (steam_account, app_id, api_name)
+     );
+     CREATE TABLE steam_achievement_fetches (
+         steam_account    TEXT    NOT NULL,
+         app_id           INTEGER NOT NULL,
+         fetched_at       INTEGER NOT NULL,
+         playtime_minutes INTEGER,
+         last_played      INTEGER,
+         PRIMARY KEY (steam_account, app_id)
+     );
+     CREATE TABLE steam_web_api_calls (
+         day   INTEGER PRIMARY KEY,
+         calls INTEGER NOT NULL
+     );",
+    // 9: How each Local Game is launched: its Launch Arguments as typed, and
+    // its Working Directory, NULL for the executable's folder.
+    "ALTER TABLE local_games ADD COLUMN launch_arguments TEXT NOT NULL DEFAULT '';
+     ALTER TABLE local_games ADD COLUMN working_directory TEXT;",
+    // 10: Hidden Games; hiding belongs to the person, not to a Steam Account.
+    "CREATE TABLE hidden_games (
+         game_id TEXT PRIMARY KEY
+     );",
+    // 11: Favorites, by Game id; like Collections they belong to the person, not to a Steam Account.
+    "CREATE TABLE favorites (
+         game_id TEXT PRIMARY KEY
+     );",
+    // 12: Cover Matches: the Steam title whose Cover a Local Game borrows, by the Local Game's number,
+    // with the title's name as it was when matched. Steam's titles belong to no Steam Account.
+    "CREATE TABLE cover_matches (
+         local_game INTEGER PRIMARY KEY,
+         app_id     INTEGER NOT NULL,
+         name       TEXT    NOT NULL
+     );",
+    // 13: The fallback Playtime and Last Played of Installed Steam Games, from Steam's local files.
+    "ALTER TABLE steam_games ADD COLUMN local_playtime_minutes INTEGER;
+     ALTER TABLE steam_games ADD COLUMN local_last_played INTEGER;",
+    // 14: Sessions of Steam Games, by app id, with the Steam Account the app worked with then, if any.
+    "CREATE TABLE steam_game_sessions (
+         id            INTEGER PRIMARY KEY AUTOINCREMENT,
+         app_id        INTEGER NOT NULL,
+         steam_account TEXT,
+         started_at    INTEGER NOT NULL,
+         ended_at      INTEGER NOT NULL
+     );
+     CREATE INDEX steam_game_sessions_by_game ON steam_game_sessions (app_id);",
+    // 15: The Rarity of Achievements, in percent, per Steam Game; it belongs
+    // to no Steam Account. An Achievement without a row has no known Rarity.
+    "CREATE TABLE steam_achievement_rarities (
+         app_id   INTEGER NOT NULL,
+         api_name TEXT    NOT NULL,
+         percent  REAL    NOT NULL,
+         PRIMARY KEY (app_id, api_name)
+     );",
+    // 16: The Manual Progress of a Local Game, in percent; NULL while the user has set none.
+    "ALTER TABLE local_games ADD COLUMN manual_progress INTEGER;",
+    // 17: The Playtime Adjustment of a Local Game, in minutes, added to or (when negative) removed from its Sessions.
+    "CREATE TABLE local_game_playtime_adjustments (
+         local_game INTEGER PRIMARY KEY REFERENCES local_games (id) ON DELETE CASCADE,
+         minutes    INTEGER NOT NULL
+     );",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
@@ -47,6 +182,22 @@ const LAST_READ_STEAM_ACCOUNT: &str = "steam_account";
 
 /// The setting that names the Steam Account the user chose.
 const CHOSEN_STEAM_ACCOUNT: &str = "chosen_steam_account";
+
+/// The setting that names the order the user chose for the Library.
+const LIBRARY_SORT: &str = "library_sort";
+
+/// The setting that holds the theme the user chose.
+const THEME: &str = "theme";
+
+/// The setting that holds the Library Layout the user chose.
+const LIBRARY_LAYOUT: &str = "library_layout";
+
+/// The setting that holds the interface language the user chose.
+const LANGUAGE: &str = "language";
+
+/// The start of the settings that hold, per Steam Account, why its last
+/// Sync left the app in Limited Mode; the SteamID follows.
+const LIMITED_MODE_PREFIX: &str = "limited_mode:";
 
 /// The local store.
 pub struct Store {
@@ -73,11 +224,22 @@ impl Store {
         self.connection.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    fn setting(&self, key: &str) -> Result<Option<String>, Error> {
+    /// The value of the setting `key`, once one is stored.
+    pub(crate) fn setting(&self, key: &str) -> Result<Option<String>, Error> {
         let connection = self.connection();
         let mut statement = connection.prepare("SELECT value FROM settings WHERE key = ?1")?;
         let mut rows = statement.query_map([key], |row| row.get(0))?;
         Ok(rows.next().transpose()?)
+    }
+
+    /// Stores `value` as the setting `key`, in place of any earlier one.
+    pub(crate) fn set_setting(&self, key: &str, value: &str) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![key, value],
+        )?;
+        Ok(())
     }
 
     /// The Steam Account whose Games were read last, from Steam's folders or
@@ -101,10 +263,106 @@ impl Store {
         Ok(())
     }
 
+    /// The name of the order the user chose for the Library, if they chose one.
+    pub(crate) fn library_sort(&self) -> Result<Option<String>, Error> {
+        self.setting(LIBRARY_SORT)
+    }
+
+    /// Remembers `name` as the order the user chose for the Library.
+    pub(crate) fn choose_library_sort(&self, name: &str) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![LIBRARY_SORT, name],
+        )?;
+        Ok(())
+    }
+
+    /// The theme the user chose; [`Theme::System`] until they choose.
+    pub(crate) fn theme(&self) -> Result<Theme, Error> {
+        Ok(self.setting(THEME)?.map_or(Theme::System, |setting| Theme::from_setting(&setting)))
+    }
+
+    /// Remembers `theme` as the theme the user chose.
+    pub(crate) fn choose_theme(&self, theme: Theme) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![THEME, theme.as_setting()],
+        )?;
+        Ok(())
+    }
+
+    /// The Library Layout the user chose; [`LibraryLayout::CoverGrid`] until they choose.
+    pub(crate) fn library_layout(&self) -> Result<LibraryLayout, Error> {
+        Ok(self
+            .setting(LIBRARY_LAYOUT)?
+            .map_or(LibraryLayout::CoverGrid, |setting| LibraryLayout::from_setting(&setting)))
+    }
+
+    /// Remembers `layout` as the Library Layout the user chose.
+    pub(crate) fn choose_library_layout(&self, layout: LibraryLayout) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![LIBRARY_LAYOUT, layout.as_setting()],
+        )?;
+        Ok(())
+    }
+
+    /// The interface language the user chose; [`Language::System`] until they choose.
+    pub(crate) fn language(&self) -> Result<Language, Error> {
+        Ok(self.setting(LANGUAGE)?.map_or(Language::System, |setting| Language::from_setting(&setting)))
+    }
+
+    /// Remembers `language` as the interface language the user chose.
+    pub(crate) fn choose_language(&self, language: Language) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![LANGUAGE, language.as_setting()],
+        )?;
+        Ok(())
+    }
+
+    /// The name of the reason the last Sync of `account` left the app in
+    /// Limited Mode, if it did.
+    pub(crate) fn limited_mode_reason(&self, account: &str) -> Result<Option<String>, Error> {
+        self.setting(&format!("{LIMITED_MODE_PREFIX}{account}"))
+    }
+
+    /// Remembers `reason` as why the last Sync of `account` left the app in
+    /// Limited Mode; `None` forgets it.
+    pub(crate) fn record_limited_mode_reason(&self, account: &str, reason: Option<&str>) -> Result<(), Error> {
+        let key = format!("{LIMITED_MODE_PREFIX}{account}");
+        match reason {
+            Some(reason) => self.set_setting(&key, reason),
+            None => {
+                self.connection().execute("DELETE FROM settings WHERE key = ?1", [key])?;
+                Ok(())
+            }
+        }
+    }
+
+    /// Forgets why any Sync left the app in Limited Mode, for every Steam Account.
+    pub(crate) fn forget_limited_mode_reasons(&self) -> Result<(), Error> {
+        self.connection().execute(
+            "DELETE FROM settings WHERE substr(key, 1, length(?1)) = ?1",
+            [LIMITED_MODE_PREFIX],
+        )?;
+        Ok(())
+    }
+
     /// Records which Steam apps are Installed for `account`, all at once:
-    /// the given apps are Installed with their titles, every other Steam Game
-    /// of the account is not. `account` becomes the account read last.
-    pub(crate) fn record_installed_steam_games(&self, account: &str, apps: &[InstalledApp]) -> Result<(), Error> {
+    /// the given apps are Installed with their titles and the fallback
+    /// Playtime `local` holds for them, every other Steam Game of the account
+    /// is not. `account` becomes the account read last.
+    pub(crate) fn record_installed_steam_games(
+        &self,
+        account: &str,
+        apps: &[InstalledApp],
+        local: &BTreeMap<u32, LocalPlaytime>,
+    ) -> Result<(), Error> {
         let mut connection = self.connection();
         let transaction = connection.transaction()?;
         transaction.execute(
@@ -114,10 +372,15 @@ impl Store {
         )?;
         transaction.execute("UPDATE steam_games SET installed = 0 WHERE steam_account = ?1", [account])?;
         for app in apps {
+            let local = local.get(&app.app_id);
+            let last_played = local.and_then(|local| local.last_played).map(seconds_column).transpose()?;
             transaction.execute(
-                "INSERT INTO steam_games (steam_account, app_id, title, installed) VALUES (?1, ?2, ?3, 1)
-                 ON CONFLICT (steam_account, app_id) DO UPDATE SET title = excluded.title, installed = 1",
-                params![account, app.app_id, app.title],
+                "INSERT INTO steam_games (steam_account, app_id, title, installed, local_playtime_minutes, local_last_played)
+                 VALUES (?1, ?2, ?3, 1, ?4, ?5)
+                 ON CONFLICT (steam_account, app_id) DO UPDATE SET title = excluded.title, installed = 1,
+                     local_playtime_minutes = excluded.local_playtime_minutes,
+                     local_last_played = excluded.local_last_played",
+                params![account, app.app_id, app.title, local.map(|local| local.minutes), last_played],
             )?;
         }
         transaction.commit()?;
@@ -174,11 +437,15 @@ impl Store {
         Ok(rows.next().transpose()?.and_then(|seconds| u64::try_from(seconds).ok()))
     }
 
-    /// The Steam Games of `account`.
+    /// The Steam Games of `account`, with Steam's Playtime and Last Played
+    /// from a Sync, or else the fallback ones from Steam's local files.
     pub(crate) fn steam_games(&self, account: &str) -> Result<Vec<Game>, Error> {
         let connection = self.connection();
         let mut statement = connection.prepare(
-            "SELECT app_id, title, installed, playtime_minutes, last_played FROM steam_games WHERE steam_account = ?1",
+            "SELECT app_id, title, installed,
+                    COALESCE(playtime_minutes, local_playtime_minutes),
+                    CASE WHEN playtime_minutes IS NULL THEN local_last_played ELSE last_played END
+             FROM steam_games WHERE steam_account = ?1",
         )?;
         let games = statement
             .query_map([account], |row| {
@@ -192,6 +459,369 @@ impl Store {
             .collect::<Result<_, _>>()?;
         Ok(games)
     }
+
+    /// The Status the person set on each Game, by the Game's id. A Game
+    /// without one is Unplayed. No Sync touches them.
+    pub(crate) fn statuses(&self) -> Result<HashMap<String, Status>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare("SELECT game_id, status FROM game_statuses")?;
+        let rows = statement.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?;
+        let mut statuses = HashMap::new();
+        for row in rows {
+            let (game_id, status) = row?;
+            // A Status this version does not know reads as Unplayed rather than failing the Library.
+            if let Some(status) = Status::from_column(&status) {
+                statuses.insert(game_id, status);
+            }
+        }
+        Ok(statuses)
+    }
+
+    /// Remembers `status` as the Status of the Game `game_id`.
+    pub(crate) fn set_status(&self, game_id: &str, status: Status) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO game_statuses (game_id, status) VALUES (?1, ?2)
+             ON CONFLICT (game_id) DO UPDATE SET status = excluded.status",
+            params![game_id, status.as_column()],
+        )?;
+        Ok(())
+    }
+}
+
+impl Store {
+    /// Every Local Game, in the order they were added.
+    pub(crate) fn local_games(&self) -> Result<Vec<StoredLocalGame>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(&format!("{SELECT_LOCAL_GAMES} ORDER BY id"))?;
+        let games = statement.query_map([], stored_local_game)?.collect::<Result<_, _>>()?;
+        Ok(games)
+    }
+
+    /// The Local Game stored under `id`, if there is one.
+    pub(crate) fn local_game(&self, id: i64) -> Result<Option<StoredLocalGame>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(&format!("{SELECT_LOCAL_GAMES} WHERE id = ?1"))?;
+        Ok(statement.query_map([id], stored_local_game)?.next().transpose()?)
+    }
+
+    /// Keeps `options` for the Local Game `id`; `false` when there is no
+    /// such Game.
+    pub(crate) fn set_launch_options(&self, id: i64, options: &LaunchOptions) -> Result<bool, Error> {
+        let changed = self.connection().execute(
+            "UPDATE local_games SET launch_arguments = ?2, working_directory = ?3 WHERE id = ?1",
+            params![id, options.arguments, options.working_directory],
+        )?;
+        Ok(changed > 0)
+    }
+
+    /// Stores `manual_progress` as the Manual Progress of the Local Game
+    /// `id`, or clears it with `None`. Answers whether there is such a Game.
+    pub(crate) fn set_manual_progress(&self, id: i64, manual_progress: Option<u8>) -> Result<bool, Error> {
+        let changed = self
+            .connection()
+            .execute("UPDATE local_games SET manual_progress = ?1 WHERE id = ?2", params![manual_progress, id])?;
+        Ok(changed > 0)
+    }
+
+    /// Adds the Local Game `title` with its `executable` and answers its id.
+    pub(crate) fn add_local_game(&self, title: &str, executable: &str) -> Result<i64, Error> {
+        let connection = self.connection();
+        connection.execute("INSERT INTO local_games (title, executable) VALUES (?1, ?2)", params![title, executable])?;
+        Ok(connection.last_insert_rowid())
+    }
+
+    /// Every Collection, as its id and name.
+    pub(crate) fn collections(&self) -> Result<Vec<(i64, String)>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare("SELECT id, name FROM collections")?;
+        let collections = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?.collect::<Result<_, _>>()?;
+        Ok(collections)
+    }
+
+    /// Which Games are in which Collection, as pairs of Collection id and Game id.
+    pub(crate) fn collection_games(&self) -> Result<Vec<(i64, String)>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare("SELECT collection_id, game_id FROM collection_games")?;
+        let games = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?.collect::<Result<_, _>>()?;
+        Ok(games)
+    }
+
+    /// The ids of the Games in the Collection `collection`; none when there
+    /// is no such Collection.
+    pub(crate) fn games_in_collection(&self, collection: i64) -> Result<std::collections::HashSet<String>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare("SELECT game_id FROM collection_games WHERE collection_id = ?1")?;
+        let games = statement.query_map([collection], |row| row.get(0))?.collect::<Result<_, _>>()?;
+        Ok(games)
+    }
+
+    /// Records that the Game `game_id` is in the Collection `collection`,
+    /// once however often. Fails when there is no such Collection.
+    pub(crate) fn add_game_to_collection(&self, collection: i64, game_id: &str) -> Result<(), Error> {
+        let mut connection = self.connection();
+        // Checked and written at once, so a Collection deleted meanwhile gets no Game.
+        let transaction = connection.transaction()?;
+        let exists: bool =
+            transaction.query_row("SELECT EXISTS (SELECT 1 FROM collections WHERE id = ?1)", [collection], |row| row.get(0))?;
+        if !exists {
+            return Err(Error::new(format!("no such collection: {collection}")));
+        }
+        transaction.execute(
+            "INSERT OR IGNORE INTO collection_games (collection_id, game_id) VALUES (?1, ?2)",
+            params![collection, game_id],
+        )?;
+        transaction.commit()?;
+        Ok(())
+    }
+
+    /// Forgets that the Game `game_id` is in the Collection `collection`;
+    /// nothing when it is not.
+    pub(crate) fn remove_game_from_collection(&self, collection: i64, game_id: &str) -> Result<(), Error> {
+        self.connection().execute(
+            "DELETE FROM collection_games WHERE collection_id = ?1 AND game_id = ?2",
+            params![collection, game_id],
+        )?;
+        Ok(())
+    }
+
+    /// Gives the Collection `id` the name `name`, already trimmed and not
+    /// empty, or creates a Collection with it when `id` is `None`. Refused
+    /// when another Collection has the name in any case. Fails for an `id`
+    /// that names no Collection.
+    pub(crate) fn name_collection(&self, id: Option<i64>, name: &str) -> Result<CollectionNaming, Error> {
+        let mut connection = self.connection();
+        // Checked and written at once, so two namings cannot both take one name.
+        let transaction = connection.transaction()?;
+        let others: Vec<(i64, String)> = transaction
+            .prepare("SELECT id, name FROM collections")?
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<Result<_, _>>()?;
+        if others.iter().any(|(other, other_name)| Some(*other) != id && collections::same_name(other_name, name)) {
+            return Ok(CollectionNaming::NameTaken);
+        }
+        let id = match id {
+            Some(id) => {
+                if transaction.execute("UPDATE collections SET name = ?1 WHERE id = ?2", params![name, id])? == 0 {
+                    return Err(Error::new(format!("no such collection: {id}")));
+                }
+                id
+            }
+            None => {
+                transaction.execute("INSERT INTO collections (name) VALUES (?1)", [name])?;
+                transaction.last_insert_rowid()
+            }
+        };
+        transaction.commit()?;
+        Ok(CollectionNaming::Named { id })
+    }
+
+    /// Deletes the Collection `id` and its record of which Games are in it,
+    /// never a Game; nothing when there is no such Collection.
+    pub(crate) fn delete_collection(&self, id: i64) -> Result<(), Error> {
+        let mut connection = self.connection();
+        let transaction = connection.transaction()?;
+        transaction.execute("DELETE FROM collection_games WHERE collection_id = ?1", [id])?;
+        transaction.execute("DELETE FROM collections WHERE id = ?1", [id])?;
+        transaction.commit()?;
+        Ok(())
+    }
+}
+
+impl Store {
+    /// Stores a Session of the Local Game `local_game` that began `at`, and
+    /// ends there until [`Self::extend_session`] moves its end, and answers
+    /// its id.
+    pub(crate) fn begin_session(&self, local_game: i64, at: u64) -> Result<i64, Error> {
+        let at = seconds_column(at)?;
+        let connection = self.connection();
+        connection.execute(
+            "INSERT INTO local_game_sessions (local_game, started_at, ended_at) VALUES (?1, ?2, ?2)",
+            params![local_game, at],
+        )?;
+        Ok(connection.last_insert_rowid())
+    }
+
+    /// Stores a Session of the Steam Game `app_id`, played while the app
+    /// worked with `steam_account`, that began `at`, and ends there until
+    /// [`Self::extend_session`] moves its end, and answers its id. It never
+    /// changes the Game's Playtime, which stays Steam's figure.
+    pub(crate) fn begin_steam_session(&self, app_id: u32, steam_account: Option<&str>, at: u64) -> Result<i64, Error> {
+        let at = seconds_column(at)?;
+        let connection = self.connection();
+        connection.execute(
+            "INSERT INTO steam_game_sessions (app_id, steam_account, started_at, ended_at) VALUES (?1, ?2, ?3, ?3)",
+            params![app_id, steam_account, at],
+        )?;
+        Ok(connection.last_insert_rowid())
+    }
+
+    /// Moves the end of the Session `session` of `game` to `at`, never
+    /// before where it is.
+    pub(crate) fn extend_session(&self, game: Tracked, session: i64, at: u64) -> Result<(), Error> {
+        let sql = match game {
+            Tracked::Local(_) => "UPDATE local_game_sessions SET ended_at = MAX(ended_at, ?2) WHERE id = ?1",
+            Tracked::Steam(_) => "UPDATE steam_game_sessions SET ended_at = MAX(ended_at, ?2) WHERE id = ?1",
+        };
+        self.connection().execute(sql, params![session, seconds_column(at)?])?;
+        Ok(())
+    }
+
+    /// The Sessions of the Local Game `local_game`, newest first: each one's
+    /// id, start and end, in seconds since the Unix epoch.
+    pub(crate) fn local_game_sessions(&self, local_game: i64) -> Result<Vec<(i64, u64, u64)>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(
+            "SELECT id, started_at, ended_at FROM local_game_sessions WHERE local_game = ?1
+             ORDER BY started_at DESC, id DESC",
+        )?;
+        let sessions = statement
+            .query_map([local_game], |row| {
+                let started_at: i64 = row.get(1)?;
+                let ended_at: i64 = row.get(2)?;
+                Ok((row.get(0)?, u64::try_from(started_at).unwrap_or(0), u64::try_from(ended_at).unwrap_or(0)))
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(sessions)
+    }
+
+    /// The Sessions of the Steam Game `app_id` played while the app worked
+    /// with `steam_account`, newest first: each one's id, start and end, in
+    /// seconds since the Unix epoch.
+    pub(crate) fn steam_game_sessions(
+        &self,
+        app_id: u32,
+        steam_account: Option<&str>,
+    ) -> Result<Vec<(i64, u64, u64)>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(
+            "SELECT id, started_at, ended_at FROM steam_game_sessions WHERE app_id = ?1 AND steam_account IS ?2
+             ORDER BY started_at DESC, id DESC",
+        )?;
+        let sessions = statement
+            .query_map(params![app_id, steam_account], |row| {
+                let started_at: i64 = row.get(1)?;
+                let ended_at: i64 = row.get(2)?;
+                Ok((row.get(0)?, u64::try_from(started_at).unwrap_or(0), u64::try_from(ended_at).unwrap_or(0)))
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(sessions)
+    }
+
+    /// What the Sessions of each Local Game that has any add up to, by its id.
+    pub(crate) fn local_games_played(&self) -> Result<BTreeMap<i64, Played>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(
+            "SELECT local_game, SUM(ended_at - started_at), MAX(ended_at) FROM local_game_sessions GROUP BY local_game",
+        )?;
+        let played = statement
+            .query_map([], |row| {
+                let seconds: i64 = row.get(1)?;
+                let last_ended: i64 = row.get(2)?;
+                Ok((
+                    row.get(0)?,
+                    Played {
+                        seconds: u64::try_from(seconds).unwrap_or(0),
+                        last_ended: u64::try_from(last_ended).unwrap_or(0),
+                    },
+                ))
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(played)
+    }
+
+    /// The Sessions that ended after `since`, in seconds since the Unix
+    /// epoch, for the Playtime per week: those of Local Games, and those of
+    /// Steam Games played while the app worked with `steam_account`, as a
+    /// Steam Game's detail page lists them.
+    pub(crate) fn sessions_ended_after(&self, since: u64, steam_account: Option<&str>) -> Result<Vec<Recorded>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(
+            "SELECT 'local', local_game, started_at, ended_at FROM local_game_sessions WHERE ended_at > ?1
+             UNION ALL
+             SELECT 'steam', app_id, started_at, ended_at FROM steam_game_sessions
+             WHERE ended_at > ?1 AND steam_account IS ?2
+             ORDER BY 3",
+        )?;
+        let sessions = statement
+            .query_map(params![seconds_column(since)?, steam_account], |row| {
+                let source: String = row.get(0)?;
+                let game = match source.as_str() {
+                    "local" => Tracked::Local(row.get(1)?),
+                    _ => Tracked::Steam(row.get(1)?),
+                };
+                let started_at: i64 = row.get(2)?;
+                let ended_at: i64 = row.get(3)?;
+                Ok(Recorded {
+                    game_id: game.game_id(),
+                    started_at: u64::try_from(started_at).unwrap_or(0),
+                    ended_at: u64::try_from(ended_at).unwrap_or(0),
+                })
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(sessions)
+    }
+}
+
+/// The columns [`stored_local_game`] reads, from every Local Game.
+const SELECT_LOCAL_GAMES: &str =
+    "SELECT id, title, executable, launch_arguments, working_directory, manual_progress FROM local_games";
+
+fn stored_local_game(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredLocalGame> {
+    Ok(StoredLocalGame {
+        id: row.get(0)?,
+        title: row.get(1)?,
+        executable: row.get(2)?,
+        launch_options: LaunchOptions { arguments: row.get(3)?, working_directory: row.get(4)? },
+        manual_progress: row.get(5)?,
+    })
+}
+
+impl Store {
+    /// Gives the Local Game numbered `id` the title `title` and the
+    /// executable `executable`; fails when there is no such Game.
+    pub(crate) fn edit_local_game(&self, id: i64, title: &str, executable: &str) -> Result<(), Error> {
+        let changed = self.connection().execute(
+            "UPDATE local_games SET title = ?1, executable = ?2 WHERE id = ?3",
+            params![title, executable, id],
+        )?;
+        if changed == 0 {
+            return Err(Error::new(format!("no such local game: {id}")));
+        }
+        Ok(())
+    }
+
+    /// Deletes the Local Game numbered `id` and everything stored about it,
+    /// all at once; nothing when there is no such Game. Its number is never
+    /// given to another Local Game (`AUTOINCREMENT`).
+    pub(crate) fn remove_local_game(&self, id: i64) -> Result<(), Error> {
+        let mut connection = self.connection();
+        let transaction = connection.transaction()?;
+        delete_local_game_data(&transaction, id)?;
+        transaction.execute("DELETE FROM local_games WHERE id = ?1", [id])?;
+        transaction.commit()?;
+        Ok(())
+    }
+}
+
+/// Deletes what every table but `local_games` keeps about the Local Game
+/// numbered `id`. This is the one place that knows which tables keep data
+/// per Game: a migration that adds such a table (Sessions, Status,
+/// Favorites, Hidden Games, ...) adds its `DELETE` here, so that removing a
+/// Local Game leaves nothing behind. Foreign keys are not relied on; SQLite
+/// enforces them only when a connection turns them on.
+fn delete_local_game_data(transaction: &rusqlite::Transaction<'_>, id: i64) -> Result<(), Error> {
+    // Tables keyed by the Game's id (`local:<number>`, see `Game::local`).
+    let game_id = format!("local:{id}");
+    transaction.execute("DELETE FROM collection_games WHERE game_id = ?1", [&game_id])?;
+    transaction.execute("DELETE FROM game_statuses WHERE game_id = ?1", [&game_id])?;
+    transaction.execute("DELETE FROM hidden_games WHERE game_id = ?1", [&game_id])?;
+    transaction.execute("DELETE FROM favorites WHERE game_id = ?1", [&game_id])?;
+    // Tables keyed by the Local Game's number.
+    transaction.execute("DELETE FROM local_game_sessions WHERE local_game = ?1", [id])?;
+    transaction.execute("DELETE FROM cover_matches WHERE local_game = ?1", [id])?;
+    transaction.execute("DELETE FROM local_game_playtime_adjustments WHERE local_game = ?1", [id])?;
+    // Its Launch Options and Manual Progress are columns of `local_games` itself.
+    Ok(())
 }
 
 /// A time in seconds since the Unix epoch, as SQLite stores it.
