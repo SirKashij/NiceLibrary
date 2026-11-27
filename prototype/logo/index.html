@@ -1,0 +1,254 @@
+<!doctype html>
+<!--
+  PROTOTYPE – wegwerfen, nicht Teil der App.
+  Frage: Wie soll das neue Logo von NiceLibrary aussehen?
+  15 Konzepte plus das aktuelle Icon, umschaltbar über ?variant= und die Leiste unten (← / →).
+  Start: Datei doppelklicken.
+-->
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PROTOTYPE · NiceLibrary Logo</title>
+<style>
+  @font-face { font-family: "Bricolage"; src: url("../../node_modules/@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2") format("woff2"); font-weight: 200 800; }
+  @font-face { font-family: "Instrument"; src: url("../../node_modules/@fontsource-variable/instrument-sans/files/instrument-sans-latin-wght-normal.woff2") format("woff2"); font-weight: 400 700; }
+  :root { --bg:#121314; --surface:#1a1b1d; --raised:#242628; --line:#2e3033; --text:#ecebe8; --muted:#9b9c98; }
+  body.light { --bg:#f2f2f0; --surface:#fafaf9; --raised:#e5e5e2; --line:#d4d4d0; --text:#1a1b1c; --muted:#5c5d59; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Instrument", system-ui, sans-serif; padding:32px 40px 120px; }
+  h1, h2, .brand { font-family:"Bricolage", system-ui, sans-serif; font-weight:700; letter-spacing:-0.02em; }
+  h1 { margin:0; font-size:40px; }
+  .proto-tag { display:inline-block; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:#111; background:#ffd23f; padding:3px 8px; border-radius:4px; margin-bottom:12px; }
+  .lead { color:var(--muted); max-width:70ch; line-height:1.5; }
+  .stage { display:grid; grid-template-columns: 320px 1fr; gap:40px; margin-top:28px; align-items:start; }
+  .hero img { width:320px; height:320px; display:block; filter: drop-shadow(0 18px 40px rgba(0,0,0,.35)); }
+  .panel { background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+  .panel h3 { margin:0 0 12px; font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); font-weight:600; }
+  .sizes { display:flex; align-items:flex-end; gap:22px; }
+  .sizes figure { margin:0; text-align:center; font-size:11px; color:var(--muted); }
+  .sizes img { display:block; margin:0 auto 6px; }
+  .pixel img { image-rendering: pixelated; }
+  .taskbar { display:flex; justify-content:center; gap:6px; padding:8px; border-radius:10px; background:#202020; }
+  .taskbar.light { background:#eeeeee; }
+  .taskbar span { width:40px; height:40px; border-radius:6px; display:grid; place-items:center; position:relative; }
+  .taskbar span.dummy::after { content:""; width:22px; height:22px; border-radius:5px; background:#5a5a5a; }
+  .taskbar.light span.dummy::after { background:#b8b8b8; }
+  .taskbar span.ours { background:rgba(255,255,255,.08); }
+  .taskbar.light span.ours { background:rgba(0,0,0,.06); }
+  .taskbar span.ours::after { content:""; position:absolute; bottom:2px; width:16px; height:3px; border-radius:2px; background:#4cc2ff; }
+  .tbs { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .window { border-radius:10px; overflow:hidden; border:1px solid var(--line); }
+  .window .bar { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--raised); }
+  .window .bar .brand { font-size:18px; }
+  .window .covers { display:flex; gap:10px; padding:14px; background:var(--bg); }
+  .window .covers i { width:64px; height:92px; border-radius:6px; background:var(--raised); }
+  .lockups { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .lockup { display:flex; align-items:center; gap:16px; padding:22px; border-radius:10px; }
+  .lockup.d { background:#121314; color:#ecebe8; } .lockup.l { background:#f2f2f0; color:#1a1b1c; }
+  .lockup .brand { font-size:34px; }
+  .notes { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; font-size:14px; line-height:1.45; }
+  .notes b { display:block; font-size:12px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:16px; margin-top:28px; }
+  .grid a { color:inherit; text-decoration:none; background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px; text-align:center; }
+  .grid a:hover { border-color:var(--muted); }
+  .grid img { width:120px; height:120px; display:block; margin:0 auto 10px; }
+  .grid .mini { display:flex; justify-content:center; gap:8px; align-items:center; margin-bottom:8px; }
+  .grid .mini img { margin:0; }
+  .grid small { color:var(--muted); }
+  .switcher { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); display:flex; align-items:center; gap:4px; background:#ffd23f; color:#111; border-radius:999px; padding:6px; box-shadow:0 10px 30px rgba(0,0,0,.4); font: 600 14px system-ui, sans-serif; z-index:10; }
+  .switcher button { border:0; background:#111; color:#ffd23f; width:36px; height:36px; border-radius:50%; font-size:18px; cursor:pointer; }
+  .switcher .label { min-width:260px; text-align:center; padding:0 10px; }
+  .switcher .theme { width:auto; border-radius:999px; padding:0 12px; font-size:13px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="switcher">
+  <button id="prev" title="Vorheriges (←)">←</button>
+  <span class="label" id="label"></span>
+  <button id="next" title="Nächstes (→)">→</button>
+  <button class="theme" id="theme" title="Seitenhintergrund hell/dunkel (T)">Hell/Dunkel</button>
+</div>
+<script>
+const D = "#121314", L = "#ecebe8";
+const plate = (fill = D) => `<rect width="1024" height="1024" rx="224" fill="${fill}"/>`;
+
+// Jedes Konzept: SVG auf 1024er Raster. Wird immer als <img> eingebunden, damit Gradient-IDs isoliert bleiben.
+const V = [
+  { key: "ALL", name: "Übersicht" },
+  { key: "0", name: "Aktuell: ein Cover",
+    idea: "Das heutige Platzhalter-Icon: ein einzelnes helles Cover auf dunkler Fläche.",
+    plus: "Ruhig, passt zur Oberfläche.", risk: "Sagt nichts über Spiele, wirkt wie ein leeres Dokument.",
+    svg: () => `${plate()}<rect x="352" y="232" width="320" height="560" rx="36" fill="${L}"/>` },
+  { key: "A", name: "Regal",
+    idea: "Buchrücken unterschiedlicher Höhe auf einem Brett, einer lehnt schräg: die Bibliothek wörtlich.",
+    plus: "Liest sich sofort als „Library“, auch bei 16 px.", risk: "Könnte nach E-Book-App aussehen statt nach Spielen.",
+    svg: () => `${plate()}
+      <rect x="216" y="312" width="96" height="440" rx="18" fill="${L}"/>
+      <rect x="328" y="232" width="120" height="520" rx="18" fill="#9b9c98"/>
+      <rect x="464" y="372" width="88" height="380" rx="18" fill="${L}"/>
+      <rect x="568" y="282" width="110" height="470" rx="18" fill="#e8b04a"/>
+      <rect x="700" y="300" width="96" height="460" rx="18" fill="${L}" transform="rotate(14 700 752)"/>
+      <rect x="192" y="752" width="640" height="44" rx="22" fill="${L}"/>` },
+  { key: "B", name: "Cover-Fächer",
+    idea: "Drei Covers wie Spielkarten aufgefächert, das vorderste trägt ein Play-Dreieck.",
+    plus: "Covers sind das Herz der App; Play verrät „Starten“.", risk: "Fächer kennt man von Karten- und Foto-Apps.",
+    svg: () => `${plate()}
+      <rect x="362" y="220" width="300" height="440" rx="40" fill="#5a5f6b" transform="rotate(-20 512 820)"/>
+      <rect x="362" y="220" width="300" height="440" rx="40" fill="#8a8f9c" transform="rotate(20 512 820)"/>
+      <rect x="362" y="240" width="300" height="440" rx="40" fill="${L}"/>
+      <path d="M470 380 L470 540 L600 460 Z" fill="${D}" stroke="${D}" stroke-width="24" stroke-linejoin="round"/>` },
+  { key: "C", name: "Spielbuch",
+    idea: "Ein aufgeschlagenes Buch; aus der rechten Seite ist ein Play-Dreieck gestanzt.",
+    plus: "Verbindet „Library“ und „Play“ in einer Form.", risk: "Das Buch dominiert, Spiele bleiben Andeutung.",
+    svg: () => `${plate("#1d2b3a")}
+      <path d="M500 330 C420 280 300 272 196 300 L196 752 C300 726 420 736 500 786 Z" fill="${L}"/>
+      <path d="M524 330 C604 280 724 272 828 300 L828 752 C724 726 604 736 524 786 Z" fill="${L}"/>
+      <path d="M610 450 L610 630 L748 540 Z" fill="#1d2b3a" stroke="#1d2b3a" stroke-width="20" stroke-linejoin="round"/>` },
+  { key: "D", name: "Monogramm nl",
+    idea: "Kleines „n“ und „l“ aus einem dicken, runden Strich, in Limette.",
+    plus: "Eigenständig, markenartig, skaliert gut.", risk: "Abstrakt: ohne Namen erklärt es nichts.",
+    svg: () => `${plate()}<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e4ff7a"/><stop offset="1" stop-color="#7fd66b"/></linearGradient></defs>
+      <path d="M290 770 V520 A135 135 0 0 1 560 520 V770 M730 250 V770" fill="none" stroke="url(#g)" stroke-width="124" stroke-linecap="round" stroke-linejoin="round"/>` },
+  { key: "E", name: "Steuerkreuz aus Covern",
+    idea: "Vier Covers bilden ein D-Pad; der rechte Arm leuchtet, als würde gerade gedrückt.",
+    plus: "Eindeutig Gaming, trotzdem aus Covern gebaut.", risk: "Steuerkreuz ist ein häufiges Gaming-Motiv.",
+    svg: () => `${plate()}
+      <rect x="432" y="184" width="160" height="256" rx="40" fill="${L}"/>
+      <rect x="432" y="584" width="160" height="256" rx="40" fill="${L}"/>
+      <rect x="184" y="432" width="256" height="160" rx="40" fill="${L}"/>
+      <rect x="584" y="432" width="256" height="160" rx="40" fill="#ff6b57"/>` },
+  { key: "F", name: "Fortschrittsring",
+    idea: "Ein Cover in einem zu drei Vierteln gefüllten Ring: wie weit du gespielt hast.",
+    plus: "Erzählt Tracking und Fortschritt, das Alleinstellungsmerkmal.", risk: "Ring-Motive erinnern an Fitness-Apps.",
+    svg: () => `${plate()}
+      <circle cx="512" cy="512" r="300" fill="none" stroke="#2e3033" stroke-width="76"/>
+      <circle cx="512" cy="512" r="300" fill="none" stroke="#5ad1b0" stroke-width="76" stroke-linecap="round" stroke-dasharray="1414 1885" transform="rotate(-90 512 512)"/>
+      <rect x="432" y="392" width="160" height="240" rx="24" fill="${L}"/>` },
+  { key: "G", name: "Modul",
+    idea: "Ein Spielmodul mit abgeschrägter Ecke, buntem Etikett und Kontaktrillen.",
+    plus: "Nostalgisch, sofort „Spiel“, viel Charakter.", risk: "Retro-Look passt evtl. nicht zur ruhigen Oberfläche.",
+    svg: () => `${plate("#2a1f4a")}<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff8a5b"/><stop offset="1" stop-color="#ff4f8b"/></linearGradient></defs>
+      <path d="M320 196 H640 L756 312 V780 A48 48 0 0 1 708 828 H320 A48 48 0 0 1 272 780 V244 A48 48 0 0 1 320 196 Z" fill="${L}"/>
+      <rect x="336" y="300" width="352" height="296" rx="28" fill="url(#g)"/>
+      ${[0,1,2,3,4].map(i => `<rect x="${360 + i*64}" y="680" width="36" height="148" rx="10" fill="#2a1f4a"/>`).join("")}` },
+  { key: "H", name: "Pixel-N",
+    idea: "Ein „N“ aus 5×5 Pixeln in Gelb, ein Pixel blinkt als Cursor.",
+    plus: "Spielerisch, sehr scharf bei 16 px (pixelgenau).", risk: "Pixel-Ästhetik ist verbreitet.",
+    svg: () => { const p = ["X...X","XX..X","X.X.X","X..XX","X...X"]; let s = plate();
+      p.forEach((row, y) => [...row].forEach((c, x) => { if (c === "X") s += `<rect x="${200 + x*128}" y="${200 + y*128}" width="112" height="112" rx="14" fill="${x===4&&y===0 ? L : "#ffd23f"}"/>`; })); return s; } },
+  { key: "I", name: "Lesezeichen",
+    idea: "Ein rotes Lesezeichen mit Play-Dreieck auf heller Fläche: „hier geht’s weiter“.",
+    plus: "Helles Icon fällt in der dunklen Taskleiste auf; verbindet Weiterspielen mit Bibliothek.", risk: "Rot+Bookmark erinnert an Lese-/Merk-Apps.",
+    svg: () => `${plate(L)}
+      <path d="M352 150 H672 V870 L512 726 L352 870 Z" fill="#d6402f"/>
+      <path d="M466 360 L466 540 L610 450 Z" fill="${L}" stroke="${L}" stroke-width="22" stroke-linejoin="round"/>` },
+  { key: "J", name: "Portal",
+    idea: "Ein leuchtender Torbogen in der Nacht: der Eingang zu deinen Welten.",
+    plus: "Stimmungsvoll, abenteuerlich.", risk: "Bei 16 px nur noch ein heller Fleck.",
+    svg: () => `${plate("#10173a")}<defs>
+        <radialGradient id="g" cx=".5" cy=".85" r=".9"><stop offset="0" stop-color="#fff2c2"/><stop offset=".45" stop-color="#ffb35c"/><stop offset="1" stop-color="#ff5c7a"/></radialGradient>
+        <radialGradient id="h" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffb35c" stop-opacity=".45"/><stop offset="1" stop-color="#ffb35c" stop-opacity="0"/></radialGradient></defs>
+      <ellipse cx="512" cy="780" rx="360" ry="70" fill="url(#h)"/>
+      <path d="M352 800 V480 A160 160 0 0 1 672 480 V800 Z" fill="url(#g)"/>
+      <rect x="232" y="796" width="560" height="28" rx="14" fill="#c9d0ff" opacity=".6"/>
+      <circle cx="770" cy="260" r="14" fill="#c9d0ff"/><circle cx="260" cy="340" r="10" fill="#c9d0ff" opacity=".7"/>` },
+  { key: "K", name: "Bento",
+    idea: "Drei Kacheln wie die Cover-Ansicht: ein großes Hochformat, zwei kleine, eins violett.",
+    plus: "Spiegelt die echte Oberfläche, modern und neutral.", risk: "Raster-Logos sind generisch (Dashboards, Galerien).",
+    svg: () => `${plate()}
+      <rect x="200" y="200" width="296" height="624" rx="60" fill="${L}"/>
+      <rect x="528" y="200" width="296" height="296" rx="60" fill="#8b8cff"/>
+      <rect x="528" y="528" width="296" height="296" rx="60" fill="#3a3c40"/>` },
+  { key: "M", name: "Sanduhr",
+    idea: "Eine Sanduhr, unten voll mit Bernstein: gesammelte Spielzeit.",
+    plus: "Spielzeit ist ein Kernfeature; ungewöhnlich für Launcher.", risk: "Sanduhr kann „warten/laden“ bedeuten.",
+    svg: () => `${plate()}
+      <rect x="282" y="196" width="460" height="56" rx="28" fill="${L}"/>
+      <rect x="282" y="772" width="460" height="56" rx="28" fill="${L}"/>
+      <path d="M332 252 H692 L540 500 Q512 540 484 500 Z" fill="#3a3c40"/>
+      <path d="M332 772 H692 L540 524 Q512 484 484 524 Z" fill="#f0a83a"/>
+      <path d="M446 252 H578 L512 360 Z" fill="#f0a83a"/>` },
+  { key: "N", name: "Juwel",
+    idea: "Ein facettierter Edelstein in Türkis: „Nice“, deine wertvolle Sammlung.",
+    plus: "Hochwertig, unverwechselbar, keine Gaming-Klischees.", risk: "Erzählt weder Spiele noch Bibliothek.",
+    svg: () => { const f = (pts, c) => `<polygon points="${pts}" fill="${c}"/>`; return `${plate("#0f2a33")}
+      ${f("232,420 392,296 452,420","#7ff0e0")}${f("392,296 632,296 572,420 452,420","#c9fff6")}${f("632,296 792,420 572,420","#4fd6c6")}
+      ${f("232,420 452,420 512,812","#2fb3a8")}${f("452,420 572,420 512,812","#5fe3d3")}${f("572,420 792,420 512,812","#1d8c86")}`; } },
+  { key: "O", name: "Zuhause",
+    idea: "Ein Haus-Umriss, darin ein grünes Cover: deine Spiele, lokal bei dir, ohne Konto.",
+    plus: "Transportiert Datenschutz und „alles an einem Ort“.", risk: "Haus-Icons heißen in Apps meist „Startseite“.",
+    svg: () => `${plate()}
+      <path d="M512 210 L812 456 V804 H212 V456 Z" fill="none" stroke="${L}" stroke-width="64" stroke-linejoin="round"/>
+      <rect x="432" y="516" width="160" height="240" rx="22" fill="#7fc99a"/>` },
+  { key: "P", name: "Stapel",
+    idea: "Spielehüllen seitlich gestapelt, leicht versetzt, oberste in Blau: der Pile of Shame.",
+    plus: "Augenzwinkern für Sammler, gut lesbar.", risk: "Querbalken könnten wie ein Menü-Icon wirken.",
+    svg: () => `${plate()}
+      <rect x="236" y="668" width="560" height="112" rx="26" fill="${L}"/>
+      <rect x="196" y="540" width="580" height="112" rx="26" fill="#9b9c98"/>
+      <rect x="260" y="412" width="540" height="112" rx="26" fill="${L}"/>
+      <rect x="230" y="284" width="520" height="112" rx="26" fill="#4cc2ff" transform="rotate(-6 490 340)"/>` },
+];
+V.slice(2).forEach((v, i) => { v.key = String.fromCharCode(65 + i); }); // A … O, lückenlos
+
+const uri = (v) => "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">${v.svg()}</svg>`);
+const img = (v, s, cls = "") => `<img class="${cls}" src="${uri(v)}" width="${s}" height="${s}" alt="">`;
+const params = new URLSearchParams(location.search);
+let idx = Math.max(0, V.findIndex(v => v.key === (params.get("variant") || "ALL")));
+
+function render() {
+  const v = V[idx];
+  const app = document.getElementById("app");
+  document.getElementById("label").textContent = `${v.key} · ${v.name}  (${idx}/${V.length - 1})`;
+  const head = `<span class="proto-tag">Prototype – wegwerfen</span><h1>${v.key === "ALL" ? "Logo-Inspirationen" : v.name}</h1>`;
+  if (v.key === "ALL") {
+    app.innerHTML = head + `<p class="lead">15 Konzepte plus das aktuelle Icon. Klick auf ein Konzept oder blättere mit ← / →, um es in Taskleiste, Titelleiste und kleinen Größen zu sehen. Gesucht ist meist ein Mix: „die Form von E mit der Farbe von G“.</p>
+      <div class="grid">${V.slice(1).map((c, i) => `<a href="?variant=${c.key}" data-i="${i+1}">${img(c,120)}<div class="mini">${img(c,32)}${img(c,16)}</div><b>${c.key} · ${c.name}</b><br><small>${c.plus}</small></a>`).join("")}</div>`;
+    app.querySelectorAll(".grid a").forEach(a => a.onclick = e => { e.preventDefault(); go(+a.dataset.i); });
+    return;
+  }
+  const tb = (light) => `<div class="taskbar ${light ? "light" : ""}"><span class="dummy"></span><span class="dummy"></span><span class="ours">${img(v,24)}</span><span class="dummy"></span><span class="dummy"></span></div>`;
+  const win = `<div class="window"><div class="bar">${img(v,22)}<span class="brand">NiceLibrary</span></div><div class="covers">${"<i></i>".repeat(6)}</div></div>`;
+  app.innerHTML = head + `<p class="lead">${v.idea}</p>
+    <div class="stage">
+      <div class="hero">${img(v,320)}</div>
+      <div>
+        <div class="panel"><h3>Größen (16 px und 32 px zusätzlich 4× vergrößert)</h3>
+          <div class="sizes">${[128,64,48,32,24,16].map(s => `<figure>${img(v,s)}${s}</figure>`).join("")}
+            <figure class="pixel"><img src="${uri(v)}" width="16" height="16" style="width:64px;height:64px" id="px16">16 ×4</figure>
+            <figure class="pixel"><img src="${uri(v)}" width="32" height="32" style="width:128px;height:128px" id="px32">32 ×4</figure></div></div>
+        <div class="panel"><h3>Windows-Taskleiste</h3><div class="tbs">${tb(false)}${tb(true)}</div></div>
+        <div class="panel"><h3>In der App</h3>${win}</div>
+        <div class="panel"><h3>Logo mit Schriftzug</h3><div class="lockups">
+          <div class="lockup d">${img(v,56)}<span class="brand">NiceLibrary</span></div>
+          <div class="lockup l">${img(v,56)}<span class="brand">NiceLibrary</span></div></div></div>
+        <div class="panel notes"><div><b>Idee</b>${v.idea}</div><div><b>Stärke</b>${v.plus}</div><div><b>Risiko</b>${v.risk}</div></div>
+      </div>
+    </div>`;
+  // Echte Rasterung bei 16/32 px, dann pixelig vergrößert: so sieht es im Tray wirklich aus.
+  [["px16",16],["px32",32]].forEach(([id, s]) => { const el = document.getElementById(id); const src = new Image();
+    src.onload = () => { const c = document.createElement("canvas"); c.width = c.height = s; c.getContext("2d").drawImage(src, 0, 0, s, s); el.src = c.toDataURL(); };
+    src.src = uri(v); });
+}
+function go(i) {
+  idx = (i + V.length) % V.length;
+  const p = new URLSearchParams(location.search); p.set("variant", V[idx].key);
+  try { history.replaceState(null, "", "?" + p); } catch { /* manche Browser sperren das bei file:// */ }
+  render(); scrollTo(0, 0);
+}
+document.getElementById("prev").onclick = () => go(idx - 1);
+document.getElementById("next").onclick = () => go(idx + 1);
+const toggleTheme = () => { document.body.classList.toggle("light"); };
+document.getElementById("theme").onclick = toggleTheme;
+addEventListener("keydown", e => {
+  if (e.target.closest("input, textarea, [contenteditable]")) return;
+  if (e.key === "ArrowLeft") go(idx - 1);
+  if (e.key === "ArrowRight") go(idx + 1);
+  if (e.key === "t" || e.key === "T") toggleTheme();
+});
+render();
+</script>
+</body>
+</html>
