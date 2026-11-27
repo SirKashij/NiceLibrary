@@ -63,15 +63,15 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .field-row { display: flex; gap: var(--space-2); }
 .field-row input {
   flex: 1; min-width: 0; font: inherit; color: var(--color-text); background: var(--color-surface);
-  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
 }
 .button {
-  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control);
   padding: var(--space-1) var(--space-3); background: var(--color-surface-raised);
 }
 .button:hover { border-color: var(--color-text-muted); }
 .button:disabled { color: var(--color-text-muted); cursor: default; }
-.button:disabled:hover { border-color: var(--color-line); }
+.button:disabled:hover { border-color: var(--color-control-border); }
 .settings-actions { display: flex; gap: var(--space-2); }
 /* The guided step for the Steam Web API key. */
 .key-form { display: grid; gap: var(--space-2); }
@@ -115,13 +115,22 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .game:hover .play, .game:focus-within .play { opacity: 1; }
 .game[data-installed='false'] .game-title { color: var(--color-text-muted); }
 
+/* Adding a Local Game: a button above the Library, then the proposal as a form. */
+.add-local-game { display: grid; gap: var(--space-2); justify-items: start; }
+.local-game-form { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); }
+.local-game-form > label { color: var(--color-text-muted); font-size: var(--text-size-label); }
+
+/* The theme: following the system, dark or light. */
+.theme-choice { display: grid; gap: var(--space-1); }
+.theme-choice label { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; cursor: pointer; }
+
 /* Library toolbar: search, Source, Status and Installed only; the empty state when nothing matches. */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding-bottom: var(--space-2); }
 .toolbar-search {
   flex: 1; min-width: 0; max-width: var(--note-max-width); font: inherit; color: var(--color-text); background: var(--color-surface);
-  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
 }
-.segmented { display: flex; border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); }
+.segmented { display: flex; border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); }
 .segmented button { padding: var(--space-1) var(--space-3); color: var(--color-text-muted); }
 .segmented button + button { border-left: var(--hairline) solid var(--color-line); }
 .segmented button:hover { color: var(--color-text); }

@@ -77,7 +77,7 @@ fn core_with_steam_at(folder: Option<&Path>) -> TestCore {
     let store = Store::open(&profile.path().join("nicelibrary.db")).unwrap();
     TestCore {
         core: Core::new(
-            Ports { steam_locator: Box::new(SteamAt(folder.map(Path::to_path_buf))), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock) },
+            Ports { steam_locator: Box::new(SteamAt(folder.map(Path::to_path_buf))), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen) },
             store,
             CoverCache::new(profile.path().join("covers")),
         ),
@@ -248,4 +248,13 @@ impl nicelibrary_core::Clock for StoppedClock {
     }
 
     fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
+}
+
+/// A computer whose user chooses no executable; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

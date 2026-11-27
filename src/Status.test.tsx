@@ -46,6 +46,10 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
       );
     },
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
     setStatus:
       options.setStatus ??
       (async (gameId, status) => {

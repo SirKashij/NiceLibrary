@@ -8,8 +8,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use nicelibrary_core::{
-    Clock, Core, CoverCache, Downloader, LibraryFilter, OpenError, Opener, Ports, SecretStore, Source, Status,
-    SteamLocator, Store, SyncOutcome, Wakeup, WebAnswer, WebApi,
+    AddLocalGame, Clock, Core, CoverCache, Downloader, ExecutablePicker, LibraryFilter, OpenError, Opener, Ports,
+    SecretStore, Source, Status, SteamLocator, Store, SyncOutcome, Wakeup, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
 
@@ -85,6 +85,15 @@ impl Clock for StoppedClock {
     fn sleep(&self, _duration: std::time::Duration, _wakeup: &Wakeup) {}
 }
 
+/// The user cancels every file dialog; Local Games are added by their path here.
+struct NoExecutableChosen;
+
+impl ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
+    }
+}
+
 /// The test computer: Steam with PLAYER logged in, Portal 2 and Hades
 /// Installed, Half-Life 2 owned but not Installed.
 struct Computer {
@@ -125,6 +134,7 @@ impl Computer {
                 secrets: Box::new(SteamOwning),
                 web_api: Box::new(SteamOwning),
                 clock: Box::new(StoppedClock),
+                executable_picker: Box::new(NoExecutableChosen),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -138,6 +148,19 @@ impl Computer {
         let core = self.start();
         assert!(matches!(core.sync().unwrap(), SyncOutcome::Synced { .. }));
         core
+    }
+}
+
+impl Computer {
+    /// Puts an executable into this computer's profile and adds it as a Local Game titled `title`.
+    fn add_local_game(&self, core: &Core, title: &str) -> String {
+        let executable = self.profile.path().join(format!("{title}.exe"));
+        fs::write(&executable, b"MZ").unwrap();
+        let AddLocalGame::Added { game } = core.add_local_game(&executable.display().to_string(), title).unwrap()
+        else {
+            panic!("{title} was not added");
+        };
+        game.id
     }
 }
 
@@ -278,4 +301,22 @@ fn a_status_and_its_filter_cross_the_seam_in_the_shape_the_interface_uses() {
     let core = Computer::new().start_synced();
     let game = serde_json::to_value(core.game("steam:620").unwrap().unwrap()).unwrap();
     assert_eq!(game["status"], "unplayed");
+}
+
+#[test]
+fn a_local_game_starts_as_unplayed_and_takes_a_status_like_a_steam_game() {
+    let computer = Computer::new();
+    let core = computer.start_synced();
+    let celeste = computer.add_local_game(&core, "Celeste");
+    assert_eq!(status_in_library(&core, &celeste), Status::Unplayed);
+
+    core.set_status(&celeste, Status::Completed).unwrap();
+    core.set_status("steam:620", Status::Completed).unwrap();
+
+    assert_eq!(status_in_library(&core, &celeste), Status::Completed);
+    let completed = LibraryFilter { status: Some(Status::Completed), ..Default::default() };
+    assert_eq!(titles(&core, completed), ["Celeste", "Portal 2"]);
+    let local_and_completed =
+        LibraryFilter { source: Some(Source::Local), status: Some(Status::Completed), ..Default::default() };
+    assert_eq!(titles(&core, local_and_completed), ["Celeste"]);
 }

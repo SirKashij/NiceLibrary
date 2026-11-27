@@ -53,12 +53,16 @@ function fakeOperations(
     openSteamWebApiKeyPage: async () => {},
     sync: options.sync ?? (async () => ({ outcome: 'noKey' })),
     lastSync: async () => null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     onAutomaticSync: () => () => {},
     filterLibrary: async () => games,
     game: async (gameId) => {
       calls.game.push(gameId);
       return games.find((game) => game.id === gameId) ?? null;
     },
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },
