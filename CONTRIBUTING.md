@@ -87,3 +87,18 @@ The Steam Web API key is never kept in the database, a file or a log. It lives o
 ## The log
 
 The app writes errors and notable events (Syncs, Launches, a key stored or removed) to `%APPDATA%\io.github.sirkashij.nicelibrary\logs\nicelibrary.log`. When that file reaches 1 MiB it becomes `nicelibrary.1.log`, the one before `nicelibrary.2.log`, and the oldest is dropped, so the log never takes more than 3 MiB. Before an entry is written, the core replaces every run of 32 or more hexadecimal digits (a Steam Web API key) with `[key]` and every run of 17 or more digits (a SteamID64) with `[SteamID]` (`crates/core/src/log.rs`). The app never sends the log; the settings only open its folder, so the user attaches a file to a bug report themselves. The end-to-end tests start the real app, so they write to that log too.
+
+## Releasing
+
+Releases are built only by the workflow `.github/workflows/release.yml`, from a tagged commit on `main`, on GitHub-hosted runners (ADR-0006). No installer built on a personal computer is ever published.
+
+1. Set the new version in `package.json`, `src-tauri/tauri.conf.json` and the `[workspace.package]` of `Cargo.toml`, and run `npm install` and `cargo check` so that `package-lock.json` and `Cargo.lock` follow. Merge that through a pull request.
+2. Once CI on `main` is green for that commit, tag it and push the tag: `git tag v0.1.0 <commit>` and `git push origin v0.1.0`. A tag with a pre-release part, such as `v0.2.0-beta.1`, publishes a pre-release.
+3. The workflow checks that the commit is on `main` and that the tag matches all three versions, builds the installer and uploads it as a workflow artifact. Its `publish` job then waits for approval.
+4. Approve the run in the Actions tab (**Review deployments**). The job computes the SHA-256 checksum, writes it into the release notes and `SHA256SUMS.txt`, and publishes the release with the installer.
+
+The approval is the `release` environment of the repository (**Settings > Environments**), which must name the maintainer as a required reviewer and allow deployments only from tags matching `v*`. The `publish` job fails if the environment has no required reviewers, so a missing environment never publishes unapproved.
+
+The installer is the NSIS installer Tauri generates, in English and German. `src-tauri/windows/hooks.nsh` adds to its uninstaller: besides the entry for starting with Windows, which Tauri removes, it always removes whether that entry was switched off in the Task Manager, and with **Delete the application data** also the Steam Web API key in the Credential Manager. Unit tests check that the hook names the same registry values and credential the app writes.
+
+Signing through the SignPath Foundation is planned as one more job between `build` and `publish`; the comment at the top of the workflow says how it fits in.

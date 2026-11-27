@@ -1,0 +1,145 @@
+# Builds the Windows installer from source when a version tag is pushed, and
+# publishes it to GitHub Releases with its SHA-256 checksum once the
+# maintainer approves (ADR-0006). How to cut a release: CONTRIBUTING.md.
+#
+# The shape follows the conditions of the SignPath Foundation, so signing can
+# be added later without restructuring:
+# - every job runs on a GitHub-hosted runner and builds from the tagged source;
+# - the build hands the installer on only as a workflow artifact;
+# - nothing is published without a manual approval (the `release` environment).
+# Signing becomes one more job between `build` and `publish`: it submits the
+# artifact `build` uploaded (signpath/github-action-submit-signing-request,
+# with `github-artifact-id: needs.build.outputs.artifact-id`) and uploads the
+# signed installer, which `publish` then downloads instead.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: Build installer
+    runs-on: windows-latest
+    outputs:
+      artifact-id: ${{ steps.upload.outputs.artifact-id }}
+    steps:
+      # The whole history, to see whether the tagged commit is on main.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      # Only reviewed code is released: the commit must have reached main
+      # through a pull request, where CI built and tested it.
+      - name: Check that the tagged commit is on main
+        run: |
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::The tag $GITHUB_REF_NAME points at a commit that is not on main."
+            exit 1
+          fi
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # No Rust cache: a release is built from scratch, so nothing a pull
+      # request run left in the cache can reach the installer.
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Check that the tag matches the app's version
+        run: node scripts/check-release-version.ts "$GITHUB_REF_NAME"
+
+      - name: Build app and installer
+        run: npm run tauri -- build --ci -- --locked
+
+      - name: Collect the installer
+        run: |
+          mkdir release
+          mv target/release/bundle/nsis/*-setup.exe release/
+          ls -l release
+
+      - name: Upload the installer
+        id: upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer
+          path: release/
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish release
+    needs: build
+    runs-on: ubuntu-latest
+    # Required reviewers on this environment are the manual approval. The job
+    # waits until one of them approves the run in the Actions tab.
+    environment: release
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      # GitHub creates an environment that does not exist, without reviewers.
+      # Without this check a missing or misconfigured environment would let the
+      # release through unapproved.
+      - name: Check that publishing needs an approval
+        run: |
+          rules=$(gh api "repos/$GITHUB_REPOSITORY/environments/release" --jq '[.protection_rules[]? | select(.type == "required_reviewers")] | length')
+          if [ "$rules" = "0" ]; then
+            echo "::error::The environment 'release' has no required reviewers, so nothing approved this release. See CONTRIBUTING.md."
+            exit 1
+          fi
+
+      - uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ needs.build.outputs.artifact-id }}
+          path: release/
+
+      - name: Compute checksums
+        working-directory: release
+        run: |
+          sha256sum -- *.exe > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Write release notes
+        run: |
+          {
+            echo "Installer for Windows 10 (22H2) and 11, 64-bit, built from $GITHUB_SHA by [this workflow run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)."
+            echo
+            echo "The installer is not code-signed yet, so Windows SmartScreen may warn. Before you run it, compare its SHA-256 checksum with the one below, as the [README](https://github.com/$GITHUB_REPOSITORY#installing) explains."
+            echo
+            echo '| File | SHA-256 |'
+            echo '| --- | --- |'
+            while read -r sum file; do echo "| \`$file\` | \`$sum\` |"; done < release/SHA256SUMS.txt
+          } > notes.md
+          cat notes.md
+
+      # A tag with a pre-release part, such as v0.2.0-beta.1, publishes a pre-release.
+      - name: Publish to GitHub Releases
+        run: |
+          prerelease=()
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then prerelease=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "NiceLibrary $GITHUB_REF_NAME" \
+            --notes-file notes.md \
+            --verify-tag \
+            "${prerelease[@]}"
