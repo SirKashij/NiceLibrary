@@ -106,6 +106,8 @@ function fakeOperations({
       throw new Error('this test sets no Status');
     },
     onSession: () => () => {},
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
   };
   return { operations, calls, automaticSync, listeners };
 }

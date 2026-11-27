@@ -193,6 +193,16 @@ export const en = {
   'autostart.hint': 'When you sign in to Windows, NiceLibrary starts in the tray without opening its window.',
   'autostart.loadFailed': 'Whether NiceLibrary starts with Windows could not be read.',
   'autostart.saveFailed': 'Starting with Windows could not be changed.',
+  'achievements.title': 'Achievements',
+  'achievements.count': '{unlocked} / {total} unlocked',
+  'achievements.list': 'Achievements of {title}',
+  'achievements.unlockedOn': 'Unlocked {date}',
+  'achievements.unlocked': 'Unlocked',
+  'achievements.locked': 'Locked',
+  'achievements.localGame': 'Local games have no achievements.',
+  'achievements.none': '{title} has no achievements.',
+  'achievements.notFetchedYet': 'The achievements have not been fetched yet. They arrive with one of the next syncs.',
+  'achievements.loadFailed': 'The achievements could not be loaded.',
 } as const;
 
 export type MessageKey = keyof typeof en;

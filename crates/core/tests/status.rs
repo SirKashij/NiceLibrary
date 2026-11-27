@@ -24,7 +24,10 @@ struct SteamOwning;
 
 impl WebApi for SteamOwning {
     fn get(&self, url: &str) -> Result<WebAnswer, String> {
-        assert!(url.starts_with("https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?"), "asked for {url}");
+        // Achievements are not needed here.
+        if !url.starts_with("https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?") {
+            return Ok(WebAnswer { status: 404, body: b"<html><body>Not Found</body></html>".to_vec() });
+        }
         let body = serde_json::json!({ "response": { "game_count": 3, "games": [
             { "appid": 620, "name": "Portal 2", "playtime_forever": 600, "rtime_last_played": 0 },
             { "appid": 220, "name": "Half-Life 2", "playtime_forever": 0, "rtime_last_played": 0 },
