@@ -54,10 +54,12 @@ pub enum LibrarySort {
     Name,
     /// Playtime, the longest first; Games whose Playtime is not known last.
     Playtime,
+    /// Progress, the most complete first; Games without Progress last.
+    Progress,
 }
 
 impl LibrarySort {
-    const ALL: [Self; 3] = [Self::RecentlyPlayed, Self::Name, Self::Playtime];
+    const ALL: [Self; 4] = [Self::RecentlyPlayed, Self::Name, Self::Playtime, Self::Progress];
 
     /// The name the store keeps this order under.
     pub(crate) fn stored_name(self) -> &'static str {
@@ -65,6 +67,7 @@ impl LibrarySort {
             Self::RecentlyPlayed => "recentlyPlayed",
             Self::Name => "name",
             Self::Playtime => "playtime",
+            Self::Progress => "progress",
         }
     }
 
@@ -80,6 +83,7 @@ impl LibrarySort {
                 Self::RecentlyPlayed => greatest_first(a.last_played, b.last_played),
                 Self::Name => Ordering::Equal,
                 Self::Playtime => greatest_first(a.playtime_minutes, b.playtime_minutes),
+                Self::Progress => greatest_first(a.progress, b.progress),
             };
             first.then_with(|| by_title(a, b))
         });

@@ -120,6 +120,7 @@ fn start(profile: &Path) -> Core {
             process_starter: Box::new(Nothing),
             icon_extractor: Box::new(Nothing),
             image_picker: Box::new(Nothing),
+            export_file_picker: Box::new(NoExportFile),
         },
         Store::open(&profile.join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.join("covers")),
@@ -167,5 +168,14 @@ fn the_language_reaches_the_interface_and_comes_back_in_the_shape_the_interface_
     for (language, text) in [(Language::System, "system"), (Language::German, "de"), (Language::English, "en")] {
         assert_eq!(serde_json::to_value(language).unwrap(), serde_json::json!(text));
         assert_eq!(serde_json::from_value::<Language>(serde_json::json!(text)).unwrap(), language);
+    }
+}
+
+/// No export is made here: the user cancels every "Save as" dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
     }
 }

@@ -178,6 +178,7 @@ impl App {
                 process_starter: Box::new(NothingStarted),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
+                export_file_picker: Box::new(NoExportFile),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -366,6 +367,7 @@ fn a_folder_dialog_that_cannot_be_shown_is_a_failure() {
             process_starter: Box::new(NothingStarted),
             icon_extractor: Box::new(NoIconsNoImages),
             image_picker: Box::new(NoIconsNoImages),
+            export_file_picker: Box::new(NoExportFile),
         },
         Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.path().join("covers")),
@@ -373,4 +375,13 @@ fn a_folder_dialog_that_cannot_be_shown_is_a_failure() {
 
     let error = core.suggest_executables_in_folder().unwrap_err();
     assert!(error.to_string().contains("no desktop"), "{error}");
+}
+
+/// No export is made here: the user cancels every "Save as" dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

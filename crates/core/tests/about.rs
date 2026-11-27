@@ -130,6 +130,7 @@ fn start(profile: &Path, browser: Browser) -> Core {
             process_starter: Box::new(Nothing),
             icon_extractor: Box::new(Nothing),
             image_picker: Box::new(Nothing),
+            export_file_picker: Box::new(NoExportFile),
         },
         Store::open(&profile.join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.join("covers")),
@@ -177,4 +178,13 @@ fn a_page_the_browser_cannot_open_is_an_error_that_names_it() {
         error.to_string(),
         "https://github.com/SirKashij/NiceLibrary/blob/main/LICENSE could not be opened: the browser crashed"
     );
+}
+
+/// No export is made here: the user cancels every "Save as" dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

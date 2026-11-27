@@ -15,6 +15,7 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     library: async () => [],
     readInstalledGames: async () => [],
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -47,6 +48,10 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     unhideGame: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     filterLibrary: async () => [],
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
@@ -73,6 +78,10 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },

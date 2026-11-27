@@ -805,9 +805,11 @@ mod autostart {
     }
 }
 
-/// `ExecutablePicker` and `ImagePicker` (crates/core): `Some` with the
-/// absolute path of the file the user chose, `None` when they cancel;
-/// blocks until they decide.
+/// `ExecutablePicker`, `ImagePicker` and `ExportFilePicker` (crates/core):
+/// `Some` with the absolute path of the file the user chose, `None` when
+/// they cancel; blocks until they decide. The "Save as" dialog of
+/// `ExportFilePicker` offers the suggested name and adds `.json` to a name
+/// typed without an extension.
 ///
 /// The tests play the user: they find the dialog this process opens, type a
 /// path into its file name box and confirm, or cancel it. A dialog shows on
@@ -820,12 +822,12 @@ mod executable_picker {
     use std::thread::JoinHandle;
     use std::time::{Duration, Instant};
 
-    use nicelibrary_core::{ExecutablePicker, ImagePicker};
-    use nicelibrary_lib::ports::{WindowsExecutablePicker, WindowsImagePicker};
+    use nicelibrary_core::{ExecutablePicker, ExportFilePicker, ImagePicker};
+    use nicelibrary_lib::ports::{WindowsExecutablePicker, WindowsExportFilePicker, WindowsImagePicker};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, WPARAM};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         BM_CLICK, EnumChildWindows, EnumWindows, GetClassNameW, GetDlgCtrlID, GetDlgItem, GetWindowThreadProcessId,
-        IDCANCEL, IDOK, IsWindowVisible, PostMessageW, SendMessageW, WM_COMMAND, WM_SETTEXT,
+        IDCANCEL, IDOK, IsWindowVisible, PostMessageW, SendMessageW, WM_COMMAND, WM_GETTEXT, WM_SETTEXT,
     };
 
     /// The id of the file name box in Windows' "Open" dialog (`cmb13`).
@@ -1035,6 +1037,108 @@ mod executable_picker {
         let answer = std::thread::spawn(|| WindowsImagePicker.choose_image());
 
         press(the_dialog(), IDCANCEL);
+
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+
+    fn open_save_dialog() -> JoinHandle<Result<Option<PathBuf>, String>> {
+        std::thread::spawn(|| WindowsExportFilePicker.choose_export_file("NiceLibrary-2027-01-15.json"))
+    }
+
+    /// The id of the file name box in Windows' "Save as" dialog (`edt1`):
+    /// an edit field deep inside the dialog, not a direct child.
+    const SAVE_NAME_BOX: i32 = 0x3e9;
+
+    /// The visible "Save as" dialog of this process and its file name box,
+    /// waiting for them up to ten seconds.
+    fn the_save_dialog() -> (HWND, HWND) {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while Instant::now() < deadline {
+            let mut dialog: HWND = std::ptr::null_mut();
+            // SAFETY: the callback only writes through the pointer it is given, which outlives the call.
+            unsafe { EnumWindows(Some(remember_dialog), &mut dialog as *mut HWND as LPARAM) };
+            if !dialog.is_null() {
+                let mut name_box: HWND = std::ptr::null_mut();
+                // SAFETY: as above.
+                unsafe { EnumChildWindows(dialog, Some(remember_name_box), &mut name_box as *mut HWND as LPARAM) };
+                if !name_box.is_null() {
+                    return (dialog, name_box);
+                }
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        panic!("no save dialog appeared");
+    }
+
+    unsafe extern "system" fn remember_name_box(window: HWND, found: LPARAM) -> i32 {
+        let mut class = [0u16; 16];
+        // SAFETY: plain Win32 calls on a window handle Windows just gave us.
+        let (id, length) = unsafe { (GetDlgCtrlID(window), GetClassNameW(window, class.as_mut_ptr(), 16)) };
+        if id == SAVE_NAME_BOX && String::from_utf16_lossy(&class[..length as usize]) == "Edit" {
+            // SAFETY: `found` is the `&mut HWND` handed to EnumChildWindows.
+            unsafe { *(found as *mut HWND) = window };
+            return 0;
+        }
+        1
+    }
+
+    /// Types `path` into the file name box of the "Save as" dialog and confirms.
+    fn type_and_save(path: &str) {
+        let (dialog, name_box) = the_save_dialog();
+        let typed: Vec<u16> = path.encode_utf16().chain([0]).collect();
+        // SAFETY: SendMessageW returns only once the box has copied the text.
+        unsafe { SendMessageW(name_box, WM_SETTEXT, 0, typed.as_ptr() as LPARAM) };
+        press(dialog, IDOK);
+    }
+
+    #[test]
+    fn the_save_dialog_offers_the_suggested_name() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = open_save_dialog();
+
+        let (dialog, name_box) = the_save_dialog();
+        let mut text = [0u16; 260];
+        // SAFETY: the buffer outlives the call and its length is passed along.
+        let length = unsafe { SendMessageW(name_box, WM_GETTEXT, text.len(), text.as_mut_ptr() as LPARAM) };
+        press(dialog, IDCANCEL);
+
+        assert_eq!(String::from_utf16_lossy(&text[..length as usize]), "NiceLibrary-2027-01-15.json");
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+
+    #[test]
+    fn answers_the_file_the_user_chose_to_save_to_without_writing_it() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let folder = tempfile::tempdir().unwrap();
+        let file = folder.path().join("backup.json");
+        let answer = open_save_dialog();
+
+        type_and_save(&file.display().to_string());
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen file");
+        assert_eq!(chosen.file_name(), file.file_name());
+        assert_eq!(fs::canonicalize(chosen.parent().unwrap()).unwrap(), fs::canonicalize(folder.path()).unwrap());
+        assert!(!file.exists(), "the dialog only chooses; the core writes");
+    }
+
+    #[test]
+    fn a_name_without_an_extension_gets_json() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let folder = tempfile::tempdir().unwrap();
+        let answer = open_save_dialog();
+
+        type_and_save(&folder.path().join("backup").display().to_string());
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen file");
+        assert_eq!(chosen.file_name().unwrap(), "backup.json");
+    }
+
+    #[test]
+    fn answers_no_file_when_the_user_cancels_saving() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = open_save_dialog();
+
+        press(the_save_dialog().0, IDCANCEL);
 
         assert_eq!(answer.join().unwrap(), Ok(None));
     }

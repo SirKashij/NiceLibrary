@@ -16,6 +16,7 @@ function steamTitleGame(title: SteamTitle): Game {
     lastPlayed: null,
     status: 'unplayed',
     favorite: false,
+    progress: null,
   };
 }
 

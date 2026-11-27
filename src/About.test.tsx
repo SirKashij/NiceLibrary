@@ -17,6 +17,11 @@ function fakeOperations({
     library: async () => [],
     readInstalledGames: async () => [],
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -85,6 +90,10 @@ function fakeOperations({
     language: async () => 'system',
     chooseLanguage: async () => {},
     about,
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     openAboutPage: async (page) => {
       calls.opened.push(page);
       return openPage();

@@ -14,7 +14,7 @@ function steamGame(appId: number, title: string, details: Partial<Game> = {}): G
     installed: true,
     playtimeMinutes: null,
     lastPlayed: null,
-    status: 'unplayed',    favorite: false,
+    progress: null, status: 'unplayed', favorite: false,
     ...details,
   };
 }
@@ -46,6 +46,7 @@ function fakeOperations(
     },
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -92,6 +93,10 @@ function fakeOperations(
     hiddenGames: async () => [],
     hideGame: async () => {},
     unhideGame: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     filterLibrary: async () => games,
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
@@ -105,6 +110,10 @@ function fakeOperations(
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },

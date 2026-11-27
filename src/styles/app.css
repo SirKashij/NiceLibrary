@@ -239,15 +239,33 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .language-choice { display: grid; gap: var(--space-1); }
 .language-choice label { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; cursor: pointer; }
 
+/* Manual Progress of a Local Game, on its detail page. */
+.manual-progress { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); }
+.manual-progress h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.manual-progress form { display: grid; gap: var(--space-2); }
+.manual-progress .field-row { align-items: center; }
+.field-row .manual-progress-field { flex: none; width: calc(var(--space-7) + var(--space-5)); text-align: right; }
 /* Status: a quiet label under each Cover, a choice on the detail page, a select in the toolbar. */
 .status-badge { color: var(--color-text-muted); font-size: var(--text-size-label); }
 .status-badge[data-status='playing'] { color: var(--color-text); }
+/* Progress: a quiet label under each Cover and a value on the detail page; a complete Game, 100 %, in its own colour. */
+.game-progress { color: var(--color-text-muted); font-size: var(--text-size-label); }
+.game-progress[data-complete='true'], .progress-value[data-complete='true'] { color: var(--color-complete); }
 .game-facts .segmented { display: inline-flex; flex-wrap: wrap; }
 .toolbar-select {
   font: inherit; color: var(--color-text); background: var(--color-surface);
   border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
 }
 
+/* Playtime Adjustment of a Local Game on its detail page (src/library/PlaytimeAdjustment.tsx). */
+.playtime-adjustment { display: grid; gap: var(--space-2); min-width: min(100%, var(--note-max-width)); max-width: var(--note-max-width); padding-top: var(--space-3); border-top: var(--hairline) solid var(--color-line); }
+.playtime-adjustment h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.playtime-adjustment-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); }
+.playtime-adjustment-form label { display: grid; gap: var(--space-1); color: var(--color-text-muted); font-size: var(--text-size-label); }
+.playtime-adjustment-form input {
+  width: var(--adjustment-field-width); font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
 /* Achievements on the detail page: hairlines between them, locked ones dimmed and marked as locked. */
 .achievements { display: grid; gap: var(--space-3); padding-top: var(--space-7); max-width: var(--note-max-width); }
 .achievements-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
@@ -276,6 +294,49 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .hidden-games-list { display: grid; max-width: var(--note-max-width); padding-top: var(--space-3); }
 .hidden-games-list li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); padding: var(--space-2) 0; border-top: var(--hairline) solid var(--color-line); }
 .hidden-games h1:focus { outline: none; }
+/* Statistics page (src/statistics/StatisticsPage.tsx): figures in rows with hairlines, like the facts of a Game. */
+.statistics { display: grid; gap: var(--space-5); align-content: start; }
+.statistics-figures, .statistics-by-status { display: grid; margin: 0; max-width: var(--note-max-width); }
+.statistics-figures > div, .statistics-by-status > div { display: flex; justify-content: space-between; gap: var(--space-4); padding: var(--space-2) 0; border-top: var(--hairline) solid var(--color-line); }
+.statistics-figures dt, .statistics-by-status dt { color: var(--color-text-muted); }
+.statistics-figures dd, .statistics-by-status dd { margin: 0; font-variant-numeric: tabular-nums; }
+.statistics-figures dd { font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display); }
+.statistics-section { display: grid; gap: var(--space-2); }
+.statistics-section h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.statistics-section > .muted { margin: 0; font-size: var(--text-size-label); }
+
+/* Playtime per week (src/statistics/WeeklyPlaytime.tsx): eight columns on one baseline, value above, week below. */
+.week-chart {
+  display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: var(--space-2);
+  margin: 0; padding: 0; list-style: none; max-width: var(--note-max-width);
+}
+.week-chart li { display: grid; grid-template-rows: auto var(--chart-height) auto; justify-items: center; gap: var(--space-1); }
+.week-chart .week-value, .week-chart .week-label { font-size: var(--text-size-label); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.week-chart .week-label { color: var(--color-text-muted); }
+.week-chart .week-track {
+  display: flex; align-items: flex-end; justify-content: center; width: 100%; height: 100%;
+  border-bottom: var(--hairline) solid var(--color-line);
+}
+.week-chart .week-bar {
+  width: 100%; max-width: var(--chart-bar-width);
+  border-radius: var(--radius-bar) var(--radius-bar) 0 0; background: var(--color-text-muted);
+}
+.week-chart li[aria-current='date'] .week-bar { background: var(--color-text); }
+.week-chart li[aria-current='date'] .week-label { color: var(--color-text); }
+.week-chart li:hover .week-bar { opacity: 0.8; }
+
+/* The most played Games (src/statistics/MostPlayed.tsx): rows with hairlines, a thin bar for each one's share. */
+.most-played { display: grid; margin: 0; padding: 0; list-style: none; max-width: var(--note-max-width); }
+.most-played li { border-top: var(--hairline) solid var(--color-line); }
+.most-played button {
+  display: grid; grid-template-columns: auto minmax(0, var(--chart-title-width)) 1fr auto; align-items: center;
+  gap: var(--space-3); width: 100%; padding: var(--space-2) 0; text-align: start;
+}
+.most-played button:hover .most-played-title { text-decoration: underline; }
+.most-played-rank, .most-played-playtime { font-variant-numeric: tabular-nums; color: var(--color-text-muted); }
+.most-played-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.most-played-share { display: block; height: var(--chart-bar-thin); }
+.most-played-share > span { display: block; height: 100%; border-radius: var(--radius-bar); background: var(--color-text-muted); }
 
 /* Favorites: the sidebar entry with its count, and the star on a Cover that marks a Favorite. */
 .favorites-entry {

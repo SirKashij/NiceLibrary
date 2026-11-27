@@ -12,6 +12,7 @@ function steamGame(appId: number, title: string): Game {
     installed: true,
     playtimeMinutes: null,
     lastPlayed: null,
+    progress: null,
     status: 'unplayed',
     favorite: false,
   };
@@ -31,6 +32,11 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     library: async () => shown(),
     readInstalledGames: async () => shown(),
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -89,6 +95,10 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     markFavorite: async () => {},
     favoriteCount: async () => 0,
     findSteamTitles: async () => [],

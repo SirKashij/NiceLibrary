@@ -131,7 +131,7 @@ impl Profile {
     /// Starts the app over this profile, reaching Steam's artwork through `steam`.
     fn start(&self, steam: &FakeSteam) -> Core {
         Core::new(
-            Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(steam.clone()), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen), autostart: Box::new(NoAutostart), processes: Box::new(NothingRuns), process_starter: Box::new(NothingStarted), icon_extractor: Box::new(NoIconsNoImages), image_picker: Box::new(NoIconsNoImages) },
+            Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(steam.clone()), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen), autostart: Box::new(NoAutostart), processes: Box::new(NothingRuns), process_starter: Box::new(NothingStarted), icon_extractor: Box::new(NoIconsNoImages), image_picker: Box::new(NoIconsNoImages), export_file_picker: Box::new(NoExportFile) },
             Store::open(&self.0.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(self.covers().join("covers")),
         )
@@ -336,5 +336,14 @@ struct NothingStarted;
 impl nicelibrary_core::ProcessStarter for NothingStarted {
     fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
         Err(format!("this test starts no process, not even {}", executable.display()))
+    }
+}
+
+/// No export is made here: the user cancels every "Save as" dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
     }
 }

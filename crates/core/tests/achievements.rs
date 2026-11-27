@@ -10,7 +10,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
-    Achievement, Clock, Core, Cover, CoverCache, Downloader, GameAchievements, OpenError, Opener, Ports, SecretStore,
+    Achievement, Clock, Core, Cover, CoverCache, Downloader, GameAchievements, LibraryFilter, LibrarySort, OpenError,
+    Opener, Ports, SecretStore,
     SteamLocator, Store, SyncOutcome, Wakeup, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
@@ -336,6 +337,7 @@ impl Computer {
                 process_starter: Box::new(NothingStarted),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
+                export_file_picker: Box::new(NoExportFile),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.covers()),
@@ -769,6 +771,131 @@ impl nicelibrary_core::ProcessStarter for NothingStarted {
     }
 }
 
+/// The Progress the Library shows for the Game `game_id`.
+fn progress(core: &Core, game_id: &str) -> Option<u8> {
+    let library = core.library().unwrap();
+    let game = library.iter().find(|game| game.id == game_id).expect("the game is in the library");
+    game.progress
+}
+
+#[test]
+fn the_progress_of_a_steam_game_is_the_share_of_its_unlocked_achievements() {
+    let computer = Computer::new();
+    let steam = FakeSteam::owning(vec![portal_2()]);
+    let core = computer.start(&steam);
+    core.sync().unwrap();
+
+    assert_eq!(progress(&core, "steam:620"), Some(50));
+    assert_eq!(core.game("steam:620").unwrap().unwrap().progress, Some(50));
+}
+
+#[test]
+fn a_steam_game_with_every_achievement_unlocked_is_complete_and_one_with_almost_all_is_not() {
+    let computer = Computer::new();
+    let all_but_one = |total: u32| {
+        let mut achievements: Vec<Defined> =
+            (1..total).map(|_| unlocked("ACH_DONE", "Done", "Unlocked", IN_OCTOBER)).collect();
+        for (n, achievement) in achievements.iter_mut().enumerate() {
+            achievement.api_name = Box::leak(format!("ACH_DONE_{n}").into_boxed_str());
+        }
+        achievements.push(locked("ACH_LAST", "Last", "Still to do"));
+        achievements
+    };
+    let steam = FakeSteam::owning(vec![
+        played(400, "Portal", 95, one_achievement()),
+        played(70, "Half-Life", 30, Some(all_but_one(200))),
+        played(220, "Half-Life 2", 30, Some(all_but_one(3))),
+    ]);
+    let core = computer.start(&steam);
+    core.sync().unwrap();
+
+    assert_eq!(progress(&core, "steam:400"), Some(100));
+    assert_eq!(progress(&core, "steam:70"), Some(99));
+    assert_eq!(progress(&core, "steam:220"), Some(66));
+}
+
+#[test]
+fn a_steam_game_without_achievements_has_no_progress_rather_than_none_of_it() {
+    let computer = Computer::new();
+    let mut nothing_unlocked = portal_2();
+    nothing_unlocked.achievements = Some(vec![locked("ACH_PARTNER", "Partner", "Finish the cooperative campaign")]);
+    let steam = FakeSteam::owning(vec![
+        nothing_unlocked,
+        played(400, "Portal", 95, None),
+        played(70, "Half-Life", 30, Some(vec![])),
+    ]);
+    let core = computer.start(&steam);
+    core.sync().unwrap();
+
+    assert_eq!(progress(&core, "steam:620"), Some(0));
+    assert_eq!(progress(&core, "steam:400"), None);
+    assert_eq!(progress(&core, "steam:70"), None);
+}
+
+#[test]
+fn a_steam_game_whose_achievements_are_not_fetched_yet_has_no_progress() {
+    let computer = Computer::new();
+    let steam = FakeSteam::owning(vec![portal_2()]);
+    let core = computer.start(&steam);
+    steam.becomes(Network::AchievementsDown);
+    core.sync().unwrap();
+
+    assert_eq!(progress(&core, "steam:620"), None);
+}
+
+#[test]
+fn a_later_sync_moves_the_progress_on() {
+    let computer = Computer::new();
+    let steam = FakeSteam::owning(vec![portal_2()]);
+    let core = computer.start(&steam);
+    core.sync().unwrap();
+    let mut further = portal_2();
+    further.last_played = NOW;
+    further.achievements = Some(vec![
+        unlocked("ACH_SPEED_RUN", "Speed run", "Finish the game in under two hours", NOW),
+        unlocked("ACH_WAKE_UP", "Wake up call", "Survive the manual override", IN_OCTOBER),
+        locked("ACH_PARTNER", "Partner", "Finish the cooperative campaign"),
+        unlocked("ACH_FINISH", "Lunacy", "Finish the single-player campaign", LAST_WEEK),
+    ]);
+    steam.owns(vec![further]);
+    computer.clock.advance(3_600);
+    core.sync().unwrap();
+
+    assert_eq!(progress(&core, "steam:620"), Some(75));
+}
+
+#[test]
+fn sorting_by_progress_puts_the_most_complete_game_first_and_the_games_without_progress_last() {
+    let computer = Computer::new();
+    let steam = FakeSteam::owning(vec![
+        portal_2(),
+        played(400, "Portal", 95, one_achievement()),
+        played(70, "Half-Life", 30, None),
+        played(10, "Counter-Strike", 30, Some(vec![locked("ACH_WIN", "Win", "Win a round")])),
+        played(220, "Half-Life 2", 30, Some(vec![])),
+    ]);
+    let core = computer.start(&steam);
+    core.sync().unwrap();
+
+    let sorted = core.filter_library(&LibraryFilter { sort: LibrarySort::Progress, ..Default::default() }).unwrap();
+
+    let titles: Vec<_> = sorted.iter().map(|game| game.title.as_str()).collect();
+    assert_eq!(titles, ["Portal", "Portal 2", "Counter-Strike", "Half-Life", "Half-Life 2"]);
+}
+
+#[test]
+fn progress_reaches_the_interface_on_the_game_and_sorting_by_it_arrives_as_the_interface_sends_it() {
+    let computer = Computer::new();
+    let steam = FakeSteam::owning(vec![portal_2()]);
+    let core = computer.start(&steam);
+    core.sync().unwrap();
+
+    let game = serde_json::to_value(core.game("steam:620").unwrap().unwrap()).unwrap();
+    assert_eq!(game["progress"], serde_json::json!(50));
+    assert_eq!(serde_json::from_value::<LibrarySort>(serde_json::json!("progress")).unwrap(), LibrarySort::Progress);
+    assert_eq!(serde_json::to_value(LibrarySort::Progress).unwrap(), serde_json::json!("progress"));
+}
+
 /// A computer whose executables show no icon and whose user chooses no
 /// image; these tests need neither.
 struct NoIconsNoImages;
@@ -781,6 +908,15 @@ impl nicelibrary_core::IconExtractor for NoIconsNoImages {
 
 impl nicelibrary_core::ImagePicker for NoIconsNoImages {
     fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+}
+
+/// No export is made here: the user cancels every "Save as" dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
     }
 }

@@ -13,7 +13,7 @@ const LAST_WEEK = 1_795_205_700;
 const pending = <T,>() => new Promise<T>(() => {});
 
 function steamGame(appId: number, title: string, installed: boolean, minutes: number | null, lastPlayed: number | null): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: minutes, lastPlayed, status: 'unplayed', favorite: false };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: minutes, lastPlayed, progress: null, status: 'unplayed', favorite: false };
 }
 
 /**
@@ -54,6 +54,7 @@ function fakeOperations({
     library: async () => library,
     readInstalledGames: async () => library,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -120,10 +121,18 @@ function fakeOperations({
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     launchOptions: async () => null,

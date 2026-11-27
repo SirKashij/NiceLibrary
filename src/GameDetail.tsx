@@ -4,8 +4,11 @@ import { useCoverTint } from './coverTint';
 import { useFormat, useT, type MessageKey } from './i18n';
 import { FavoriteToggle } from './Favorites';
 import { LaunchOptionsForm } from './LaunchOptions';
+import { ManualProgressForm } from './ManualProgress';
+import { ProgressValue } from './library/Progress';
 import { GameActionButton } from './library/GameAction';
 import { HideGameButton } from './library/HiddenGames';
+import { PlaytimeAdjustment } from './library/PlaytimeAdjustment';
 import { StatusChoice } from './library/Status';
 import { LocalGameCoverChoice } from './LocalGameCover';
 import { CoverMatchChoice } from './CoverMatch';
@@ -18,11 +21,12 @@ const SOURCES: Record<Source, MessageKey> = {
 
 /**
  * The detail page of one Game: its large Cover, title, Source, whether it is
- * Installed, its Status to set, Playtime, Last Played, its Collections and
- * the main action, its Achievements, marking it as a Favorite, and the way
- * back to the Library. Shows the Game as opened at once and as the core
- * answers it then, again after each change. Takes its Tint from the Game's
- * Cover, or stays neutral (see src/coverTint.ts).
+ * Installed, its Status to set, Playtime, Last Played, Progress when it has
+ * one, its Collections and the main action, for a Local Game its Launch
+ * Options and Manual Progress, its Achievements, marking it as a Favorite,
+ * and the way back to the Library. Shows the Game as opened at once and as
+ * the core answers it then, again after each change. Takes its Tint from the
+ * Game's Cover, or stays neutral (see src/coverTint.ts).
  */
 export function GameDetail({
   operations,
@@ -33,7 +37,7 @@ export function GameDetail({
   notice,
   onPlay,
   onInstall,
-  onStatusSet,
+  onChanged,
   onFavorite,
   onBack,
   onHidden,
@@ -55,8 +59,8 @@ export function GameDetail({
   onPlay: (game: Game) => void;
   /** Starts the installation of a Steam Game that is not Installed. */
   onInstall: (game: Game) => void;
-  /** Hears that the Game's Status was set, which changes the Library. */
-  onStatusSet: (game: Game) => void;
+  /** Hears that the Game's Status, Manual Progress or Playtime Adjustment was set, which changes the Library and its order. */
+  onChanged: (game: Game) => void;
   /** Marks the Game as a Favorite, or unmarks it. */
   onFavorite: (game: Game) => void;
   onBack: () => void;
@@ -80,7 +84,7 @@ export function GameDetail({
       (answer) => {
         if (id !== latestStatus.current) return;
         setGame(answer);
-        onStatusSet(answer);
+        onChanged(answer);
       },
       () => id === latestStatus.current && setStatusFailed(true),
     );
@@ -178,6 +182,14 @@ export function GameDetail({
                   <dt>{t('game.lastPlayed')}</dt>
                   <dd>{lastPlayed}</dd>
                 </div>
+                {game.progress !== null && (
+                  <div>
+                    <dt>{t('game.progress')}</dt>
+                    <dd>
+                      <ProgressValue progress={game.progress} />
+                    </dd>
+                  </div>
+                )}
               </dl>
               {statusFailed && (
                 <p className="note" role="alert">
@@ -187,6 +199,26 @@ export function GameDetail({
               {collections}
               <HideGameButton operations={operations} game={game} onHidden={onHidden} />
               {game.source === 'local' && <LaunchOptionsForm operations={operations} game={game} />}
+              {game.source === 'local' && (
+                <ManualProgressForm
+                  operations={operations}
+                  game={game}
+                  onSet={(answer) => {
+                    setGame(answer);
+                    onChanged(answer);
+                  }}
+                />
+              )}
+              {game.source === 'local' && (
+                <PlaytimeAdjustment
+                  operations={operations}
+                  game={game}
+                  onAdjusted={(answer) => {
+                    setGame(answer);
+                    onChanged(answer);
+                  }}
+                />
+              )}
               {actions?.(game)}
             </>
           )}

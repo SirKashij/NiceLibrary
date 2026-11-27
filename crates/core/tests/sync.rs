@@ -320,6 +320,7 @@ impl Computer {
                 executable_picker: Box::new(NoExecutableChosen),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
+                export_file_picker: Box::new(NoExportFile),
                 autostart: Box::new(NoAutostart),
                 processes: Box::new(NothingRuns),
                 process_starter: Box::new(NothingStarted),
@@ -338,6 +339,7 @@ fn steam_game(app_id: u32, title: &str, installed: bool, minutes: u32, last_play
         installed,
         playtime_minutes: Some(minutes),
         last_played,
+        progress: None,
         status: Status::Unplayed,
         favorite: false,
     }
@@ -810,6 +812,7 @@ fn an_automatic_sync_that_fails_in_the_app_reaches_the_interface_with_its_reason
             executable_picker: Box::new(NoExecutableChosen),
             icon_extractor: Box::new(NoIconsNoImages),
             image_picker: Box::new(NoIconsNoImages),
+            export_file_picker: Box::new(NoExportFile),
             autostart: Box::new(NoAutostart),
             processes: Box::new(NothingRuns),
             process_starter: Box::new(NothingStarted),
@@ -928,5 +931,14 @@ struct NothingStarted;
 impl nicelibrary_core::ProcessStarter for NothingStarted {
     fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
         Err(format!("this test starts no process, not even {}", executable.display()))
+    }
+}
+
+/// No export is made here: the user cancels every "Save as" dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
     }
 }

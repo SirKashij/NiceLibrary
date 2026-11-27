@@ -15,7 +15,7 @@ const STEAM_APP_LIST: SteamTitle[] = [
 ];
 
 function localGame(id: number, title: string): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false, progress: null };
 }
 
 const PORTAL_2: Game = { ...localGame(0, 'Portal 2'), id: 'steam:620', source: 'steam', playtimeMinutes: null };
@@ -123,6 +123,15 @@ function fakeOperations({
     coverHue: async () => null,
     install: async () => ({ outcome: 'started' }),
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    exportData: async () => ({ outcome: 'cancelled' }),
   };
   return { operations, calls };
 }

@@ -155,6 +155,7 @@ impl App {
                 executable_picker: Box::new(NoExecutableChosen),
                 icon_extractor: Box::new(icons.clone()),
                 image_picker: Box::new(user.clone()),
+                export_file_picker: Box::new(NoExportFile),
                 processes: Box::new(NothingRuns),
                 process_starter: Box::new(NothingStarted),
             },
@@ -618,4 +619,13 @@ fn a_local_game_without_a_cover_has_no_hue() {
     let game = app.add_game("Games/Celeste/Celeste.exe", None);
 
     assert_eq!(app.core.cover_hue(&game).unwrap(), None);
+}
+
+/// No export is made here: the user cancels every "Save as" dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

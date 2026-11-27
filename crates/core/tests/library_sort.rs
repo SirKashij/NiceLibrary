@@ -142,6 +142,7 @@ impl Computer {
                 executable_picker: Box::new(NoExecutableChosen),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
+                export_file_picker: Box::new(NoExportFile),
                 autostart: Box::new(NoAutostart),
                 processes: Box::new(NothingRuns),
                 process_starter: Box::new(NothingStarted),
@@ -240,6 +241,7 @@ fn an_order_arrives_from_the_interface_in_the_shape_the_interface_sends() {
         ("recentlyPlayed", LibrarySort::RecentlyPlayed),
         ("name", LibrarySort::Name),
         ("playtime", LibrarySort::Playtime),
+        ("progress", LibrarySort::Progress),
     ] {
         assert_eq!(serde_json::from_value::<LibrarySort>(serde_json::json!(sent)).unwrap(), sort);
         assert_eq!(serde_json::to_value(sort).unwrap(), serde_json::json!(sent));
@@ -299,5 +301,14 @@ impl nicelibrary_core::ProcessStarter for NothingStarted {
         _working_directory: &std::path::Path,
     ) -> Result<(), String> {
         Err(format!("this test starts no process, not even {}", executable.display()))
+    }
+}
+
+/// No export is made here: the user cancels every "Save as" dialog.
+struct NoExportFile;
+
+impl nicelibrary_core::ExportFilePicker for NoExportFile {
+    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
     }
 }

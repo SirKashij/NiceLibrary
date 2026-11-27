@@ -49,15 +49,18 @@ export interface Format {
   dateTime(seconds: number): string;
   /** A whole number, with the interface language's digit grouping. */
   count(n: number): string;
+  /** A Progress, given in percent from 0 to 100. */
+  percent(n: number): string;
 }
 
 export function useFormat(): Format {
   const lang = useContext(LangContext);
   const t = useT();
-  const { number, count, date, dateTime } = useMemo(
+  const { number, count, percent, date, dateTime } = useMemo(
     () => ({
       number: new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }),
       count: new Intl.NumberFormat(lang, { maximumFractionDigits: 0 }),
+      percent: new Intl.NumberFormat(lang, { style: 'percent', maximumFractionDigits: 0 }),
       date: new Intl.DateTimeFormat(lang, { dateStyle: 'medium' }),
       dateTime: new Intl.DateTimeFormat(lang, { dateStyle: 'medium', timeStyle: 'short' }),
     }),
@@ -71,5 +74,6 @@ export function useFormat(): Format {
     date: (seconds) => date.format(seconds * 1000),
     dateTime: (seconds) => dateTime.format(seconds * 1000),
     count: (n) => count.format(n),
+    percent: (n) => percent.format(n / 100),
   };
 }

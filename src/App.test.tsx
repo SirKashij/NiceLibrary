@@ -12,6 +12,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => steam,
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -57,6 +58,10 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
@@ -76,6 +81,10 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     markFavorite: async () => {},
     favoriteCount: async () => 0,
     findSteamTitles: async () => [],
@@ -89,7 +98,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
 const pending = <T,>() => new Promise<T>(() => {});
 
 function steamGame(appId: number, title: string, installed = true): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, progress: null, status: 'unplayed', favorite: false };
 }
 
 function gameTitles() {
@@ -246,6 +255,7 @@ describe('Steam in the settings', () => {
     const failing: Operations = {
       ...fakeOperations(),
       steamInstallation: () => Promise.reject(new Error('core unavailable')),
+      exportData: async () => ({ outcome: 'cancelled' }),
     };
     const steam = await openSettings(failing);
 

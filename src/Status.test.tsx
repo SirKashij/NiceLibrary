@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LibraryFilter, Operations, Status } from './operations';
 
 function steamGame(appId: number, title: string, installed: boolean, status: Status = 'unplayed'): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status, favorite: false };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, progress: null, status, favorite: false };
 }
 
 /**
@@ -24,6 +24,7 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
+    exportData: async () => ({ outcome: 'cancelled' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
@@ -60,6 +61,10 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     install: async () => ({ outcome: 'started' }),
@@ -76,6 +81,10 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     closeToTray: async () => true,
     setCloseToTray: async () => {},
     closeWindow: async () => {},
