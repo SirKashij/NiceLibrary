@@ -55,6 +55,7 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    openLogFolder: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },

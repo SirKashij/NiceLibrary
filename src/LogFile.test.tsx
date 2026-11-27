@@ -28,6 +28,23 @@ function fakeOperations() {
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'emptyName' }),
+    renameCollection: async () => ({ outcome: 'emptyName' }),
+    deleteCollection: async () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
     openLogFolder: async () => {
       calls.logFolderOpened += 1;
     },
