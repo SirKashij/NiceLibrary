@@ -443,6 +443,33 @@ export interface Operations {
   markFavorite(gameId: string, favorite: boolean): Promise<void>;
   /** How many Games of the Library are Favorites. */
   favoriteCount(): Promise<number>;
+  /**
+   * Up to twenty titles of the stored Steam App List whose name contains
+   * `typed`, whatever its case and punctuation, the closest first. Fast
+   * enough to run as the user types.
+   */
+  findSteamTitles(typed: string): Promise<SteamTitle[]>;
+  /**
+   * The title of the Steam App List the app proposes as the Cover Match of a
+   * Local Game titled `title`, before it is added; `null` when none matches
+   * or no Steam App List is stored, as without a key.
+   */
+  proposeCoverMatch(title: string): Promise<SteamTitle | null>;
+  /** The Steam title a Local Game borrows its Cover from; `null` without a Cover Match. */
+  coverMatch(gameId: string): Promise<SteamTitle | null>;
+  /**
+   * Gives a Local Game the Cover Match `appId`, a title of the Steam App
+   * List, in place of any before; `null` removes it and the Game shows its
+   * executable's icon again. Rejects for anything but a Local Game in the
+   * Library, and for an app id not in the Steam App List.
+   */
+  setCoverMatch(gameId: string, appId: number | null): Promise<void>;
+}
+
+/** One title of the Steam App List. Mirrors `SteamTitle` in crates/core. */
+export interface SteamTitle {
+  appId: number;
+  name: string;
 }
 
 /** How choosing an image as a Local Game's Cover went. Every outcome but `chosen` changed nothing. Mirrors `CoverImageChoice` in crates/core. */
@@ -548,4 +575,8 @@ export const tauriOperations: Operations = {
   removeLocalGame: (gameId) => invoke<void>('remove_local_game', { gameId }),
   markFavorite: (gameId, favorite) => invoke<void>('mark_favorite', { gameId, favorite }),
   favoriteCount: () => invoke<number>('favorite_count'),
+  findSteamTitles: (typed) => invoke<SteamTitle[]>('find_steam_titles', { typed }),
+  proposeCoverMatch: (title) => invoke<SteamTitle | null>('propose_cover_match', { title }),
+  coverMatch: (gameId) => invoke<SteamTitle | null>('cover_match', { gameId }),
+  setCoverMatch: (gameId, appId) => invoke<void>('set_cover_match', { gameId, appId }),
 };

@@ -6,6 +6,7 @@ import { LaunchOptionsForm } from './LaunchOptions';
 import { HideGameButton } from './library/HiddenGames';
 import { StatusChoice } from './library/Status';
 import { LocalGameCoverChoice } from './LocalGameCover';
+import { CoverMatchChoice } from './CoverMatch';
 import type { Game, Operations, Source, Status } from './operations';
 
 const SOURCES: Record<Source, MessageKey> = {
@@ -109,7 +110,10 @@ export function GameDetail({
         <div className="game-detail-cover">
           {cover(game ?? opened)}
           {game?.source === 'local' && (
-            <LocalGameCoverChoice operations={operations} game={game} onCoverChanged={onCoverChanged} />
+            <>
+              <LocalGameCoverChoice operations={operations} game={game} onCoverChanged={onCoverChanged} />
+              <CoverMatchChoice operations={operations} game={game} onCoverChanged={onCoverChanged} />
+            </>
           )}
           {game && <FavoriteToggle game={game} onToggle={onFavorite} />}
         </div>

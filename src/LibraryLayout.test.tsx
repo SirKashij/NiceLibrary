@@ -96,6 +96,10 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
       marks.push([gameId, favorite]);
     },
     favoriteCount: async () => 0,
+    findSteamTitles: async () => [],
+    proposeCoverMatch: async () => null,
+    coverMatch: async () => null,
+    setCoverMatch: async () => {},
   };
   return { operations, chosen, launched, marks, failWhenChoosing: () => (failChoosing = true) };
 }

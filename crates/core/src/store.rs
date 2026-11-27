@@ -28,6 +28,8 @@ mod achievements;
 
 mod favorites;
 
+mod cover_matches;
+
 /// The schema changes, oldest first. Never edit or reorder a released entry;
 /// append a new one instead.
 const MIGRATIONS: &[&str] = &[
@@ -131,6 +133,13 @@ const MIGRATIONS: &[&str] = &[
     // 11: Favorites, by Game id; like Collections they belong to the person, not to a Steam Account.
     "CREATE TABLE favorites (
          game_id TEXT PRIMARY KEY
+     );",
+    // 12: Cover Matches: the Steam title whose Cover a Local Game borrows, by the Local Game's number,
+    // with the title's name as it was when matched. Steam's titles belong to no Steam Account.
+    "CREATE TABLE cover_matches (
+         local_game INTEGER PRIMARY KEY,
+         app_id     INTEGER NOT NULL,
+         name       TEXT    NOT NULL
      );",
 ];
 
@@ -613,6 +622,7 @@ fn delete_local_game_data(transaction: &rusqlite::Transaction<'_>, id: i64) -> R
     transaction.execute("DELETE FROM favorites WHERE game_id = ?1", [&game_id])?;
     // Tables keyed by the Local Game's number.
     transaction.execute("DELETE FROM local_game_sessions WHERE local_game = ?1", [id])?;
+    transaction.execute("DELETE FROM cover_matches WHERE local_game = ?1", [id])?;
     // Its Launch Options are columns of `local_games` itself.
     Ok(())
 }

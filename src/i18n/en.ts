@@ -270,6 +270,21 @@ export const en = {
   'favorites.toggle': 'Favorite {title}',
   'favorites.none': 'No favorites yet. Mark a game with its star to find it here.',
   'favorites.failed': '{title} could not be marked or unmarked as a favorite.',
+  'coverMatch.heading': 'Cover',
+  'coverMatch.matched': 'Cover from Steam: {name}',
+  'coverMatch.noMatch': 'No Steam title matches. The game shows its executable’s icon.',
+  'coverMatch.icon': 'The game shows its executable’s icon.',
+  'coverMatch.choose': 'Choose a Steam title…',
+  'coverMatch.chooseOther': 'Choose another title…',
+  'coverMatch.decline': 'Use the icon instead',
+  'coverMatch.remove': 'Remove the Steam cover',
+  'coverMatch.searchLabel': 'Search Steam titles',
+  'coverMatch.closeSearch': 'Close the search',
+  'coverMatch.results': 'Steam titles',
+  'coverMatch.noResults': 'No Steam title found. Without a Steam Web API key the app has no list of Steam titles.',
+  'coverMatch.searchFailed': 'Steam titles could not be searched.',
+  'coverMatch.changeFailed': 'The Steam cover could not be changed.',
+  'coverMatch.notSaved': '{title} was added, but its Steam cover could not be saved. Choose it on its page.',
 } as const;
 
 export type MessageKey = keyof typeof en;

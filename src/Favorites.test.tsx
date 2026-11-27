@@ -72,6 +72,10 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
       else marked.delete(gameId);
     },
     favoriteCount: async () => library().filter((game) => game.favorite).length,
+    findSteamTitles: async () => [],
+    proposeCoverMatch: async () => null,
+    coverMatch: async () => null,
+    setCoverMatch: async () => {},
     chooseCoverImage: async () => ({ outcome: 'cancelled' }),
     coverImageChosen: async () => false,
     removeCoverImage: async () => {},

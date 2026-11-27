@@ -71,6 +71,10 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     removeLocalGame: async () => {},
     markFavorite: async () => {},
     favoriteCount: async () => 0,
+    findSteamTitles: async () => [],
+    proposeCoverMatch: async () => null,
+    coverMatch: async () => null,
+    setCoverMatch: async () => {},
   };
 }
 

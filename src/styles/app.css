@@ -280,3 +280,16 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .favorite-toggle[aria-pressed='true'] .icon { fill: currentColor; }
 .game:hover .favorite-toggle, .game:focus-within .favorite-toggle,
 .game-detail-cover .favorite-toggle, .favorite-toggle:focus-visible { opacity: 1; }
+
+/* Cover Match: the Steam title a Local Game borrows its Cover from, proposed when adding, changed on the detail page. */
+.cover-match-proposal { display: grid; gap: var(--space-2); margin: 0; padding: 0; border: 0; min-width: 0; }
+.cover-match-proposal legend { padding: 0; margin-bottom: var(--space-2); color: var(--color-text-muted); font-size: var(--text-size-label); }
+.cover-match, .cover-match-search { display: grid; justify-items: start; gap: var(--space-2); width: 100%; }
+.cover-match-search { justify-items: stretch; }
+.cover-match-search > label { color: var(--color-text-muted); font-size: var(--text-size-label); }
+.cover-match-title { display: flex; align-items: center; gap: var(--space-3); }
+.cover-match-title p { margin: 0; }
+.cover-match-preview { width: var(--list-cover-width); flex: 0 0 auto; }
+.cover-match-results { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+.cover-match-result { text-align: left; color: var(--color-text-muted); }
+.cover-match-result:hover, .cover-match-result:focus-visible { color: var(--color-text); }

@@ -8,6 +8,7 @@ mod achievements;
 mod autostart;
 mod clock;
 mod collections;
+mod cover_match;
 mod covers;
 mod favorites;
 pub mod keyvalues;
@@ -393,7 +394,8 @@ impl Core {
     }
 
     /// The Cover of the Game `game_id`: a Steam Game's from Steam, a Local
-    /// Game's the image the user chose, else its executable's icon on a
+    /// Game's the image the user chose, else the Steam Cover of its Cover
+    /// Match (see [`Self::set_cover_match`]), else its executable's icon on a
     /// neutral background. `None` when it has none and the interface shows a
     /// placeholder instead.
     pub fn cover(&self, game_id: &str) -> Result<Option<Cover>, Error> {
@@ -401,7 +403,16 @@ impl Core {
             return self.covers.steam_cover(self.ports.downloader.as_ref(), app_id);
         }
         match self.stored_local_game(game_id)? {
-            Some(game) => local_covers::cover(&self.covers, self.ports.icon_extractor.as_ref(), &game),
+            Some(game) => {
+                let matched = self.store.cover_match(game.id)?.map(|title| title.app_id);
+                local_covers::cover(
+                    &self.covers,
+                    self.ports.icon_extractor.as_ref(),
+                    self.ports.downloader.as_ref(),
+                    &game,
+                    matched,
+                )
+            }
             None => Ok(None),
         }
     }
@@ -1160,6 +1171,60 @@ impl Core {
             None => Ok(()),
         });
         self.logged("remove_cover_image", removed)
+    }
+
+    /// The title of the stored Steam App List the app proposes as the Cover
+    /// Match of a Local Game titled `title`, before it is added: the title of
+    /// the same name, whatever its case and punctuation, else the shortest
+    /// that begins with all of its words. `None` when no title matches, or no
+    /// Steam App List is stored, as without a Steam Web API key; the Game
+    /// then keeps its executable's icon.
+    pub fn propose_cover_match(&self, title: &str) -> Result<Option<SteamTitle>, Error> {
+        let search = steam_app_list::searchable(title);
+        if search.is_empty() {
+            return Ok(None);
+        }
+        let proposal = self
+            .steam_title_index()
+            .and_then(|index| self.store.steam_titles(&index.find(&search, steam_app_list::LOOKUP_LIMIT)))
+            .map(|found| cover_match::proposal(&search, found));
+        self.logged("propose_cover_match", proposal)
+    }
+
+    /// The Steam title the Local Game `game_id` borrows its Cover from;
+    /// `None` without a Cover Match, for a Steam Game and for a Game that is
+    /// not in the Library.
+    pub fn cover_match(&self, game_id: &str) -> Result<Option<SteamTitle>, Error> {
+        let matched = self.stored_local_game(game_id).and_then(|game| match game {
+            Some(game) => self.store.cover_match(game.id),
+            None => Ok(None),
+        });
+        self.logged("cover_match", matched)
+    }
+
+    /// Gives the Local Game `game_id` the Cover Match `app_id`, a title of
+    /// the stored Steam App List, in place of any before; `None` removes its
+    /// Cover Match, and the Game shows its executable's icon again. An image
+    /// the user chose stays the Cover either way. The match stays when the
+    /// key is removed or the Steam App List is fetched anew. Fails for a Game
+    /// that is not a Local Game in the Library, and for an app id that is not
+    /// in the stored Steam App List.
+    pub fn set_cover_match(&self, game_id: &str, app_id: Option<u32>) -> Result<(), Error> {
+        self.logged("set_cover_match", self.record_cover_match(game_id, app_id))
+    }
+
+    fn record_cover_match(&self, game_id: &str, app_id: Option<u32>) -> Result<(), Error> {
+        let Some(game) = self.stored_local_game(game_id)? else {
+            return Err(Error::new(format!("not a Local Game in the library: {game_id}")));
+        };
+        let title = match app_id {
+            Some(app_id) => match self.store.steam_titles(&[app_id])?.pop() {
+                Some(title) => Some(title),
+                None => return Err(Error::new(format!("not in the Steam App List: {app_id}"))),
+            },
+            None => None,
+        };
+        self.store.set_cover_match(game.id, title.as_ref())
     }
 
     /// The Local Game `game_id` as the store keeps it; `None` when the id is

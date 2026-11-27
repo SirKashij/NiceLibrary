@@ -94,7 +94,7 @@ _Avoid_: Sorting, ranking
 ### Artwork
 
 **Cover**:
-The upright picture that represents a Game in the Library. A Steam Game's comes from Steam. A Local Game's is its Cover Image, else the icon of its executable on a neutral background, else there is none and the Library shows a neutral placeholder with the title.
+The upright picture that represents a Game in the Library. A Steam Game's comes from Steam. A Local Game's is its Cover Image, else the Steam Cover of its Cover Match, else the icon of its executable on a neutral background, else there is none and the Library shows a neutral placeholder with the title.
 _Avoid_: Box art, poster, artwork, thumbnail
 
 **Cover Image**:
@@ -102,7 +102,7 @@ An image the person chose as a Local Game's Cover. The app keeps its own copy in
 _Avoid_: Custom cover, own cover
 
 **Cover Match**:
-The link between a Local Game and the Steam title whose Cover it borrows. The person confirms or changes it when adding the Game.
+The link between a Local Game and the Steam title whose Cover it borrows. When the Game is added, the app proposes the title of the Steam App List whose name is the Game's or begins with it; the person confirms it, picks another title or declines, and can change or remove it later on the Detail Page. Removing the Local Game forgets it.
 
 **Steam App List**:
 Steam's list of the titles it offers, each with its app id and name, fetched with the Steam Web API key and kept on this computer as the basis for Cover Matches. It is fetched, not synced: it belongs to no Steam Account.
