@@ -13,7 +13,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSync, Clock, Core, CoverCache, Downloader, ExecutablePicker, Game, Log, OpenError, Opener,
-    Ports, ProcessList, SecretStore, SteamLocator, Store, SyncOutcome, Tracking, Wakeup, WebAnswer, WebApi,
+    Ports, ProcessList, SecretStore, Session, SteamLocator, Store, SyncOutcome, Tracking, Wakeup, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
 
@@ -188,6 +188,23 @@ impl nicelibrary_core::Autostart for NoAutostart {
     }
 }
 
+
+/// A computer whose executables show no icon and whose user chooses no
+/// image; these tests need neither.
+struct NoIconsNoImages;
+
+impl nicelibrary_core::IconExtractor for NoIconsNoImages {
+    fn largest_icon(&self, _executable: &Path) -> Result<Option<nicelibrary_core::Icon>, String> {
+        Ok(None)
+    }
+}
+
+impl nicelibrary_core::ImagePicker for NoIconsNoImages {
+    fn choose_image(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
+    }
+}
+
 /// The app on a computer with Steam, the player logged in, and a disk the
 /// test puts Games on.
 struct App {
@@ -227,6 +244,8 @@ impl App {
                 processes: Box::new(processes.clone()),
                 process_starter: Box::new(NothingStarted),
                 autostart: Box::new(NoAutostart),
+                icon_extractor: Box::new(NoIconsNoImages),
+                image_picker: Box::new(NoIconsNoImages),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -553,4 +572,56 @@ fn sessions_of_steam_games_are_written_to_the_log_without_their_title() {
     assert!(log.contains("INFO track_sessions: started"), "{log}");
     assert!(log.contains("INFO track_sessions: ended"), "{log}");
     assert!(!log.contains("Portal"), "the Log names no title or path: {log}");
+}
+
+#[test]
+fn the_sessions_of_a_steam_game_are_listed_newest_first() {
+    let app = App::start();
+    app.library_folders(&[]);
+    let portal = app.install(PORTAL_2, "Portal 2", "Portal 2", "portal2.exe");
+    app.core.read_installed_games().unwrap();
+    app.look(at(10, 0, 0), &[&portal]);
+    app.look(at(10, 30, 0), &[&portal]);
+    app.look(at(10, 30, 5), &[]);
+    app.look(at(12, 0, 0), &[&portal]);
+    app.look(at(12, 10, 0), &[&portal]);
+    app.look(at(12, 10, 5), &[]);
+
+    app.track();
+
+    assert_eq!(
+        app.core.sessions("steam:620").unwrap(),
+        [
+            Session { started_at: at(12, 0, 0), seconds: 10 * 60, running: false },
+            Session { started_at: at(10, 0, 0), seconds: 30 * 60, running: false },
+        ]
+    );
+}
+
+#[test]
+fn a_running_session_of_a_steam_game_is_marked_as_running() {
+    let app = App::start();
+    app.library_folders(&[]);
+    let portal = app.install(PORTAL_2, "Portal 2", "Portal 2", "portal2.exe");
+    app.core.read_installed_games().unwrap();
+    app.look(at(10, 0, 0), &[&portal]);
+    app.look(at(10, 30, 0), &[&portal]);
+    app.look(at(10, 30, 5), &[]);
+
+    let mut while_running = Vec::new();
+    app.core.track_sessions(|event| {
+        if matches!(event, Tracking::Failed { .. }) && app.processes.is_over() {
+            return ControlFlow::Break(());
+        }
+        if matches!(event, Tracking::Started { .. }) {
+            while_running = app.core.sessions("steam:620").unwrap();
+        }
+        ControlFlow::Continue(())
+    });
+
+    assert_eq!(while_running, [Session { started_at: at(10, 0, 0), seconds: 0, running: true }]);
+    assert_eq!(
+        app.core.sessions("steam:620").unwrap(),
+        [Session { started_at: at(10, 0, 0), seconds: 30 * 60, running: false }]
+    );
 }

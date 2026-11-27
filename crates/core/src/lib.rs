@@ -185,7 +185,7 @@ pub struct Core {
     log: Log,
     /// The stored Sessions whose process the tracking found at its last
     /// look, by their id; empty while the tracking does not run.
-    running_sessions: Mutex<std::collections::BTreeSet<i64>>,
+    running_sessions: Mutex<std::collections::BTreeSet<(Tracked, i64)>>,
 }
 
 impl Core {
@@ -921,7 +921,8 @@ impl Core {
 
     /// Makes the Sessions in `open` the ones [`Self::sessions`] marks as running.
     fn show_running(&self, open: &sessions::OpenSessions) {
-        *self.running_sessions.lock().unwrap_or_else(PoisonError::into_inner) = open.values().copied().collect();
+        *self.running_sessions.lock().unwrap_or_else(PoisonError::into_inner) =
+            open.iter().map(|(&game, &session)| (game, session)).collect();
     }
 
     /// The Sessions of the Game `game_id`, newest first, each with when it
@@ -933,17 +934,21 @@ impl Core {
     }
 
     fn stored_sessions(&self, game_id: &str) -> Result<Vec<Session>, Error> {
-        let Some(local_game) = sessions::local_game_id(game_id) else {
+        let (game, stored) = if let Some(local_game) = sessions::local_game_id(game_id) {
+            (Tracked::Local(local_game), self.store.local_game_sessions(local_game)?)
+        } else if let Some(app_id) = steam_app_id(game_id) {
+            let account = self.current_steam_account()?;
+            (Tracked::Steam(app_id), self.store.steam_game_sessions(app_id, account.as_deref())?)
+        } else {
             return Ok(Vec::new());
         };
-        let stored = self.store.local_game_sessions(local_game)?;
         let running = self.running_sessions.lock().unwrap_or_else(PoisonError::into_inner).clone();
         Ok(stored
             .into_iter()
             .map(|(id, started_at, ended_at)| Session {
                 started_at,
                 seconds: ended_at.saturating_sub(started_at),
-                running: running.contains(&id),
+                running: running.contains(&(game, id)),
             })
             .collect())
     }
