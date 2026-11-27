@@ -72,6 +72,25 @@ impl CoverCache {
         Ok(cover)
     }
 
+    /// The Achievement icon `icon` of the Steam Game `app_id`, kept beside
+    /// the Covers: from the cache when it is there, else downloaded from
+    /// Steam and kept. `icon` is Steam's name for the image, a hash, so the
+    /// image under it never changes.
+    pub(crate) fn achievement_icon(&self, downloader: &dyn Downloader, app_id: u32, icon: &str) -> Result<Option<Cover>, Error> {
+        let file = self.folder.join(format!("achievement-{app_id}-{icon}"));
+        if let Some(cover) = fs::read(&file).ok().and_then(Cover::from_bytes) {
+            return Ok(Some(cover));
+        }
+        let url = crate::achievements::icon_url(app_id, icon);
+        let Some(bytes) = downloader.download(&url).map_err(|reason| Error::new(format!("cannot download {url}: {reason}")))?
+        else {
+            return Ok(None);
+        };
+        let icon = Cover::from_bytes(bytes).ok_or_else(|| Error::new(format!("{url} did not answer with an image")))?;
+        self.keep(&file, &icon.bytes);
+        Ok(Some(icon))
+    }
+
     /// Writes `bytes` to `file` in one step, so that a crash never leaves a
     /// half-written Cover behind. A Cover that cannot be kept is downloaded
     /// again next time.

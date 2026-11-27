@@ -54,6 +54,8 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     launch: (game) => {
       requested.push(game.id);
       return launch(game);

@@ -62,6 +62,8 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     },
     filterLibrary: async () => library,
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     collections: async () => [...collections].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())),
     createCollection: async (raw) => name(null, raw),
     renameCollection: async (id, raw) => name(id, raw),

@@ -110,6 +110,8 @@ function fakeOperations({
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
   };
   return { operations, calls, automaticSync, listeners };
 }

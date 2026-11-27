@@ -37,6 +37,8 @@ function fakeOperations(initial: Game[]) {
     onAutomaticSync: () => () => {},
     filterLibrary: async () => games,
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     theme: async () => 'system',

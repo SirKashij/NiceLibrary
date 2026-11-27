@@ -46,6 +46,8 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
       );
     },
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     theme: async () => 'system',
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),

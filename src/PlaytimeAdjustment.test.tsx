@@ -80,6 +80,8 @@ function fakeOperations(
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     filterLibrary: async () => games(),
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

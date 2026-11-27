@@ -208,6 +208,16 @@ export const en = {
   'adjustment.invalid': 'Enter the time in whole hours and minutes.',
   'adjustment.loadFailed': 'The playtime adjustment of {title} could not be read.',
   'adjustment.saveFailed': 'The playtime adjustment of {title} could not be saved.',
+  'achievements.title': 'Achievements',
+  'achievements.count': '{unlocked} / {total} unlocked',
+  'achievements.list': 'Achievements of {title}',
+  'achievements.unlockedOn': 'Unlocked {date}',
+  'achievements.unlocked': 'Unlocked',
+  'achievements.locked': 'Locked',
+  'achievements.localGame': 'Local games have no achievements.',
+  'achievements.none': '{title} has no achievements.',
+  'achievements.notFetchedYet': 'The achievements have not been fetched yet. They arrive with one of the next syncs.',
+  'achievements.loadFailed': 'The achievements could not be loaded.',
 } as const;
 
 export type MessageKey = keyof typeof en;
