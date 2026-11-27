@@ -182,4 +182,13 @@ export const de: Record<MessageKey, string> = {
   'language.de': 'Deutsch',
   'language.en': 'English',
   'language.saveFailed': 'Die Sprache konnte nicht gespeichert werden.',
+  'game.status': 'Status',
+  'status.unplayed': 'Ungespielt',
+  'status.playing': 'Wird gespielt',
+  'status.completed': 'Durchgespielt',
+  'status.dropped': 'Abgebrochen',
+  'status.of': 'Status von {title}',
+  'status.setFailed': 'Der Status von {title} konnte nicht geändert werden.',
+  'filter.status': 'Status',
+  'filter.anyStatus': 'Jeder Status',
 };

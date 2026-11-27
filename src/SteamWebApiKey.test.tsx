@@ -64,6 +64,9 @@ function fakeOperations({ stored = false } = {}) {
     chooseLibrarySort: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
   };
   return { operations, calls };
 }

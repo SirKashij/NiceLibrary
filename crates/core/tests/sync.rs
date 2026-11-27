@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
-    AutomaticSync, Clock, Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, SteamLocator,
+    AutomaticSync, Clock, Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, Status, SteamLocator,
     SteamWebApiKeyCheck, Store, SyncOutcome, Wakeup, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
@@ -328,6 +328,7 @@ fn steam_game(app_id: u32, title: &str, installed: bool, minutes: u32, last_play
         installed,
         playtime_minutes: Some(minutes),
         last_played,
+        status: Status::Unplayed,
     }
 }
 

@@ -8,7 +8,8 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
-    ExecutableChoice, Game, Language, Launch, LibraryFilter, LibrarySort, SteamAccountChoice, SteamAppList, SteamAppListFetch,
+    ExecutableChoice, Game, Language, Launch, LibraryFilter, LibrarySort, Status, SteamAccountChoice, SteamAppList,
+    SteamAppListFetch,
     SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
@@ -93,6 +94,11 @@ fn library_sort(core: tauri::State<'_, Core>) -> Result<LibrarySort, Error> {
 #[tauri::command]
 fn choose_library_sort(core: tauri::State<'_, Core>, sort: LibrarySort) -> Result<(), Error> {
     core.choose_library_sort(sort)
+}
+
+#[tauri::command]
+fn set_status(core: tauri::State<'_, Core>, game_id: String, status: Status) -> Result<Game, Error> {
+    core.set_status(&game_id, status)
 }
 
 /// Async, so a slow start of the browser does not block the window.
@@ -257,6 +263,7 @@ pub fn run() {
             set_close_to_tray,
             close_window,
             show_tray_menu,
+            set_status,
             language,
             choose_language
         ])

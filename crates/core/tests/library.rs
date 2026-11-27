@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use nicelibrary_core::{Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, Source, SteamLocator, Store};
+use nicelibrary_core::{Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, Source, Status, SteamLocator, Store};
 
 /// A computer whose secret store holds nothing and whose network reaches no
 /// Web API; these tests need neither.
@@ -83,6 +83,7 @@ fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
         installed: true,
         playtime_minutes: Some(1_234),
         last_played: Some(1_795_205_700),
+        status: Status::Unplayed,
     };
 
     assert_eq!(
@@ -93,7 +94,8 @@ fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
             "source": "steam",
             "installed": true,
             "playtimeMinutes": 1234,
-            "lastPlayed": 1795205700
+            "lastPlayed": 1795205700,
+            "status": "unplayed"
         })
     );
 }
@@ -107,6 +109,7 @@ fn a_game_without_playtime_and_last_played_reaches_the_interface_with_null() {
         installed: true,
         playtime_minutes: None,
         last_played: None,
+        status: Status::Unplayed,
     };
 
     let json = serde_json::to_value(&game).unwrap();

@@ -7,6 +7,7 @@
 
 mod steam_app_list;
 
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard};
@@ -19,7 +20,7 @@ use crate::local_games::StoredLocalGame;
 use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
 use crate::theme::Theme;
-use crate::{Error, Game};
+use crate::{Error, Game, Status};
 
 /// The schema changes, oldest first. Never edit or reorder a released entry;
 /// append a new one instead.
@@ -65,6 +66,11 @@ const MIGRATIONS: &[&str] = &[
          app_id INTEGER PRIMARY KEY,
          name   TEXT    NOT NULL,
          search TEXT    NOT NULL
+     );",
+    // 6: The Status the person set on a Game, by the Game's id, which is unique across Sources.
+    "CREATE TABLE game_statuses (
+         game_id TEXT PRIMARY KEY,
+         status  TEXT NOT NULL
      );",
 ];
 
@@ -284,6 +290,33 @@ impl Store {
             })?
             .collect::<Result<_, _>>()?;
         Ok(games)
+    }
+
+    /// The Status the person set on each Game, by the Game's id. A Game
+    /// without one is Unplayed. No Sync touches them.
+    pub(crate) fn statuses(&self) -> Result<HashMap<String, Status>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare("SELECT game_id, status FROM game_statuses")?;
+        let rows = statement.query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)))?;
+        let mut statuses = HashMap::new();
+        for row in rows {
+            let (game_id, status) = row?;
+            // A Status this version does not know reads as Unplayed rather than failing the Library.
+            if let Some(status) = Status::from_column(&status) {
+                statuses.insert(game_id, status);
+            }
+        }
+        Ok(statuses)
+    }
+
+    /// Remembers `status` as the Status of the Game `game_id`.
+    pub(crate) fn set_status(&self, game_id: &str, status: Status) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO game_statuses (game_id, status) VALUES (?1, ?2)
+             ON CONFLICT (game_id) DO UPDATE SET status = excluded.status",
+            params![game_id, status.as_column()],
+        )?;
+        Ok(())
     }
 }
 

@@ -15,6 +15,7 @@ const played: Game = {
   installed: true,
   playtimeMinutes: 90,
   lastPlayed: Date.UTC(2026, 2, 5, 12) / 1000,
+  status: 'playing',
 };
 
 /** Fake operations that keep the interface language like the core does: the system's until the user chooses. */
@@ -62,6 +63,9 @@ function fakeOperations({
     deleteCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
     language: language ?? (async () => kept),
     chooseLanguage:
       chooseLanguage ??
