@@ -825,6 +825,7 @@ mod executable_picker {
     use nicelibrary_core::{ExecutablePicker, DataFilePicker, ImagePicker};
     use nicelibrary_lib::ports::{WindowsExecutablePicker, WindowsDataFilePicker, WindowsImagePicker};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, WPARAM};
+    use windows_sys::Win32::UI::Shell::{SHELLFLAGSTATE, SHGetSettings, SSF_SHOWEXTENSIONS};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         BM_CLICK, EnumChildWindows, EnumWindows, GetClassNameW, GetDlgCtrlID, GetDlgItem, GetWindowThreadProcessId,
         IDCANCEL, IDOK, IsWindowVisible, PostMessageW, SendMessageW, WM_COMMAND, WM_GETTEXT, WM_SETTEXT,
@@ -1050,7 +1051,8 @@ mod executable_picker {
     const SAVE_NAME_BOX: i32 = 0x3e9;
 
     /// The visible "Save as" dialog of this process and its file name box,
-    /// waiting for them up to ten seconds.
+    /// waiting up to ten seconds for them and for the dialog to have filled
+    /// in the suggested name, so nothing typed is overwritten afterwards.
     fn the_save_dialog() -> (HWND, HWND) {
         let deadline = Instant::now() + Duration::from_secs(10);
         while Instant::now() < deadline {
@@ -1061,7 +1063,7 @@ mod executable_picker {
                 let mut name_box: HWND = std::ptr::null_mut();
                 // SAFETY: as above.
                 unsafe { EnumChildWindows(dialog, Some(remember_name_box), &mut name_box as *mut HWND as LPARAM) };
-                if !name_box.is_null() {
+                if !name_box.is_null() && !text_of(name_box).is_empty() {
                     return (dialog, name_box);
                 }
             }
@@ -1070,11 +1072,33 @@ mod executable_picker {
         panic!("no save dialog appeared");
     }
 
+    /// The text `window` holds.
+    fn text_of(window: HWND) -> String {
+        let mut text = [0u16; 1024];
+        // SAFETY: the buffer outlives the call and its length is passed along.
+        let length = unsafe { SendMessageW(window, WM_GETTEXT, text.len(), text.as_mut_ptr() as LPARAM) };
+        String::from_utf16_lossy(&text[..length as usize])
+    }
+
+    /// Whether Windows shows the extensions of known file types. When it
+    /// hides them, so does the "Save as" dialog in its file name box.
+    fn extensions_shown() -> bool {
+        let mut state = SHELLFLAGSTATE { _bitfield: 0 };
+        // SAFETY: a plain Win32 call that fills in the state it is given.
+        unsafe { SHGetSettings(&mut state, SSF_SHOWEXTENSIONS) };
+        // fShowExtensions is the second bit of SHELLFLAGSTATE.
+        state._bitfield & 0b10 != 0
+    }
+
     unsafe extern "system" fn remember_name_box(window: HWND, found: LPARAM) -> i32 {
         let mut class = [0u16; 16];
         // SAFETY: plain Win32 calls on a window handle Windows just gave us.
         let (id, length) = unsafe { (GetDlgCtrlID(window), GetClassNameW(window, class.as_mut_ptr(), 16)) };
-        if id == SAVE_NAME_BOX && String::from_utf16_lossy(&class[..length as usize]) == "Edit" {
+        if id == SAVE_NAME_BOX
+            && String::from_utf16_lossy(&class[..length as usize]) == "Edit"
+            // SAFETY: as above.
+            && unsafe { IsWindowVisible(window) } != 0
+        {
             // SAFETY: `found` is the `&mut HWND` handed to EnumChildWindows.
             unsafe { *(found as *mut HWND) = window };
             return 0;
@@ -1082,13 +1106,26 @@ mod executable_picker {
         1
     }
 
-    /// Types `path` into the file name box of the "Save as" dialog and confirms.
+    /// `EM_SETSEL` and `EM_REPLACESEL` of an edit field (winuser.h).
+    const EM_SETSEL: u32 = 0x00b1;
+    const EM_REPLACESEL: u32 = 0x00c2;
+
+    /// Types `path` into the file name box of the "Save as" dialog, in place
+    /// of the suggested name, and confirms. It replaces the selected text as
+    /// typing does, which marks the box as changed: with extensions hidden the
+    /// dialog keeps its own suggested name for a box changed by WM_SETTEXT.
     fn type_and_save(path: &str) {
         let (dialog, name_box) = the_save_dialog();
         let typed: Vec<u16> = path.encode_utf16().chain([0]).collect();
         // SAFETY: SendMessageW returns only once the box has copied the text.
-        unsafe { SendMessageW(name_box, WM_SETTEXT, 0, typed.as_ptr() as LPARAM) };
-        press(dialog, IDOK);
+        unsafe {
+            SendMessageW(name_box, EM_SETSEL, 0, -1);
+            SendMessageW(name_box, EM_REPLACESEL, 1, typed.as_ptr() as LPARAM);
+        }
+        let held = text_of(name_box);
+        // Confirms only what was typed; otherwise closes the dialog before failing.
+        press(dialog, if held == path { IDOK } else { IDCANCEL });
+        assert_eq!(held, path, "the typed name is in the file name box");
     }
 
     #[test]
@@ -1097,12 +1134,12 @@ mod executable_picker {
         let answer = open_save_dialog();
 
         let (dialog, name_box) = the_save_dialog();
-        let mut text = [0u16; 260];
-        // SAFETY: the buffer outlives the call and its length is passed along.
-        let length = unsafe { SendMessageW(name_box, WM_GETTEXT, text.len(), text.as_mut_ptr() as LPARAM) };
+        let offered = text_of(name_box);
         press(dialog, IDCANCEL);
 
-        assert_eq!(String::from_utf16_lossy(&text[..length as usize]), "NiceLibrary-2027-01-15.json");
+        // Windows shows ".json" only where it shows the extensions of known file types.
+        let shown = if extensions_shown() { "NiceLibrary-2027-01-15.json" } else { "NiceLibrary-2027-01-15" };
+        assert_eq!(offered, shown);
         assert_eq!(answer.join().unwrap(), Ok(None));
     }
 
