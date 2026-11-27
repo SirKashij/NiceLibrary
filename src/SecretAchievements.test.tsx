@@ -15,6 +15,7 @@ const PORTAL_2: Game = {
   playtimeMinutes: 1_260,
   lastPlayed: null,
   status: 'unplayed',
+  favorite: false,
 };
 
 function achievement(id: string, name: string, unlockedAt: number | null, details: Partial<Achievement> = {}): Achievement {
@@ -51,7 +52,7 @@ const WITHOUT_SECRETS = listed([achievement('ACH_FINISH', 'Lunacy', LAST_WEEK), 
 /** Fake operations over a Library of Portal 2 alone, whose Achievements are `achievements`. */
 function fakeOperations(achievements: GameAchievements): Operations {
   const games = [PORTAL_2];
-  return {
+  const operations: Operations = {
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
@@ -100,7 +101,36 @@ function fakeOperations(achievements: GameAchievements): Operations {
     },
     openLogFolder: async () => {},
     onSession: () => () => {},
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
+    language: async () => 'system',
+    chooseLanguage: async () => {},
+    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
+    coverImageChosen: async () => false,
+    removeCoverImage: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
+    coverHue: async () => null,
+    install: async () => ({ outcome: 'started' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
+    findSteamTitles: async () => [],
+    proposeCoverMatch: async () => null,
+    coverMatch: async () => null,
+    setCoverMatch: async () => {},
   };
+  return operations;
 }
 
 async function openAchievements(achievements: GameAchievements, lang: 'en' | 'de' = 'en') {
