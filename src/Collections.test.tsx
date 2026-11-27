@@ -54,6 +54,10 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
       calls.deleted.push(id);
       collections = collections.filter((c) => c.id !== id);
     },
+    theme: async () => 'system',
+    chooseTheme: async () => {},
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, calls };
 }

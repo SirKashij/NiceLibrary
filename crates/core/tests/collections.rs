@@ -72,6 +72,15 @@ impl nicelibrary_core::Clock for StoppedClock {
     fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
 }
 
+/// A computer whose user chooses no executable; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
+    }
+}
+
 /// The user profile of one test: where the database lives between starts.
 struct Profile {
     folder: TempDir,
@@ -98,6 +107,7 @@ impl Profile {
                 secrets: Box::new(NoSecretsNoWebApi),
                 web_api: Box::new(NoSecretsNoWebApi),
                 clock: Box::new(StoppedClock),
+                executable_picker: Box::new(NoExecutableChosen),
             },
             store,
             CoverCache::new(self.folder.path().join("covers")),
