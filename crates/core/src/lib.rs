@@ -23,6 +23,7 @@ mod sync;
 mod theme;
 mod window;
 
+use std::collections::BTreeSet;
 use std::fmt;
 use std::ops::ControlFlow;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -30,6 +31,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use serde::{Deserialize, Serialize, Serializer};
 
 use log::Level;
+use sessions::Tracked;
 
 pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
@@ -438,8 +440,9 @@ impl Core {
     /// Syncs on its own while the app runs: shortly after the start, then
     /// every 30 minutes, each time as long after the previous Sync ended,
     /// waiting on the clock. A round without a stored Steam Web API key
-    /// starts no Sync. Storing a key that Steam accepts starts the next
-    /// round right away, or once the Sync that runs has ended. `report`
+    /// starts no Sync. Storing a key that Steam accepts, and the end of any
+    /// Session (see [`Self::track_sessions`]), start the next round right
+    /// away, or once the Sync that runs has ended. `report`
     /// hears what happens in each round as it happens; the Syncs go on until
     /// it answers `Break`, otherwise for good.
     pub fn sync_automatically(&self, mut report: impl FnMut(AutomaticSync) -> ControlFlow<()>) {
@@ -573,11 +576,15 @@ impl Core {
 
     /// Records Sessions while the app runs: looks at the running processes
     /// every few seconds, waiting on the clock, and finds the Local Games
-    /// whose executable runs, however they were started. A Session begins at
-    /// the first look that finds its Game and is stored at once; each later
-    /// look that finds it again moves its end there, so it is kept up to the
-    /// last look even if the app is closed or crashes. A Game still running
-    /// when tracking starts again begins a new Session. `report` hears each
+    /// whose executable runs and the Installed Steam Games with an
+    /// executable running from their install folder, however they were
+    /// started. A Session begins at the first look that finds its Game and
+    /// is stored at once; each later look that finds it again moves its end
+    /// there, so it is kept up to the last look even if the app is closed or
+    /// crashes. A Game still running when tracking starts again begins a new
+    /// Session. Each Session that ends starts a Sync (see
+    /// [`Self::sync_automatically`]). A Steam Game's Sessions never change
+    /// its Playtime, which stays Steam's figure. `report` hears each
     /// Session that begins or ends and each look that failed; tracking goes
     /// on until it answers `Break`, otherwise for good.
     pub fn track_sessions(&self, mut report: impl FnMut(Tracking) -> ControlFlow<()>) {
@@ -625,22 +632,36 @@ impl Core {
             Ok(games) => games,
             Err(reason) => return report(Tracking::Failed { reason }),
         };
-        let running = sessions::running_games(&games, &running);
-        let ended: Vec<i64> = open.keys().copied().filter(|game| !running.contains(game)).collect();
+        let steam_games = match self.ports.steam_locator.steam_folder() {
+            Some(folder) => sessions::running_steam_games(&folder, &running),
+            None => BTreeSet::new(),
+        };
+        let running: BTreeSet<Tracked> = sessions::running_games(&games, &running)
+            .into_iter()
+            .map(Tracked::Local)
+            .chain(steam_games.into_iter().map(Tracked::Steam))
+            .collect();
+        let ended: Vec<Tracked> = open.keys().copied().filter(|game| !running.contains(game)).collect();
         for game in ended {
             open.remove(&game);
-            report(Tracking::Ended { game_id: sessions::game_id(game) })?;
+            // So Playtime and Achievements are current after playing (see `sync_automatically`).
+            self.sync_soon.ring();
+            report(Tracking::Ended { game_id: game.game_id() })?;
         }
         for game in running {
-            let recorded = match open.get(&game) {
-                Some(&session) => self.store.extend_session(session, at).map(|()| None),
-                None => self.store.begin_session(game, at).map(Some),
+            let recorded = match (open.get(&game), game) {
+                (Some(&session), _) => self.store.extend_session(game, session, at).map(|()| None),
+                (None, Tracked::Local(local_game)) => self.store.begin_session(local_game, at).map(Some),
+                (None, Tracked::Steam(app_id)) => self
+                    .current_steam_account()
+                    .and_then(|account| self.store.begin_steam_session(app_id, account.as_deref(), at))
+                    .map(Some),
             };
             match recorded {
                 Ok(None) => {}
                 Ok(Some(session)) => {
                     open.insert(game, session);
-                    report(Tracking::Started { game_id: sessions::game_id(game) })?;
+                    report(Tracking::Started { game_id: game.game_id() })?;
                 }
                 Err(reason) => report(Tracking::Failed { reason })?,
             }

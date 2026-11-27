@@ -14,6 +14,9 @@ use crate::keyvalues;
 pub(crate) struct InstalledApp {
     pub app_id: u32,
     pub title: String,
+    /// Its install folder, `steamapps/common/<installdir>` in its library
+    /// folder; `None` when its manifest names none.
+    pub install_folder: Option<PathBuf>,
 }
 
 /// Port: where Steam is installed on this computer.
@@ -161,7 +164,7 @@ pub(crate) fn installed_apps(steam_folder: &Path) -> Option<Vec<InstalledApp>> {
             if !(name.starts_with("appmanifest_") && name.ends_with(".acf")) {
                 continue;
             }
-            if let Some(app) = read_manifest(&entry.path()).filter(|app| !is_steam_tool(app)) {
+            if let Some(app) = read_manifest(&entry.path(), &folder).filter(|app| !is_steam_tool(app)) {
                 apps.entry(app.app_id).or_insert(app);
             }
         }
@@ -200,9 +203,9 @@ fn library_folders(steam_folder: &Path) -> Option<Vec<PathBuf>> {
 /// update waits or downloads.
 const FULLY_INSTALLED: u32 = 4;
 
-/// The app in one `appmanifest_<id>.acf`, if it is fully installed. A
-/// manifest that cannot be read is skipped.
-fn read_manifest(path: &Path) -> Option<InstalledApp> {
+/// The app in one `appmanifest_<id>.acf` of the library folder `library`,
+/// if it is fully installed. A manifest that cannot be read is skipped.
+fn read_manifest(path: &Path, library: &Path) -> Option<InstalledApp> {
     let bytes = fs::read(path).ok()?;
     let doc = keyvalues::parse(&String::from_utf8_lossy(&bytes)).ok()?;
     let state = doc.block("AppState")?;
@@ -217,7 +220,12 @@ fn read_manifest(path: &Path) -> Option<InstalledApp> {
         .map(str::trim)
         .find(|title| !title.is_empty())?
         .to_owned();
-    Some(InstalledApp { app_id, title })
+    let install_folder = state
+        .string("installdir")
+        .map(str::trim)
+        .filter(|dir| !dir.is_empty())
+        .map(|dir| library.join("steamapps").join("common").join(dir));
+    Some(InstalledApp { app_id, title, install_folder })
 }
 
 /// Steam's own redistributables and runtimes, which Steam installs next to

@@ -16,7 +16,7 @@ use rusqlite::{Connection, params};
 
 use crate::collections::{self, CollectionNaming};
 use crate::local_games::StoredLocalGame;
-use crate::sessions::Played;
+use crate::sessions::{Played, Tracked};
 use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
 use crate::theme::Theme;
@@ -80,6 +80,15 @@ const MIGRATIONS: &[&str] = &[
          ended_at   INTEGER NOT NULL
      );
      CREATE INDEX local_game_sessions_by_game ON local_game_sessions (local_game);",
+    // 8: Sessions of Steam Games, by app id, with the Steam Account the app worked with then, if any.
+    "CREATE TABLE steam_game_sessions (
+         id            INTEGER PRIMARY KEY AUTOINCREMENT,
+         app_id        INTEGER NOT NULL,
+         steam_account TEXT,
+         started_at    INTEGER NOT NULL,
+         ended_at      INTEGER NOT NULL
+     );
+     CREATE INDEX steam_game_sessions_by_game ON steam_game_sessions (app_id);",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
@@ -401,12 +410,28 @@ impl Store {
         Ok(connection.last_insert_rowid())
     }
 
-    /// Moves the end of the Session `session` to `at`, never before where it is.
-    pub(crate) fn extend_session(&self, session: i64, at: u64) -> Result<(), Error> {
-        self.connection().execute(
-            "UPDATE local_game_sessions SET ended_at = MAX(ended_at, ?2) WHERE id = ?1",
-            params![session, seconds_column(at)?],
+    /// Stores a Session of the Steam Game `app_id`, played while the app
+    /// worked with `steam_account`, that began `at`, and ends there until
+    /// [`Self::extend_session`] moves its end, and answers its id. It never
+    /// changes the Game's Playtime, which stays Steam's figure.
+    pub(crate) fn begin_steam_session(&self, app_id: u32, steam_account: Option<&str>, at: u64) -> Result<i64, Error> {
+        let at = seconds_column(at)?;
+        let connection = self.connection();
+        connection.execute(
+            "INSERT INTO steam_game_sessions (app_id, steam_account, started_at, ended_at) VALUES (?1, ?2, ?3, ?3)",
+            params![app_id, steam_account, at],
         )?;
+        Ok(connection.last_insert_rowid())
+    }
+
+    /// Moves the end of the Session `session` of `game` to `at`, never
+    /// before where it is.
+    pub(crate) fn extend_session(&self, game: Tracked, session: i64, at: u64) -> Result<(), Error> {
+        let sql = match game {
+            Tracked::Local(_) => "UPDATE local_game_sessions SET ended_at = MAX(ended_at, ?2) WHERE id = ?1",
+            Tracked::Steam(_) => "UPDATE steam_game_sessions SET ended_at = MAX(ended_at, ?2) WHERE id = ?1",
+        };
+        self.connection().execute(sql, params![session, seconds_column(at)?])?;
         Ok(())
     }
 
