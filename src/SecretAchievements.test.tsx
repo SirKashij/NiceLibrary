@@ -27,6 +27,7 @@ function achievement(id: string, name: string, unlockedAt: number | null, detail
     unlockedAt,
     icon: `${id.toLowerCase()}${unlockedAt === null ? '-grey' : ''}`,
     secret: false,
+    rarity: null,
     ...details,
   };
 }
