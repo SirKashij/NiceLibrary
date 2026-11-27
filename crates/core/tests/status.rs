@@ -271,6 +271,7 @@ fn the_status_filter_combines_with_the_other_filters_and_the_search() {
         source,
         installed_only,
         status: Some(Status::Playing),
+        ..Default::default()
     };
 
     assert_eq!(titles(&core, playing("", None, false)), ["Hades", "Half-Life 2"]);

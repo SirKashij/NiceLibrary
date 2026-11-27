@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LibraryFilter, LibrarySort, Operations } from './operations';
 
 function steamGame(appId: number, title: string, playtimeMinutes: number | null, lastPlayed: number | null): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed: true, playtimeMinutes, lastPlayed };
+  return { id: `steam:${appId}`, title, source: 'steam', installed: true, playtimeMinutes, lastPlayed, status: 'unplayed' };
 }
 
 // Ordered by title, as `library` answers.
@@ -55,6 +55,9 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
     collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),
     renameCollection: async () => ({ outcome: 'emptyName' }),
@@ -89,7 +92,7 @@ describe('Sorting the Library', () => {
 
     await waitFor(() => expect(shownTitles()).toEqual(['Hades', 'Portal 2', 'Half-Life 2']));
     expect(screen.getByRole('combobox', { name: 'Sort by' })).toHaveValue('recentlyPlayed');
-    expect(asked.at(-1)).toEqual({ search: '', source: null, installedOnly: false, sort: 'recentlyPlayed' });
+    expect(asked.at(-1)).toEqual({ search: '', source: null, installedOnly: false, status: null, sort: 'recentlyPlayed' });
   });
 
   it('offers recently played, name and Playtime', async () => {
@@ -133,7 +136,7 @@ describe('Sorting the Library', () => {
 
     await user.type(screen.getByRole('searchbox', { name: 'Search the library' }), 'ha');
     await waitFor(() => expect(shownTitles()).toEqual(['Hades', 'Half-Life 2']));
-    expect(asked.at(-1)).toEqual({ search: 'ha', source: null, installedOnly: false, sort: 'playtime' });
+    expect(asked.at(-1)).toEqual({ search: 'ha', source: null, installedOnly: false, status: null, sort: 'playtime' });
 
     await user.click(screen.getByRole('checkbox', { name: 'Installed only' }));
     await user.click(screen.getByRole('checkbox', { name: 'Installed only' }));

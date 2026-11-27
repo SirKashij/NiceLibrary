@@ -50,6 +50,20 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'emptyName' }),
+    renameCollection: async () => ({ outcome: 'emptyName' }),
+    deleteCollection: async () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     setStatus:
       options.setStatus ??
       (async (gameId, status) => {
@@ -171,7 +185,7 @@ describe('Filtering the Library by Status', () => {
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Status' }), 'Playing');
 
-    expect(calls.filters.at(-1)).toEqual({ search: '', source: null, installedOnly: false, status: 'playing' });
+    expect(calls.filters.at(-1)).toEqual({ search: '', source: null, installedOnly: false, status: 'playing', sort: 'name' });
     expect(await shownTitles(1)).toEqual(['Hades']);
   });
 
@@ -186,7 +200,7 @@ describe('Filtering the Library by Status', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Installed only' }));
     await user.type(screen.getByRole('searchbox', { name: 'Search the library' }), 'portal');
 
-    expect(calls.filters.at(-1)).toEqual({ search: 'portal', source: null, installedOnly: true, status: 'unplayed' });
+    expect(calls.filters.at(-1)).toEqual({ search: 'portal', source: null, installedOnly: true, status: 'unplayed', sort: 'name' });
     expect(await shownTitles(1)).toEqual(['Portal 2']);
   });
 
