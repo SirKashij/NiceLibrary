@@ -152,6 +152,7 @@ fn the_settings_are_imported_and_the_app_starts_with_windows_as_the_file_says() 
     before.core.choose_library_sort(LibrarySort::Playtime).unwrap();
     before.core.set_close_to_tray(false).unwrap();
     before.core.set_start_with_windows(true).unwrap();
+    before.core.set_check_for_updates(false).unwrap();
     let file = before.export_to_disk();
     let after = App::start();
 
@@ -159,6 +160,17 @@ fn the_settings_are_imported_and_the_app_starts_with_windows_as_the_file_says() 
 
     assert_eq!(after.export()["settings"], before.export()["settings"]);
     assert_eq!(after.core.starts_with_windows(), Ok(true));
+    assert_eq!(after.core.checks_for_updates(), Ok(false));
+}
+
+#[test]
+fn a_file_written_before_the_update_setting_existed_turns_the_automatic_update_check_on() {
+    let app = App::start();
+    app.core.set_check_for_updates(false).unwrap();
+    let file = app.write_file(json!({}));
+
+    assert!(matches!(app.import(&file), DataImport::Imported { .. }));
+    assert_eq!(app.core.checks_for_updates(), Ok(true));
 }
 
 #[test]

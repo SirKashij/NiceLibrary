@@ -12,7 +12,7 @@ use nicelibrary_core::{
     GameAchievements, Install, Language, Launch, LaunchOptions, LibraryFilter, LibraryLayout, LimitedMode, LibrarySort,
     LocalGame, Log, ManualProgress, Session, Statistics, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
     SteamInstallation, SteamTitle, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, UnreadableCore,
-    Database, started_with_windows,
+    Database, AutomaticUpdateCheck, UpdateChannel, UpdateCheck, UpdateInstall, started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -442,6 +442,56 @@ fn sessions(core: tauri::State<'_, Core>, game_id: String) -> Result<Vec<Session
     core.sessions(&game_id)
 }
 
+#[tauri::command]
+fn checks_for_updates(core: tauri::State<'_, Core>) -> Result<bool, Error> {
+    core.checks_for_updates()
+}
+
+#[tauri::command]
+fn set_check_for_updates(core: tauri::State<'_, Core>, on: bool) -> Result<(), Error> {
+    core.set_check_for_updates(on)
+}
+
+/// Async, so asking GitHub runs off the main thread.
+#[tauri::command]
+async fn check_for_update(core: tauri::State<'_, Core>) -> Result<UpdateCheck, Error> {
+    core.check_for_update()
+}
+
+/// Async, so downloading the Update Package runs off the main thread. Once
+/// the package runs, the app quits so the installer can replace it; the
+/// installer starts it again.
+#[tauri::command]
+async fn install_update(app: AppHandle, core: tauri::State<'_, Core>, version: String) -> Result<UpdateInstall, Error> {
+    let install = core.install_update(&version)?;
+    if install == UpdateInstall::Started {
+        app.exit(0);
+    }
+    Ok(install)
+}
+
+/// The updater key's public half, as `tauri signer generate` wrote it. Its
+/// private half exists only as a secret of the `release` environment on
+/// GitHub, with which the release workflow signs each Update Package
+/// (.github/workflows/release.yml).
+const UPDATER_PUBLIC_KEY: &str = include_str!("../updater-key.pub");
+
+/// Where the app looks for Updates: the latest release of the project on
+/// GitHub Releases, which the release workflow publishes with its manifest.
+fn update_channel() -> UpdateChannel {
+    UpdateChannel {
+        manifest_url: "https://github.com/SirKashij/NiceLibrary/releases/latest/download/latest.json".into(),
+        package_url_prefix: "https://github.com/SirKashij/NiceLibrary/releases/download/".into(),
+        platform: "windows-x86_64".into(),
+        public_key: UPDATER_PUBLIC_KEY.trim().into(),
+        download_folder: std::env::temp_dir().join("NiceLibrary-update"),
+        // The options of Tauri's NSIS installer: without its pages (/P), over
+        // the installed app keeping its data and settings (/UPDATE), and
+        // starting the app again once done (/R).
+        installer_arguments: vec!["/P".into(), "/R".into(), "/UPDATE".into()],
+    }
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 /// Achievement icons come from `<game id>/achievements/<icon>` under the same scheme
@@ -580,7 +630,11 @@ pub fn run() {
             set_playtime_adjustment,
             export_data,
             import_data,
-            sessions
+            sessions,
+            checks_for_updates,
+            set_check_for_updates,
+            check_for_update,
+            install_update
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
@@ -610,8 +664,9 @@ pub fn run() {
             };
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS))
                 .with_chosen_images_in(app.path().app_data_dir()?.join(CHOSEN_COVERS));
-            app.manage(Core::new(ports::real_ports(), store, covers).with_log(log));
+            app.manage(Core::new(ports::real_ports(), store, covers).with_log(log).with_update_channel(update_channel()));
             start_automatic_syncs(app)?;
+            start_automatic_update_checks(app)?;
             tray::create(app.handle())?;
             start_automatic_steam_app_list_fetches(app)?;
             start_session_tracking(app)?;
@@ -655,6 +710,27 @@ fn start_automatic_steam_app_list_fetches(app: &App) -> std::io::Result<()> {
             if event != AutomaticSteamAppListFetch::Skipped {
                 // No window to tell is no reason to stop fetching.
                 let _ = app.emit(AUTOMATIC_STEAM_APP_LIST_FETCH_EVENT, &event);
+            }
+            ControlFlow::Continue(())
+        });
+    })?;
+    Ok(())
+}
+
+/// The event the interface hears of an Update the automatic Update Check
+/// found through (`onUpdateFound` in src/operations.ts); it then asks the
+/// user whether to install it. Every other round tells the interface nothing.
+const UPDATE_FOUND_EVENT: &str = "update-found";
+
+/// Runs the core's automatic Update Checks on a thread of their own for as
+/// long as the app runs.
+fn start_automatic_update_checks(app: &App) -> std::io::Result<()> {
+    let app = app.handle().clone();
+    std::thread::Builder::new().name("automatic-update-check".into()).spawn(move || {
+        app.state::<Core>().check_for_updates_automatically(|event| {
+            if let AutomaticUpdateCheck::Found { update } = event {
+                // No window to tell is no reason to stop checking.
+                let _ = app.emit(UPDATE_FOUND_EVENT, &update);
             }
             ControlFlow::Continue(())
         });

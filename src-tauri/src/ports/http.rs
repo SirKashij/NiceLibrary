@@ -1,4 +1,6 @@
-//! HTTP(S): downloads Covers and Achievement icons from Steam's image hosts and asks the Steam Web API.
+//! HTTP(S): downloads Covers and Achievement icons from Steam's image hosts,
+//! the release manifest and Update Packages from GitHub Releases, and asks
+//! the Steam Web API.
 
 use std::time::Duration;
 
@@ -9,26 +11,44 @@ use ureq::tls::{RootCerts, TlsConfig, TlsProvider};
 /// The largest file accepted; a Cover is far smaller.
 const MAX_SIZE: u64 = 16 * 1024 * 1024;
 
+/// The longest a request may take; a Cover arrives far sooner.
+const TIMEOUT: Duration = Duration::from_secs(30);
+
+/// The largest Update Package accepted; the installer is a few megabytes.
+const MAX_UPDATE_PACKAGE_SIZE: u64 = 256 * 1024 * 1024;
+
+/// The longest downloading an Update Package may take, on a slow connection too.
+const UPDATE_PACKAGE_TIMEOUT: Duration = Duration::from_secs(15 * 60);
+
 /// Fetches files with the operating system's TLS and its trusted root
 /// certificates (schannel on Windows).
 pub struct HttpDownloader {
     agent: Agent,
+    max_size: u64,
 }
 
 impl HttpDownloader {
+    /// For Covers and Achievement icons.
     pub fn new() -> Self {
-        Self { agent: agent() }
+        Self { agent: agent(TIMEOUT), max_size: MAX_SIZE }
+    }
+
+    /// For the release manifest and Update Packages from GitHub Releases,
+    /// which are far larger than a Cover.
+    pub fn for_update_packages() -> Self {
+        Self { agent: agent(UPDATE_PACKAGE_TIMEOUT), max_size: MAX_UPDATE_PACKAGE_SIZE }
     }
 }
 
 /// An HTTP client with the operating system's TLS and its trusted root
-/// certificates, which hands every status to the caller.
-fn agent() -> Agent {
+/// certificates, which hands every status to the caller and gives up on a
+/// request after `timeout`.
+fn agent(timeout: Duration) -> Agent {
     let tls = TlsConfig::builder().provider(TlsProvider::NativeTls).root_certs(RootCerts::PlatformVerifier).build();
     Agent::config_builder()
         .tls_config(tls)
         .timeout_connect(Some(Duration::from_secs(10)))
-        .timeout_global(Some(Duration::from_secs(30)))
+        .timeout_global(Some(timeout))
         // The status is answered by the caller, not turned into an error.
         .http_status_as_error(false)
         .build()
@@ -48,7 +68,7 @@ impl Downloader for HttpDownloader {
             200 => response
                 .body_mut()
                 .with_config()
-                .limit(MAX_SIZE)
+                .limit(self.max_size)
                 .read_to_vec()
                 .map(Some)
                 .map_err(|e| e.to_string()),
@@ -67,7 +87,7 @@ pub struct HttpWebApi {
 
 impl HttpWebApi {
     pub fn new() -> Self {
-        Self { agent: agent() }
+        Self { agent: agent(TIMEOUT) }
     }
 }
 

@@ -49,8 +49,7 @@ describe('The About dialog', () => {
     const privacy = within(dialog).getByRole('region', { name: 'Privacy' });
     expect(privacy).toHaveTextContent('Steam Web API');
     expect(privacy).toHaveTextContent('Steam’s image servers');
-    // The app has no update check yet, so it names no connection to GitHub.
-    expect(privacy).not.toHaveTextContent('GitHub');
+    expect(privacy).toHaveTextContent('GitHub, for updates');
     expect(privacy).toHaveTextContent('only on this computer');
     expect(privacy).toHaveTextContent('Windows Credential Manager');
     expect(privacy).toHaveTextContent('Nothing else leaves your computer.');

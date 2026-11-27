@@ -1,6 +1,8 @@
 # Builds the Windows installer from source when a version tag is pushed, and
 # publishes it to GitHub Releases with its SHA-256 checksum once the
-# maintainer approves (ADR-0006). How to cut a release: CONTRIBUTING.md.
+# maintainer approves (ADR-0006), together with its updater signature and the
+# update manifest the app checks (`latest.json`). How to cut a release:
+# CONTRIBUTING.md.
 #
 # The shape follows the conditions of the SignPath Foundation, so signing can
 # be added later without restructuring:
@@ -10,7 +12,8 @@
 # Signing becomes one more job between `build` and `publish`: it submits the
 # artifact `build` uploaded (signpath/github-action-submit-signing-request,
 # with `github-artifact-id: needs.build.outputs.artifact-id`) and uploads the
-# signed installer, which `publish` then downloads instead. To sign the app's
+# signed installer, which `publish` then downloads instead and signs with the
+# updater key, so that signature covers the final bytes. To sign the app's
 # own executable inside the installer as well, the build step splits into
 # `tauri build --no-bundle`, a signing request for nicelibrary.exe and
 # `tauri bundle`; the jobs stay as they are.
@@ -121,6 +124,63 @@ jobs:
         run: |
           sha256sum -- *.exe > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+      # The app installs an update only when the updater key signed it
+      # (crates/core/src/updates.rs). The key's private half and its password
+      # exist only as secrets of the `release` environment, so only an
+      # approved run of this job reaches them. With SignPath, this signs the
+      # Authenticode-signed installer: the very bytes the app downloads.
+      - uses: actions/checkout@v7
+        with:
+          path: source
+          persist-credentials: false
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      # For the Tauri CLI at the version the lockfile pins; no package's
+      # install script runs.
+      - name: Install npm dependencies
+        working-directory: source
+        run: npm ci --ignore-scripts
+
+      - name: Sign the update package
+        working-directory: source
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          if [ -z "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            echo "::error::The environment 'release' has no secret TAURI_SIGNING_PRIVATE_KEY. See CONTRIBUTING.md."
+            exit 1
+          fi
+          shopt -s nullglob
+          installers=(../release/*-setup.exe)
+          if [ "${#installers[@]}" -ne 1 ]; then
+            echo "::error::Expected one installer, found ${#installers[@]}."
+            exit 1
+          fi
+          # The version goes into the signature, so the app refuses an older
+          # package passed off as this version.
+          npx tauri signer sign --app-version "${GITHUB_REF_NAME#v}" "${installers[0]}"
+
+      # The manifest the app reads from the latest release
+      # (releases/latest/download/latest.json), in the shape of Tauri's updater.
+      # GitHub's "latest" is never a pre-release, so the app is offered only
+      # stable releases.
+      - name: Write the update manifest
+        working-directory: release
+        run: |
+          installer=$(ls -- *-setup.exe)
+          jq -n \
+            --arg version "${GITHUB_REF_NAME#v}" \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/releases/download/$GITHUB_REF_NAME/$installer" \
+            --rawfile signature "$installer.sig" \
+            '{version: $version, notes: "", pub_date: $date, platforms: {"windows-x86_64": {url: $url, signature: ($signature | rtrimstr("\n"))}}}' \
+            > latest.json
+          cat latest.json
 
       - name: Write release notes
         run: |

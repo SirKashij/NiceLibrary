@@ -220,6 +220,60 @@ mod downloader {
 
         assert!(bytes.starts_with(&[0xFF, 0xD8, 0xFF]), "not a JPEG");
     }
+
+    // The downloader for Update Packages honours the same contract, for
+    // files far larger than a Cover, and follows the redirects GitHub
+    // Releases answers with.
+
+    #[test]
+    fn an_update_package_larger_than_any_cover_is_downloaded() {
+        let package: Vec<u8> = (0..40 * 1024 * 1024).map(|i: u32| (i % 251) as u8).collect();
+        let url = serve_once("200 OK", &package);
+
+        assert!(HttpDownloader::new().download(&url).is_err(), "a Cover this large is refused");
+        assert_eq!(HttpDownloader::for_update_packages().download(&serve_once("200 OK", &package)), Ok(Some(package)));
+    }
+
+    #[test]
+    fn an_update_package_behind_a_redirect_is_downloaded() {
+        let package = b"MZ an update package".to_vec();
+        let target = serve_once("200 OK", &package);
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            let mut line = String::new();
+            while reader.read_line(&mut line).unwrap() > 0 && line != "\r\n" {
+                line.clear();
+            }
+            let head = format!("HTTP/1.1 302 Found\r\nLocation: {target}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+            stream.write_all(head.as_bytes()).unwrap();
+        });
+
+        let downloaded = HttpDownloader::for_update_packages().download(&format!("http://{address}/latest.json"));
+
+        assert_eq!(downloaded, Ok(Some(package)));
+    }
+
+    #[test]
+    fn an_update_package_the_server_does_not_have_is_none() {
+        let url = serve_once("404 Not Found", b"Not Found");
+
+        assert_eq!(HttpDownloader::for_update_packages().download(&url), Ok(None));
+    }
+
+    #[test]
+    fn reaches_the_projects_releases_on_github_over_https() {
+        // Before the first public release GitHub answers 404 (`None`); after it, the manifest.
+        let url = "https://github.com/SirKashij/NiceLibrary/releases/latest/download/latest.json";
+
+        let answer = HttpDownloader::for_update_packages().download(url).expect("GitHub reachable");
+
+        if let Some(manifest) = answer {
+            assert!(manifest.starts_with(b"{"), "not a JSON manifest");
+        }
+    }
 }
 
 /// `Opener` (crates/core): `Ok` once the program registered for the URL's

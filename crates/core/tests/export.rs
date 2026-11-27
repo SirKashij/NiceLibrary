@@ -223,6 +223,7 @@ fn the_settings_are_exported() {
     app.core.choose_library_sort(LibrarySort::Playtime).unwrap();
     app.core.set_close_to_tray(false).unwrap();
     app.core.set_start_with_windows(true).unwrap();
+    app.core.set_check_for_updates(false).unwrap();
 
     let export = app.export();
 
@@ -236,6 +237,7 @@ fn the_settings_are_exported() {
             "librarySort": "playtime",
             "closeToTray": false,
             "startWithWindows": true,
+            "checkForUpdates": false,
         })
     );
 }
@@ -256,6 +258,7 @@ fn a_fresh_app_exports_its_default_settings_and_nothing_else() {
             "librarySort": "recentlyPlayed",
             "closeToTray": true,
             "startWithWindows": false,
+            "checkForUpdates": true,
         })
     );
     for list in ["localGames", "sessions", "statuses", "favorites", "hiddenGames", "collections"] {

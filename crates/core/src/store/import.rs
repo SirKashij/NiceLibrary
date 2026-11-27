@@ -6,7 +6,7 @@ use rusqlite::params;
 
 use super::{CHOSEN_STEAM_ACCOUNT, Error, LANGUAGE, LIBRARY_LAYOUT, LIBRARY_SORT, Store, THEME, seconds_column};
 use crate::export::ExportFile;
-use crate::{playtime_adjustment, window};
+use crate::{playtime_adjustment, updates, window};
 
 impl Store {
     /// Replaces everything that is the person's own with what `file` holds,
@@ -125,6 +125,7 @@ impl Store {
         set(LIBRARY_LAYOUT, settings.library_layout.as_setting())?;
         set(LIBRARY_SORT, settings.library_sort.stored_name())?;
         set(window::CLOSE_TO_TRAY, if settings.close_to_tray { "true" } else { "false" })?;
+        set(updates::CHECK_FOR_UPDATES, if settings.check_for_updates { "true" } else { "false" })?;
 
         before_commit(&numbers)?;
         transaction.commit()?;

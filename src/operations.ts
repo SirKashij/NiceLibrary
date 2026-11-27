@@ -623,7 +623,46 @@ export interface Operations {
    * file is refused with nothing changed. Rejects when that failed.
    */
   importData(): Promise<DataImport>;
+  /** Whether the app checks GitHub Releases for Updates on its own, once a day. On until the user turns it off. */
+  checksForUpdates(): Promise<boolean>;
+  /** Switches the automatic Update Check on or off, also after a restart. Off, the app asks GitHub nothing on its own. */
+  setCheckForUpdates(on: boolean): Promise<void>;
+  /**
+   * Asks GitHub Releases whether a newer version is out, whatever the setting
+   * says. Installs nothing. Rejects when GitHub could not be asked.
+   */
+  checkForUpdate(): Promise<UpdateCheck>;
+  /**
+   * Installs the Update of `version`, which a check offered and the user
+   * agreed to: its Update Package is downloaded and started only when its
+   * signature proves it comes from the project. After `started` the app
+   * quits and the installer starts it again. Rejects when the package could
+   * not be downloaded or started.
+   */
+  installUpdate(version: string): Promise<UpdateInstall>;
+  /**
+   * Hears an Update the automatic Update Check found, so the interface can
+   * ask the user whether to install it. Answers the function that stops listening.
+   */
+  onUpdateFound(listener: (update: Update) => void): () => void;
 }
+
+/** A newer version of the app. Mirrors `Update` in crates/core. */
+export interface Update {
+  /** Such as `0.2.0`. */
+  version: string;
+  /** What is new, as the release says; empty when it says nothing. */
+  notes: string;
+}
+
+/** What an Update Check found. Mirrors `UpdateCheck` in crates/core. */
+export type UpdateCheck = { outcome: 'upToDate' } | { outcome: 'available'; update: Update };
+
+/**
+ * How installing an Update went. Every outcome but `started` installed nothing: its signature was
+ * refused, or no check offered that version. Mirrors `UpdateInstall` in crates/core.
+ */
+export type UpdateInstall = { outcome: 'started' } | { outcome: 'invalidSignature' } | { outcome: 'notOffered' };
 
 /** One title of the Steam App List. Mirrors `SteamTitle` in crates/core. */
 export interface SteamTitle {
@@ -795,6 +834,17 @@ export const tauriOperations: Operations = {
   coverMatch: (gameId) => invoke<SteamTitle | null>('cover_match', { gameId }),
   setCoverMatch: (gameId, appId) => invoke<void>('set_cover_match', { gameId, appId }),
   importData: () => invoke<DataImport>('import_data'),
+  checksForUpdates: () => invoke<boolean>('checks_for_updates'),
+  setCheckForUpdates: (on) => invoke<void>('set_check_for_updates', { on }),
+  checkForUpdate: () => invoke<UpdateCheck>('check_for_update'),
+  installUpdate: (version) => invoke<UpdateInstall>('install_update', { version }),
+  onUpdateFound: (listener) => {
+    // UPDATE_FOUND_EVENT in src-tauri/src/lib.rs.
+    const listening = listen<Update>('update-found', (event) => listener(event.payload));
+    return () => {
+      void listening.then((stop) => stop());
+    };
+  },
 };
 
 /** Mirrors `Statistics` in crates/core: the totals over the Games in the Library. */

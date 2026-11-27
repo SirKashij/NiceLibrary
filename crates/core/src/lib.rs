@@ -39,6 +39,7 @@ mod store;
 mod sync;
 mod theme;
 mod unreadable_database;
+mod updates;
 mod window;
 
 use std::collections::BTreeSet;
@@ -80,6 +81,7 @@ pub use store::Store;
 pub use sync::{AutomaticSync, SyncOutcome};
 pub use theme::Theme;
 pub use unreadable_database::{Database, UnreadableCore, UnreadableDatabase, UnreadableReason};
+pub use updates::{AutomaticUpdateCheck, Update, UpdateChannel, UpdateCheck, UpdateInstall};
 pub use window::WindowClose;
 
 /// The origin a Game is read from.
@@ -184,6 +186,8 @@ pub struct Ports {
     pub icon_extractor: Box<dyn IconExtractor>,
     pub image_picker: Box<dyn ImagePicker>,
     pub data_file_picker: Box<dyn DataFilePicker>,
+    /// Fetches the release manifest and Update Packages from GitHub Releases.
+    pub update_downloader: Box<dyn Downloader>,
 }
 
 /// The application core. Each public method is one operation.
@@ -206,6 +210,10 @@ pub struct Core {
     /// The stored Sessions whose process the tracking found at its last
     /// look, by their id; empty while the tracking does not run.
     running_sessions: Mutex<std::collections::BTreeSet<(Tracked, i64)>>,
+    /// Where Updates come from; without one, the app looks for none.
+    update_channel: Option<UpdateChannel>,
+    /// The Update the last Update Check offered, the only one the user can agree to install.
+    offered_update: Mutex<Option<updates::Offered>>,
 }
 
 impl Core {
@@ -221,7 +229,16 @@ impl Core {
             steam_title_index: Mutex::new(None),
             log: Log::none(),
             running_sessions: Mutex::default(),
+            update_channel: None,
+            offered_update: Mutex::new(None),
         }
+    }
+
+    /// This core, looking for Updates in `channel`; without it, the core
+    /// looks for none.
+    pub fn with_update_channel(mut self, channel: UpdateChannel) -> Self {
+        self.update_channel = Some(channel);
+        self
     }
 
     /// This core, writing errors and notable events to `log`; without it,
@@ -1572,6 +1589,109 @@ impl Core {
             .stored_library()
             .map(|games| u32::try_from(games.iter().filter(|game| game.favorite).count()).unwrap_or(u32::MAX));
         self.logged("favorite_count", count)
+    }
+
+    /// Asks GitHub Releases whether a version newer than the one that runs
+    /// is out, whatever the setting says: the user asked for it. Installs
+    /// nothing; an Update offered here is installed only through
+    /// [`Self::install_update`], once the user agreed. No release yet is
+    /// [`UpdateCheck::UpToDate`].
+    pub fn check_for_update(&self) -> Result<UpdateCheck, Error> {
+        self.logged_outcome("check_for_update", self.look_for_update())
+    }
+
+    fn look_for_update(&self) -> Result<UpdateCheck, Error> {
+        let channel = self.update_channel()?;
+        let manifest = self
+            .ports
+            .update_downloader
+            .download(&channel.manifest_url)
+            .map_err(|reason| Error::new(format!("update check: {reason}")))?;
+        let offered = match manifest {
+            Some(bytes) => updates::offered(channel, &about::about().version, &bytes)?,
+            None => None,
+        };
+        let check = match &offered {
+            Some(offered) => UpdateCheck::Available { update: offered.update.clone() },
+            None => UpdateCheck::UpToDate,
+        };
+        *self.offered_update.lock().unwrap_or_else(PoisonError::into_inner) = offered;
+        Ok(check)
+    }
+
+    fn update_channel(&self) -> Result<&UpdateChannel, Error> {
+        self.update_channel.as_ref().ok_or_else(|| Error::new("update check: this build looks for no updates"))
+    }
+
+    /// Installs the Update of `version`, which the last Update Check offered
+    /// and the user agreed to: downloads its Update Package and starts it
+    /// only when its signature is the updater key's and names `version`.
+    /// After [`UpdateInstall::Started`] the app has to quit, so the package
+    /// can replace it. Every other outcome, and every error, installs nothing.
+    pub fn install_update(&self, version: &str) -> Result<UpdateInstall, Error> {
+        self.logged_outcome("install_update", self.download_and_start_update(version))
+    }
+
+    fn download_and_start_update(&self, version: &str) -> Result<UpdateInstall, Error> {
+        let channel = self.update_channel()?;
+        let offered = self.offered_update.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        let Some(offered) = offered.filter(|offered| offered.update.version == version) else {
+            return Ok(UpdateInstall::NotOffered);
+        };
+        let package = self
+            .ports
+            .update_downloader
+            .download(&offered.url)
+            .map_err(|reason| Error::new(format!("update: the update package could not be downloaded: {reason}")))?
+            .ok_or_else(|| Error::new("update: the update package is no longer published"))?;
+        if !updates::signed(&channel.public_key, &package, &offered.signature, version) {
+            return Ok(UpdateInstall::InvalidSignature);
+        }
+        let file = updates::write_package(&channel.download_folder, version, &package)?;
+        self.ports
+            .process_starter
+            .start(&file, &channel.installer_arguments, &channel.download_folder)
+            .map_err(|reason| Error::new(format!("update: the update package could not be started: {reason}")))?;
+        Ok(UpdateInstall::Started)
+    }
+
+    /// Whether the app checks for Updates on its own (see
+    /// [`Self::check_for_updates_automatically`]). On until the user turns it off.
+    pub fn checks_for_updates(&self) -> Result<bool, Error> {
+        self.logged("checks_for_updates", updates::checks_for_updates(&self.store))
+    }
+
+    /// Switches the automatic Update Check on or off, from now on and after
+    /// every restart. Off, the app asks GitHub nothing unless the user checks
+    /// by hand.
+    pub fn set_check_for_updates(&self, on: bool) -> Result<(), Error> {
+        self.logged("set_check_for_updates", updates::set_check_for_updates(&self.store, on))
+    }
+
+    /// Checks for Updates on its own while the app runs: a minute after the
+    /// start, then once a day, waiting on the clock. With the automatic
+    /// Update Check switched off, a round asks nothing. Installs nothing:
+    /// `report` hears what each round found, and the interface asks the user
+    /// about an Update found. The rounds go on until `report` answers `Break`.
+    pub fn check_for_updates_automatically(&self, mut report: impl FnMut(AutomaticUpdateCheck) -> ControlFlow<()>) {
+        // Nothing ends the waits early; the clock alone paces the rounds.
+        let never = Wakeup::new();
+        self.ports.clock.sleep(updates::FIRST_AUTOMATIC_CHECK_AFTER, &never);
+        loop {
+            let event = match self.logged("automatic_update_check", updates::checks_for_updates(&self.store)) {
+                Ok(false) => AutomaticUpdateCheck::Skipped,
+                Ok(true) => match self.logged_outcome("automatic_update_check", self.look_for_update()) {
+                    Ok(UpdateCheck::UpToDate) => AutomaticUpdateCheck::UpToDate,
+                    Ok(UpdateCheck::Available { update }) => AutomaticUpdateCheck::Found { update },
+                    Err(reason) => AutomaticUpdateCheck::Failed { reason },
+                },
+                Err(reason) => AutomaticUpdateCheck::Failed { reason },
+            };
+            if report(event).is_break() {
+                return;
+            }
+            self.ports.clock.sleep(updates::AUTOMATIC_CHECK_EVERY, &never);
+        }
     }
 
     /// The version of the app that runs and its license, for the About dialog.
