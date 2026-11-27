@@ -75,6 +75,8 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   const removeOutsideTheApp = () => {
     entry = false;

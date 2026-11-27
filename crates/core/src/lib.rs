@@ -9,6 +9,7 @@ mod autostart;
 mod clock;
 mod collections;
 mod covers;
+mod favorites;
 pub mod keyvalues;
 mod launch;
 mod local_covers;
@@ -90,6 +91,8 @@ pub struct Game {
     /// The person's own judgement of where they stand with the Game;
     /// Unplayed until they set it. No Sync changes it.
     pub status: Status,
+    /// Whether the user marked the Game as a Favorite.
+    pub favorite: bool,
 }
 
 impl Game {
@@ -105,6 +108,7 @@ impl Game {
             last_played: None,
             progress: None,
             status: Status::Unplayed,
+            favorite: false,
         }
     }
 }
@@ -277,6 +281,7 @@ impl Core {
         for game in &mut games {
             game.status = statuses.get(&game.id).copied().unwrap_or_default();
         }
+        favorites::mark(&mut games, &self.store.favorites()?);
         games.sort_by(library_filter::by_title);
         Ok(games)
     }
@@ -1217,6 +1222,31 @@ impl Core {
             }))
         });
         self.logged("statistics", statistics)
+    }
+
+    /// Marks the Game `game_id` as a Favorite, or with `favorite` false
+    /// unmarks it. The mark stays through Syncs and restarts, also while a
+    /// Steam Game is out of the Library. Fails when the Game is not in the
+    /// Library; a Hidden Game is not.
+    pub fn mark_favorite(&self, game_id: &str, favorite: bool) -> Result<(), Error> {
+        let marked = self.stored_library().and_then(|games| {
+            if !games.iter().any(|game| game.id == game_id) {
+                return Err(Error::new(format!("no such game in the library: {game_id}")));
+            }
+            self.store.mark_favorite(game_id, favorite)
+        });
+        if marked.is_ok() {
+            self.note(if favorite { "mark_favorite: marked" } else { "mark_favorite: unmarked" });
+        }
+        self.logged("mark_favorite", marked)
+    }
+
+    /// How many Games of the Library are Favorites; a Hidden Game does not count.
+    pub fn favorite_count(&self) -> Result<u32, Error> {
+        let count = self
+            .stored_library()
+            .map(|games| u32::try_from(games.iter().filter(|game| game.favorite).count()).unwrap_or(u32::MAX));
+        self.logged("favorite_count", count)
     }
 }
 

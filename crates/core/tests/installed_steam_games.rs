@@ -170,6 +170,7 @@ fn installed(app_id: u32, title: &str) -> Game {
         last_played: None,
         progress: None,
         status: Status::Unplayed,
+        favorite: false,
     }
 }
 

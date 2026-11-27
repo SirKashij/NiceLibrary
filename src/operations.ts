@@ -31,6 +31,8 @@ export interface Game {
   progress: number | null;
   /** Set by hand only, `unplayed` until then; no Sync changes it. */
   status: Status;
+  /** Whether the user marked the Game as a Favorite. */
+  favorite: boolean;
 }
 
 /**
@@ -198,6 +200,8 @@ export interface LibraryFilter {
   sort: LibrarySort;
   /** Only Games with this Status; `null` for every Status. */
   status: Status | null;
+  /** Only Favorites. */
+  favoritesOnly: boolean;
 }
 
 /**
@@ -443,6 +447,13 @@ export interface Operations {
    * Hidden Games count in none of them.
    */
   statistics(): Promise<Statistics>;
+  /**
+   * Marks a Game as a Favorite, or with `false` unmarks it. The mark stays
+   * through Syncs and restarts. Rejects when the Game is not in the Library.
+   */
+  markFavorite(gameId: string, favorite: boolean): Promise<void>;
+  /** How many Games of the Library are Favorites. */
+  favoriteCount(): Promise<number>;
 }
 
 /** How choosing an image as a Local Game's Cover went. Every outcome but `chosen` changed nothing. Mirrors `CoverImageChoice` in crates/core. */
@@ -543,6 +554,8 @@ export const tauriOperations: Operations = {
     invoke<EditLocalGame>('edit_local_game', { gameId, title, executable }),
   removeLocalGame: (gameId) => invoke<void>('remove_local_game', { gameId }),
   statistics: () => invoke<Statistics>('statistics'),
+  markFavorite: (gameId, favorite) => invoke<void>('mark_favorite', { gameId, favorite }),
+  favoriteCount: () => invoke<number>('favorite_count'),
 };
 
 /** Mirrors `Statistics` in crates/core: the totals over the Games in the Library. */

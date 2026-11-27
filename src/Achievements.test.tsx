@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Achievement, Game, GameAchievements, Operations } from './operations';
 
 function game(id: string, title: string, details: Partial<Game> = {}): Game {
-  return { id, title, source: 'steam', installed: true, playtimeMinutes: 1_260, lastPlayed: null, progress: null, status: 'unplayed', ...details };
+  return { id, title, source: 'steam', installed: true, playtimeMinutes: 1_260, lastPlayed: null, progress: null, status: 'unplayed', favorite: false, ...details };
 }
 
 /** 2026-11-20 20:15:00 UTC, in seconds since the Unix epoch. */
@@ -109,6 +109,8 @@ function fakeOperations(games: Game[], achievements: Record<string, GameAchievem
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, asked };
 }

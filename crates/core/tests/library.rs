@@ -85,6 +85,7 @@ fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
         last_played: Some(1_795_205_700),
         progress: Some(42),
         status: Status::Unplayed,
+        favorite: false,
     };
 
     assert_eq!(
@@ -97,7 +98,8 @@ fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
             "playtimeMinutes": 1234,
             "lastPlayed": 1795205700,
             "progress": 42,
-            "status": "unplayed"
+            "status": "unplayed",
+            "favorite": false
         })
     );
 }
@@ -113,6 +115,7 @@ fn a_game_without_playtime_last_played_and_progress_reaches_the_interface_with_n
         last_played: None,
         progress: None,
         status: Status::Unplayed,
+        favorite: false,
     };
 
     let json = serde_json::to_value(&game).unwrap();

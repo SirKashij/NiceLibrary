@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Achievements } from './Achievements';
 import { useFormat, useT, type MessageKey } from './i18n';
+import { FavoriteToggle } from './Favorites';
 import { LaunchOptionsForm } from './LaunchOptions';
 import { ManualProgressForm } from './ManualProgress';
 import { ProgressValue } from './library/Progress';
@@ -18,9 +19,9 @@ const SOURCES: Record<Source, MessageKey> = {
  * The detail page of one Game: its large Cover, title, Source, whether it is
  * Installed, its Status to set, Playtime, Last Played, Progress when it has
  * one, the main action, for a Local Game its Launch Options and Manual
- * Progress, its Achievements, and the way back to the Library. Shows the Game
- * as opened at once and as the core answers it then, again after each Sync
- * and after each change of its Manual Progress.
+ * Progress, its Achievements, marking it as a Favorite, and the way back to
+ * the Library. Shows the Game as opened at once and as the core answers it
+ * then, again after each change.
  */
 export function GameDetail({
   operations,
@@ -30,6 +31,7 @@ export function GameDetail({
   notice,
   onPlay,
   onChanged,
+  onFavorite,
   onBack,
   onHidden,
   onCoverChanged,
@@ -38,7 +40,7 @@ export function GameDetail({
   operations: Operations;
   /** The Game as the Library showed it when it was opened. */
   game: Game;
-  /** Changes with each successful Sync or edit, which may change the Game. */
+  /** Changes with each successful Sync, edit and Favorite mark taken, which may change the Game. */
   syncs: number;
   /** Further actions on the Game as the core answered it, such as editing a Local Game. */
   actions?: (game: Game) => ReactNode;
@@ -48,6 +50,8 @@ export function GameDetail({
   onPlay: (game: Game) => void;
   /** Hears that the Game's Status or Manual Progress was set, which changes the Library and its order. */
   onChanged: (game: Game) => void;
+  /** Marks the Game as a Favorite, or unmarks it. */
+  onFavorite: (game: Game) => void;
   onBack: () => void;
   /** Hears the Game once the user hid it. */
   onHidden: (game: Game) => void;
@@ -107,6 +111,7 @@ export function GameDetail({
           {game?.source === 'local' && (
             <LocalGameCoverChoice operations={operations} game={game} onCoverChanged={onCoverChanged} />
           )}
+          {game && <FavoriteToggle game={game} onToggle={onFavorite} />}
         </div>
         <div className="game-detail-info">
           <h1 id={headingId} ref={heading} tabIndex={-1}>

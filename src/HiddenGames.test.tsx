@@ -14,6 +14,7 @@ function steamGame(appId: number, title: string): Game {
     lastPlayed: null,
     progress: null,
     status: 'unplayed',
+    favorite: false,
   };
 }
 
@@ -92,6 +93,8 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
       throw new Error('this test shows no Statistics');
     },
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, hidden };
 }

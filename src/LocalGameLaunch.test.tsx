@@ -13,6 +13,7 @@ const CELESTE: Game = {
   lastPlayed: null,
   progress: null,
   status: 'unplayed',
+  favorite: false,
 };
 
 const PORTAL_2: Game = {
@@ -24,6 +25,7 @@ const PORTAL_2: Game = {
   lastPlayed: null,
   progress: null,
   status: 'unplayed',
+  favorite: false,
 };
 
 /**
@@ -109,6 +111,8 @@ function fakeOperations({
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, saved };
 }

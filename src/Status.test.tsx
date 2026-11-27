@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LibraryFilter, Operations, Status } from './operations';
 
 function steamGame(appId: number, title: string, installed: boolean, status: Status = 'unplayed'): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, progress: null, status };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, progress: null, status, favorite: false };
 }
 
 /**
@@ -95,6 +95,8 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, calls };
 }
@@ -207,7 +209,7 @@ describe('Filtering the Library by Status', () => {
 
     await user.selectOptions(screen.getByRole('combobox', { name: 'Status' }), 'Playing');
 
-    expect(calls.filters.at(-1)).toEqual({ search: '', source: null, installedOnly: false, status: 'playing', sort: 'name' });
+    expect(calls.filters.at(-1)).toEqual({ search: '', source: null, installedOnly: false, status: 'playing', sort: 'name', favoritesOnly: false });
     expect(await shownTitles(1)).toEqual(['Hades']);
   });
 
@@ -222,7 +224,7 @@ describe('Filtering the Library by Status', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Installed only' }));
     await user.type(screen.getByRole('searchbox', { name: 'Search the library' }), 'portal');
 
-    expect(calls.filters.at(-1)).toEqual({ search: 'portal', source: null, installedOnly: true, status: 'unplayed', sort: 'name' });
+    expect(calls.filters.at(-1)).toEqual({ search: 'portal', source: null, installedOnly: true, status: 'unplayed', sort: 'name', favoritesOnly: false });
     expect(await shownTitles(1)).toEqual(['Portal 2']);
   });
 

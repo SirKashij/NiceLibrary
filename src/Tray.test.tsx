@@ -33,6 +33,12 @@ function fakeOperations({ closeToTray = true } = {}) {
     lastSync: async () => null,
     theme: async () => 'system',
     chooseTheme: async () => {},
+    onAutomaticSync: () => () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
+    onAutomaticSteamAppListFetch: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
     renameCollection: async (id) => ({ outcome: 'named', id }),
@@ -43,10 +49,6 @@ function fakeOperations({ closeToTray = true } = {}) {
       throw new Error('this test shows no Statistics');
     },
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
-    onAutomaticSync: () => () => {},
-    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
-    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
-    onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
     openLogFolder: async () => {},
     setStatus: async () => {

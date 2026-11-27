@@ -13,6 +13,7 @@ const CELESTE: Game = {
   lastPlayed: null,
   progress: null,
   status: 'unplayed',
+  favorite: false,
 };
 const PORTAL_2: Game = {
   id: 'steam:620',
@@ -23,6 +24,7 @@ const PORTAL_2: Game = {
   lastPlayed: null,
   progress: null,
   status: 'unplayed',
+  favorite: false,
 };
 
 /**
@@ -111,6 +113,8 @@ function fakeOperations({
       throw new Error('this test shows no Statistics');
     },
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, calls };
 }

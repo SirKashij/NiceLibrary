@@ -7,11 +7,11 @@ import { App } from './App';
 import type { Game, LibraryFilter, LibrarySort, ManualProgress, Operations } from './operations';
 
 function steamGame(appId: number, title: string, progress: number | null): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed: true, playtimeMinutes: 60, lastPlayed: null, progress, status: 'unplayed' };
+  return { id: `steam:${appId}`, title, source: 'steam', installed: true, playtimeMinutes: 60, lastPlayed: null, progress, status: 'unplayed', favorite: false };
 }
 
 function localGame(id: number, title: string, progress: number | null = null): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, progress, status: 'unplayed' };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, progress, status: 'unplayed', favorite: false };
 }
 
 const PORTAL = steamGame(400, 'Portal', 100);
@@ -99,6 +99,8 @@ function fakeOperations(initial: Game[], sort: LibrarySort = 'name') {
     statistics: async () => {
       throw new Error('this test shows no Statistics');
     },
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
     setManualProgress: async (gameId, percent) => {
       const game = games.find((candidate) => candidate.id === gameId);
       if (!game || game.source !== 'local') return { outcome: 'notALocalGame' } satisfies ManualProgress;

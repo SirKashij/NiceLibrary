@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, ManualProgress, Operations } from './operations';
 
 function localGame(id: number, title: string, progress: number | null = null): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, progress, status: 'unplayed' };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, progress, status: 'unplayed', favorite: false };
 }
 
 const PORTAL_2: Game = {
@@ -17,6 +17,7 @@ const PORTAL_2: Game = {
   lastPlayed: null,
   progress: null,
   status: 'unplayed',
+  favorite: false,
 };
 
 /**
@@ -86,6 +87,8 @@ function fakeOperations(initial: Game[], options: { setManualProgress?: Operatio
     statistics: async () => {
       throw new Error('this test shows no Statistics');
     },
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
     setManualProgress: (gameId, percent) => {
       calls.setManualProgress.push([gameId, percent]);
       if (options.setManualProgress) return options.setManualProgress(gameId, percent);

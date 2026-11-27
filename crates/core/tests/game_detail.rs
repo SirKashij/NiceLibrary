@@ -184,6 +184,7 @@ fn an_installed_steam_game_shows_its_source_and_that_it_is_installed() {
             last_played: None,
             progress: None,
             status: Status::Unplayed,
+            favorite: false,
         }))
     );
 }

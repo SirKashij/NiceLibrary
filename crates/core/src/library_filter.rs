@@ -1,6 +1,6 @@
 //! Which Games of the Library the user wants to see, and in which order:
-//! filters by Source, to Installed Games and by Status, combined with a
-//! search in the title, and a sort order.
+//! filters by Source, to Installed Games, by Status and to Favorites,
+//! combined with a search in the title, and a sort order.
 
 use std::cmp::Ordering;
 
@@ -24,6 +24,8 @@ pub struct LibraryFilter {
     pub status: Option<Status>,
     /// The order the Games are answered in.
     pub sort: LibrarySort,
+    /// Only Favorites.
+    pub favorites_only: bool,
 }
 
 impl LibraryFilter {
@@ -31,6 +33,7 @@ impl LibraryFilter {
         self.source.is_none_or(|source| game.source == source)
             && (!self.installed_only || game.installed)
             && self.status.is_none_or(|status| game.status == status)
+            && (!self.favorites_only || game.favorite)
             && game.title.to_lowercase().contains(&self.search.to_lowercase())
     }
 }

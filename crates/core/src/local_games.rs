@@ -105,6 +105,7 @@ impl Game {
             last_played: None,
             progress: None,
             status: crate::Status::Unplayed,
+            favorite: false,
         }
     }
 
