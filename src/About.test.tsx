@@ -84,6 +84,7 @@ function fakeOperations({
       calls.opened.push(page);
       return openPage();
     },
+    install: async () => ({ outcome: 'started' }),
   };
   return { operations, calls };
 }

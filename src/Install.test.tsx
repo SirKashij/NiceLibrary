@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, InstallOutcome, Operations } from './operations';
 
 function steamGame(appId: number, title: string, installed: boolean): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed' };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
 }
 
 /** Fake operations over a stored Library; `install` records each Game it is asked to install. */
@@ -56,6 +56,33 @@ function fakeOperations(games: Game[], install: (game: Game) => Promise<InstallO
     },
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    onSession: () => () => {},
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
+    hiddenGames: async () => [],
+    hideGame: async () => {},
+    unhideGame: async () => {},
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
+    coverHue: async () => null,
+    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
+    coverImageChosen: async () => false,
+    removeCoverImage: async () => {},
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     install: (game) => {
       installs.push(game.id);
       return install(game);

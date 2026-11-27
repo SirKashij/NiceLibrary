@@ -118,6 +118,7 @@ function fakeOperations({
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
     coverHue: async (gameId) => (chosen.has(gameId) ? { hue: 220, saturation: 0.8 } : null),
     language: async () => 'system',
     chooseLanguage: async () => {},
