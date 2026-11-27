@@ -65,6 +65,7 @@ function fakeOperations({ stored = false } = {}) {
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },
+    openLogFolder: async () => {},
   };
   return { operations, calls };
 }

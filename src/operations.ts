@@ -279,6 +279,12 @@ export interface Operations {
    * the Library now shows it. Rejects for a Game that is not in the Library.
    */
   setStatus(gameId: string, status: Status): Promise<Game>;
+  /**
+   * Shows the folder of the log files in File Explorer, so the user can attach
+   * one to a bug report themselves. The app never sends the log. Rejects when
+   * the folder could not be shown.
+   */
+  openLogFolder(): Promise<void>;
 }
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
@@ -346,4 +352,5 @@ export const tauriOperations: Operations = {
   librarySort: () => invoke<LibrarySort>('library_sort'),
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
   setStatus: (gameId, status) => invoke<Game>('set_status', { gameId, status }),
+  openLogFolder: () => invoke<void>('open_log_folder'),
 };

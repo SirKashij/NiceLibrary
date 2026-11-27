@@ -12,6 +12,7 @@ import { WindowSettings } from './settings/WindowSettings';
 import { Tray } from './Tray';
 import { SortChoice, useLibrarySort } from './library/LibrarySort';
 import { StatusBadge } from './library/Status';
+import { LogSettings } from './settings/LogSettings';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -397,6 +398,7 @@ function SettingsView({ operations, onAccountChosen }: { operations: Operations;
       <ThemeSettings />
       <WindowSettings operations={operations} />
       <SteamAppListSettings operations={operations} />
+      <LogSettings operations={operations} />
     </Page>
   );
 }

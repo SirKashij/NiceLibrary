@@ -55,6 +55,7 @@ function fakeOperations(
     storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    openLogFolder: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => (account && lastSyncs[account]) || null,
     theme: async () => 'system',

@@ -23,6 +23,7 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     storeSteamWebApiKey: async () => ({ outcome: 'invalid' }),
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    openLogFolder: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},

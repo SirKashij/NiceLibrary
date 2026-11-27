@@ -8,7 +8,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
-    ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
+    ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
     SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
@@ -180,6 +180,12 @@ async fn fetch_steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppLi
     core.fetch_steam_app_list()
 }
 
+/// Async, so a slow start of File Explorer does not block the window.
+#[tauri::command]
+async fn open_log_folder(core: tauri::State<'_, Core>) -> Result<(), Error> {
+    core.open_log_folder()
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -208,6 +214,10 @@ const DATABASE: &str = "nicelibrary.db";
 /// The folder of downloaded Covers in the app's cache folder in the user
 /// profile (`%LOCALAPPDATA%\<identifier>` on Windows).
 const COVERS: &str = "covers";
+
+/// The folder of the log files in the app's data folder, next to the
+/// database (`%APPDATA%\<identifier>\logs` on Windows).
+const LOGS: &str = "logs";
 
 pub fn run() {
     tauri::Builder::default()
@@ -252,7 +262,8 @@ pub fn run() {
             set_close_to_tray,
             close_window,
             show_tray_menu,
-            set_status
+            set_status,
+            open_log_folder
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
@@ -265,7 +276,8 @@ pub fn run() {
         .setup(|app| {
             let store = Store::open(&app.path().app_data_dir()?.join(DATABASE))?;
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
-            app.manage(Core::new(ports::real_ports(), store, covers));
+            let log = Log::new(app.path().app_data_dir()?.join(LOGS));
+            app.manage(Core::new(ports::real_ports(), store, covers).with_log(log));
             start_automatic_syncs(app)?;
             tray::create(app.handle())?;
             start_automatic_steam_app_list_fetches(app)?;
