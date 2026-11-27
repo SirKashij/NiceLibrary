@@ -4,6 +4,7 @@
 //! about Tauri; the desktop shell is a thin adapter over these operations, and
 //! everything that varies by machine or OS reaches the core through ports.
 
+mod autostart;
 mod clock;
 mod covers;
 pub mod keyvalues;
@@ -21,6 +22,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use serde::{Deserialize, Serialize, Serializer};
 
+pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
@@ -111,6 +113,7 @@ pub struct Ports {
     pub secrets: Box<dyn SecretStore>,
     pub web_api: Box<dyn WebApi>,
     pub clock: Box<dyn Clock>,
+    pub autostart: Box<dyn Autostart>,
 }
 
 /// The application core. Each public method is one operation.
@@ -378,6 +381,19 @@ impl Core {
     /// instead; with close-to-tray off the app quits.
     pub fn close_window(&self) -> Result<WindowClose, Error> {
         window::close_window(&self.store)
+    }
+
+    /// Whether the app starts with Windows, hidden in the Tray, when the
+    /// user signs in: what the current user's autostart entry says, also
+    /// after it was changed outside the app. Off until the user turns it on.
+    pub fn starts_with_windows(&self) -> Result<bool, Error> {
+        autostart::starts_with_windows(self.ports.autostart.as_ref())
+    }
+
+    /// Adds or removes the current user's autostart entry, which starts the
+    /// app hidden in the Tray (see [`started_with_windows`]).
+    pub fn set_start_with_windows(&self, on: bool) -> Result<(), Error> {
+        autostart::set_start_with_windows(self.ports.autostart.as_ref(), on)
     }
 }
 

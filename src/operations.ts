@@ -145,6 +145,13 @@ export interface Operations {
   onTrayNotice(listener: () => void): () => void;
   /** Gives the Tray icon its tooltip and menu, in the interface language. */
   showTrayMenu(texts: TrayMenuTexts): Promise<void>;
+  /**
+   * Whether the app starts with Windows, hidden in the Tray: what the current
+   * user's autostart entry says, also after it was changed outside the app.
+   */
+  startsWithWindows(): Promise<boolean>;
+  /** Adds or removes the current user's autostart entry. */
+  setStartWithWindows(on: boolean): Promise<void>;
 }
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
@@ -191,4 +198,6 @@ export const tauriOperations: Operations = {
     };
   },
   showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
+  startsWithWindows: () => invoke<boolean>('starts_with_windows'),
+  setStartWithWindows: (on) => invoke<void>('set_start_with_windows', { on }),
 };

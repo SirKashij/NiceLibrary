@@ -112,6 +112,10 @@ export const en = {
   'tray.notice':
     'When you close the window, NiceLibrary keeps running in the tray so it can go on tracking your playtime. Click its tray icon to open it again, or quit it from the icon’s menu. You can change this in the Settings under Window.',
   'tray.ok': 'OK',
+  'autostart.startWithWindows': 'Start with Windows',
+  'autostart.hint': 'When you sign in to Windows, NiceLibrary starts in the tray without opening its window.',
+  'autostart.loadFailed': 'Whether NiceLibrary starts with Windows could not be read.',
+  'autostart.saveFailed': 'Starting with Windows could not be changed.',
 } as const;
 
 export type MessageKey = keyof typeof en;

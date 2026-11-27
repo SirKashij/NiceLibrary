@@ -30,6 +30,8 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
     onAutomaticSync: () => () => {},
     game: async () => null,
     launch: (game) => {

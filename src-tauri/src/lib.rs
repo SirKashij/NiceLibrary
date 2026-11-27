@@ -8,7 +8,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AutomaticSync, Core, CoverCache, Error, Game, Launch, LibraryFilter, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
-    SyncOutcome,
+    SyncOutcome, started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -112,6 +112,16 @@ fn show_tray_menu(app: AppHandle, texts: TrayMenuTexts) -> Result<(), String> {
     tray::show_menu(&app, &texts).map_err(|error| error.to_string())
 }
 
+#[tauri::command]
+fn starts_with_windows(core: tauri::State<'_, Core>) -> Result<bool, Error> {
+    core.starts_with_windows()
+}
+
+#[tauri::command]
+fn set_start_with_windows(core: tauri::State<'_, Core>, on: bool) -> Result<(), Error> {
+    core.set_start_with_windows(on)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -144,7 +154,12 @@ const COVERS: &str = "covers";
 pub fn run() {
     tauri::Builder::default()
         // First, so a second start hands over and ends before it opens anything.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| tray::show_main_window(app)))
+        // A start with Windows while the app already runs leaves it in the Tray.
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            if !started_with_windows(&args) {
+                tray::show_main_window(app);
+            }
+        }))
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event
                 && window.label() == tray::MAIN_WINDOW
@@ -171,7 +186,9 @@ pub fn run() {
             close_to_tray,
             set_close_to_tray,
             close_window,
-            show_tray_menu
+            show_tray_menu,
+            starts_with_windows,
+            set_start_with_windows
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
@@ -214,8 +231,13 @@ fn start_automatic_syncs(app: &App) -> std::io::Result<()> {
 }
 
 /// Creates the window declared in tauri.conf.json (`"create": false` there).
+/// Started with Windows, the app starts hidden in the Tray: the window is
+/// created, so the interface runs, but not shown.
 fn create_main_window(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
-    let config = app.config().app.windows.first().ok_or("tauri.conf.json declares no window")?.clone();
+    let mut config = app.config().app.windows.first().ok_or("tauri.conf.json declares no window")?.clone();
+    if started_with_windows(std::env::args()) {
+        config.visible = false;
+    }
     let builder = WebviewWindowBuilder::from_config(app.handle(), &config)?;
     #[cfg(windows)]
     let builder = with_webview2_env_args(builder);

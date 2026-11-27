@@ -312,6 +312,7 @@ impl Computer {
                 secrets: Box::new(self.secrets.clone()),
                 web_api: api,
                 clock: Box::new(self.clock.clone()),
+                autostart: Box::new(NoAutostart),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -794,6 +795,7 @@ fn an_automatic_sync_that_fails_in_the_app_reaches_the_interface_with_its_reason
             secrets: Box::new(LockedSecrets),
             web_api: Box::new(SteamWebApi::owning(vec![])),
             clock: Box::new(computer.clock.clone()),
+            autostart: Box::new(NoAutostart),
         },
         Store::open(&computer.profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(computer.profile.path().join("covers")),
@@ -849,5 +851,22 @@ impl WebApi for SlowSteam {
         let answer = self.steam.get(url);
         *self.running.lock().unwrap() -= 1;
         answer
+    }
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
     }
 }

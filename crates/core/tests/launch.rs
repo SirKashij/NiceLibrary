@@ -145,6 +145,7 @@ impl App {
                 secrets: Box::new(NoSecretsNoWebApi),
                 web_api: Box::new(NoSecretsNoWebApi),
                 clock: Box::new(StoppedClock),
+                autostart: Box::new(NoAutostart),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -237,4 +238,21 @@ impl nicelibrary_core::Clock for StoppedClock {
     }
 
     fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
 }

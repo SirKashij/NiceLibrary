@@ -63,6 +63,8 @@ function fakeOperations(
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
     onAutomaticSync: () => () => {},
     game: async () => null,
     launch: async () => ({ outcome: 'launched' }),

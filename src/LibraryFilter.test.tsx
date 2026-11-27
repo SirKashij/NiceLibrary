@@ -35,6 +35,8 @@ function fakeOperations() {
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
     onAutomaticSync: () => () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);

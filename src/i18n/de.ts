@@ -114,4 +114,8 @@ export const de: Record<MessageKey, string> = {
   'tray.notice':
     'Wenn du das Fenster schließt, läuft NiceLibrary im Infobereich der Taskleiste weiter und erfasst weiter deine Spielzeit. Ein Klick auf das Symbol dort öffnet es wieder, über sein Menü beendest du es. Ändern kannst du das in den Einstellungen unter Fenster.',
   'tray.ok': 'OK',
+  'autostart.startWithWindows': 'Mit Windows starten',
+  'autostart.hint': 'Wenn du dich bei Windows anmeldest, startet NiceLibrary im Infobereich, ohne sein Fenster zu öffnen.',
+  'autostart.loadFailed': 'Ob NiceLibrary mit Windows startet, konnte nicht gelesen werden.',
+  'autostart.saveFailed': 'Der Start mit Windows konnte nicht geändert werden.',
 };

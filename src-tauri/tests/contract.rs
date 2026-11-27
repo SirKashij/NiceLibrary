@@ -576,3 +576,197 @@ mod secret_store {
         assert_eq!(test.open().read("key"), Ok(Some(text.to_owned())));
     }
 }
+
+/// `Autostart` (crates/core): off while there is no entry; `turn_on` makes
+/// it on, `turn_off` off again and is `Ok` when there is nothing to remove;
+/// an entry removed or disabled outside the app, or one for another program,
+/// is off.
+///
+/// The tests write their entries under
+/// `HKCU\Software\NiceLibraryContractTests\autostart-<test>-<process id>`
+/// instead of Windows' own startup keys and delete them again; the app's
+/// real entry is only read.
+#[cfg(windows)]
+mod autostart {
+    use std::path::PathBuf;
+
+    use nicelibrary_core::Autostart;
+    use nicelibrary_lib::ports::WindowsAutostart;
+    use winreg::enums::{HKEY_CURRENT_USER, REG_BINARY};
+    use winreg::{RegKey, RegValue};
+
+    const PARENT: &str = r"Software\NiceLibraryContractTests";
+    const NAME: &str = "NiceLibrary";
+
+    /// The startup keys of one test, removed when dropped.
+    struct TestKeys {
+        path: String,
+    }
+
+    impl TestKeys {
+        fn new(test: &str) -> Self {
+            let path = format!(r"{PARENT}\autostart-{test}-{}", std::process::id());
+            // Created up front, so another test's clean-up no longer removes
+            // the parent while it is empty; that may happen while this one
+            // creates it, so it tries again.
+            let user = RegKey::predef(HKEY_CURRENT_USER);
+            let mut created = user.create_subkey(&path);
+            for _ in 0..10 {
+                if created.is_ok() {
+                    break;
+                }
+                created = user.create_subkey(&path);
+            }
+            created.unwrap();
+            Self { path }
+        }
+
+        fn run_key(&self) -> String {
+            format!(r"{}\Run", self.path)
+        }
+
+        fn approved_key(&self) -> String {
+            format!(r"{}\StartupApproved\Run", self.path)
+        }
+
+        /// The autostart of `program`, as the app would see it after a start.
+        fn autostart_of(&self, program: &str) -> WindowsAutostart {
+            WindowsAutostart::under(&self.run_key(), &self.approved_key(), NAME, Some(PathBuf::from(program)))
+        }
+
+        fn autostart(&self) -> WindowsAutostart {
+            self.autostart_of(PROGRAM)
+        }
+
+        /// The command the entry runs, as Windows reads it.
+        fn command(&self) -> Option<String> {
+            RegKey::predef(HKEY_CURRENT_USER).open_subkey(self.run_key()).ok()?.get_value(NAME).ok()
+        }
+
+        /// The user removes the entry outside the app.
+        fn remove_entry(&self) {
+            let key = RegKey::predef(HKEY_CURRENT_USER).create_subkey(self.run_key()).unwrap().0;
+            key.delete_value(NAME).unwrap();
+        }
+
+        /// The user turns the entry off or on in the Task Manager's startup
+        /// apps, which records it as Windows does: the first of 12 bytes is
+        /// odd for disabled.
+        fn mark_in_startup_apps(&self, first_byte: u8) {
+            let key = RegKey::predef(HKEY_CURRENT_USER).create_subkey(self.approved_key()).unwrap().0;
+            let mut bytes = vec![0; 12];
+            bytes[0] = first_byte;
+            key.set_raw_value(NAME, &RegValue { bytes: bytes.into(), vtype: REG_BINARY }).unwrap();
+        }
+
+        fn has_startup_apps_mark(&self) -> bool {
+            RegKey::predef(HKEY_CURRENT_USER)
+                .open_subkey(self.approved_key())
+                .and_then(|key| key.get_raw_value(NAME))
+                .is_ok()
+        }
+    }
+
+    impl Drop for TestKeys {
+        fn drop(&mut self) {
+            let user = RegKey::predef(HKEY_CURRENT_USER);
+            let _ = user.delete_subkey_all(&self.path);
+            // Fails while other tests still hold keys below it; the last one removes it.
+            let _ = user.delete_subkey(PARENT);
+        }
+    }
+
+    /// A program path with a space, as under `C:\Program Files`. The tests
+    /// never run it.
+    const PROGRAM: &str = r"C:\Program Files\NiceLibrary Contract Tests\nicelibrary.exe";
+
+    #[test]
+    fn without_an_entry_it_is_off() {
+        let keys = TestKeys::new("none");
+
+        assert_eq!(keys.autostart().is_on(), Ok(false));
+    }
+
+    #[test]
+    fn turning_it_on_adds_an_entry_that_starts_the_program_with_the_arguments() {
+        let keys = TestKeys::new("on");
+
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+
+        assert_eq!(keys.autostart().is_on(), Ok(true));
+        assert_eq!(keys.command().as_deref(), Some(format!("\"{PROGRAM}\" --autostart").as_str()));
+    }
+
+    #[test]
+    fn turning_it_off_removes_the_entry_and_turning_it_off_again_is_fine() {
+        let keys = TestKeys::new("off");
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+
+        keys.autostart().turn_off().unwrap();
+
+        assert_eq!(keys.autostart().is_on(), Ok(false));
+        assert_eq!(keys.command(), None);
+        assert_eq!(keys.autostart().turn_off(), Ok(()));
+    }
+
+    #[test]
+    fn an_entry_removed_outside_the_app_is_off() {
+        let keys = TestKeys::new("removed");
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+
+        keys.remove_entry();
+
+        assert_eq!(keys.autostart().is_on(), Ok(false));
+    }
+
+    #[test]
+    fn an_entry_disabled_in_the_startup_apps_is_off_until_it_is_turned_on_again() {
+        let keys = TestKeys::new("disabled");
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+
+        keys.mark_in_startup_apps(0x03);
+        assert_eq!(keys.autostart().is_on(), Ok(false));
+
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+        assert_eq!(keys.autostart().is_on(), Ok(true));
+    }
+
+    #[test]
+    fn an_entry_enabled_in_the_startup_apps_is_on() {
+        let keys = TestKeys::new("enabled");
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+
+        keys.mark_in_startup_apps(0x02);
+
+        assert_eq!(keys.autostart().is_on(), Ok(true));
+    }
+
+    #[test]
+    fn turning_it_off_also_forgets_the_startup_apps_mark() {
+        let keys = TestKeys::new("forget");
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+        keys.mark_in_startup_apps(0x03);
+
+        keys.autostart().turn_off().unwrap();
+
+        assert!(!keys.has_startup_apps_mark());
+    }
+
+    #[test]
+    fn an_entry_for_another_program_is_off_and_turning_it_on_replaces_it() {
+        let keys = TestKeys::new("moved");
+        keys.autostart_of(r"C:\Old Place\nicelibrary.exe").turn_on(&["--autostart"]).unwrap();
+
+        assert_eq!(keys.autostart().is_on(), Ok(false));
+
+        keys.autostart().turn_on(&["--autostart"]).unwrap();
+        assert_eq!(keys.autostart().is_on(), Ok(true));
+        assert_eq!(keys.command().as_deref(), Some(format!("\"{PROGRAM}\" --autostart").as_str()));
+    }
+
+    #[test]
+    fn the_apps_own_entry_can_be_read() {
+        // Only reads Windows' startup keys for the running program.
+        assert!(WindowsAutostart::new().is_on().is_ok());
+    }
+}
