@@ -281,6 +281,36 @@ fn setting_the_status_of_a_game_that_is_not_in_the_library_writes_why_to_the_log
 }
 
 #[test]
+fn setting_manual_progress_and_a_playtime_adjustment_is_written_as_notable_events_without_the_title() {
+    let app = App::start();
+    let executable = app.profile.path().join("Games").join("Celeste.exe");
+    fs::create_dir_all(executable.parent().unwrap()).unwrap();
+    fs::write(&executable, b"MZ").unwrap();
+    let game = match app.core.add_local_game(executable.to_str().unwrap(), "Celeste").unwrap() {
+        nicelibrary_core::AddLocalGame::Added { game } => game,
+        other => panic!("expected Celeste to be added, got {other:?}"),
+    };
+
+    app.core.set_manual_progress(&game.id, Some(40)).unwrap();
+    app.core.set_manual_progress(&game.id, Some(140)).unwrap();
+    app.core.set_manual_progress("steam:620", Some(40)).unwrap();
+    assert!(app.core.set_manual_progress("local:999", Some(40)).is_err());
+    app.core.set_playtime_adjustment(&game.id, Some(90)).unwrap();
+    app.core.set_playtime_adjustment(&game.id, None).unwrap();
+    assert!(app.core.set_playtime_adjustment("steam:620", Some(90)).is_err());
+
+    let log = app.log();
+    assert!(log.contains("INFO set_manual_progress: set\n"), "{log}");
+    assert!(log.contains("INFO set_manual_progress: outOfRange\n"), "{log}");
+    assert!(log.contains("INFO set_manual_progress: notALocalGame\n"), "{log}");
+    assert!(log.contains("ERROR set_manual_progress: no such game in the library: local:999"), "{log}");
+    assert!(log.contains("INFO set_playtime_adjustment: set\n"), "{log}");
+    assert!(log.contains("INFO set_playtime_adjustment: cleared\n"), "{log}");
+    assert!(log.contains("ERROR set_playtime_adjustment: no such local game in the library: steam:620"), "{log}");
+    assert!(!log.contains("Celeste"), "the Log holds no titles or paths: {log}");
+}
+
+#[test]
 fn the_log_never_holds_the_steam_web_api_key_or_a_full_steam_id() {
     let app = App::start();
     app.secrets.write("key", KEY).unwrap();

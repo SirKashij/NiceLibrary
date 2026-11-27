@@ -1,7 +1,8 @@
 //! Statistics: figures over the Library, for the Statistics page. They are
 //! worked out from the Library as it shows, so a Hidden Game counts in none
 //! of them. The Playtime per week comes from the recorded Sessions alone,
-//! since Steam's figure says nothing about when a Game was played.
+//! of Local and Steam Games, since Steam's figure says nothing about when a
+//! Game was played.
 
 use std::collections::HashSet;
 

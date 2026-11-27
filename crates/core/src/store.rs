@@ -729,19 +729,30 @@ impl Store {
         Ok(played)
     }
 
-    /// The Sessions of Local Games that ended after `since`, in seconds
-    /// since the Unix epoch, for the Playtime per week.
-    pub(crate) fn sessions_ended_after(&self, since: u64) -> Result<Vec<Recorded>, Error> {
+    /// The Sessions that ended after `since`, in seconds since the Unix
+    /// epoch, for the Playtime per week: those of Local Games, and those of
+    /// Steam Games played while the app worked with `steam_account`, as a
+    /// Steam Game's detail page lists them.
+    pub(crate) fn sessions_ended_after(&self, since: u64, steam_account: Option<&str>) -> Result<Vec<Recorded>, Error> {
         let connection = self.connection();
         let mut statement = connection.prepare(
-            "SELECT local_game, started_at, ended_at FROM local_game_sessions WHERE ended_at > ?1 ORDER BY started_at",
+            "SELECT 'local', local_game, started_at, ended_at FROM local_game_sessions WHERE ended_at > ?1
+             UNION ALL
+             SELECT 'steam', app_id, started_at, ended_at FROM steam_game_sessions
+             WHERE ended_at > ?1 AND steam_account IS ?2
+             ORDER BY 3",
         )?;
         let sessions = statement
-            .query_map([seconds_column(since)?], |row| {
-                let started_at: i64 = row.get(1)?;
-                let ended_at: i64 = row.get(2)?;
+            .query_map(params![seconds_column(since)?, steam_account], |row| {
+                let source: String = row.get(0)?;
+                let game = match source.as_str() {
+                    "local" => Tracked::Local(row.get(1)?),
+                    _ => Tracked::Steam(row.get(1)?),
+                };
+                let started_at: i64 = row.get(2)?;
+                let ended_at: i64 = row.get(3)?;
                 Ok(Recorded {
-                    game_id: Tracked::Local(row.get(0)?).game_id(),
+                    game_id: game.game_id(),
                     started_at: u64::try_from(started_at).unwrap_or(0),
                     ended_at: u64::try_from(ended_at).unwrap_or(0),
                 })
@@ -808,7 +819,8 @@ fn delete_local_game_data(transaction: &rusqlite::Transaction<'_>, id: i64) -> R
     // Tables keyed by the Local Game's number.
     transaction.execute("DELETE FROM local_game_sessions WHERE local_game = ?1", [id])?;
     transaction.execute("DELETE FROM cover_matches WHERE local_game = ?1", [id])?;
-    // Its Launch Options are columns of `local_games` itself.
+    transaction.execute("DELETE FROM local_game_playtime_adjustments WHERE local_game = ?1", [id])?;
+    // Its Launch Options and Manual Progress are columns of `local_games` itself.
     Ok(())
 }
 

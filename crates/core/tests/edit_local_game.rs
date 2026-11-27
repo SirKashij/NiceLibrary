@@ -535,6 +535,29 @@ fn removing_a_local_game_deletes_its_sessions_status_hiding_and_cover_match() {
 }
 
 #[test]
+fn removing_a_local_game_deletes_its_playtime_adjustment() {
+    let app = App::start();
+    let game = app.add(&app.put("Games/Celeste/Celeste.exe"), "Celeste");
+    let other = app.add(&app.put("Games/Zork/Zork.exe"), "Zork");
+    app.core.set_playtime_adjustment(&game.id, Some(90)).unwrap();
+    app.core.set_playtime_adjustment(&other.id, Some(-15)).unwrap();
+
+    app.core.remove_local_game(&game.id).unwrap();
+
+    // Nothing of the Game stays behind, not even where no operation looks.
+    let database = app.database();
+    let left: Vec<(String, i32)> = database
+        .prepare("SELECT 'local:' || local_game, minutes FROM local_game_playtime_adjustments")
+        .unwrap()
+        .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+        .unwrap()
+        .collect::<Result<_, _>>()
+        .unwrap();
+    assert_eq!(left, [(other.id.clone(), -15)]);
+    assert_eq!(app.core.playtime_adjustment(&other.id), Ok(Some(-15)));
+}
+
+#[test]
 fn removing_a_local_game_that_is_gone_already_changes_nothing() {
     let app = App::start();
     let game = app.add(&app.put("Games/Celeste/Celeste.exe"), "Celeste");

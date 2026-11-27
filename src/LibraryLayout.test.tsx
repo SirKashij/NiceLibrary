@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LibraryLayout, Operations } from './operations';
 
 const LIBRARY: Game[] = [
-  { id: 'steam:1145360', title: 'Hades', source: 'steam', installed: true, playtimeMinutes: 600, lastPlayed: 1_700_000_000, status: 'playing', favorite: true, progress: null },
+  { id: 'steam:1145360', title: 'Hades', source: 'steam', installed: true, playtimeMinutes: 600, lastPlayed: 1_700_000_000, status: 'playing', favorite: true, progress: 40 },
   { id: 'steam:220', title: 'Half-Life 2', source: 'steam', installed: false, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false, progress: null },
   { id: 'local:1', title: 'Portal 2', source: 'local', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false, progress: null },
 ];
@@ -232,6 +232,16 @@ describe('The list', () => {
 
     expect(within(portal).getByText('Local')).toBeInTheDocument();
     expect(within(portal).getAllByText('Not known yet')).toHaveLength(2);
+  });
+
+  it('shows the Progress of each row under its title, and none for a Game without Progress', async () => {
+    const { operations } = fakeOperations(Promise.resolve('list'));
+    render(<App operations={operations} lang="en" />);
+    const [hades, halfLife] = await shownGames();
+
+    expect(within(hades).getByText('Progress 40%')).toBeInTheDocument();
+    expect(within(hades).getByRole('heading')).toHaveTextContent(/^Hades$/);
+    expect(halfLife).not.toHaveTextContent('Progress');
   });
 
   it('shows the Status of each row and marks a Game as a Favorite with its star', async () => {

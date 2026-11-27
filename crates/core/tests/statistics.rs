@@ -196,11 +196,11 @@ impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
 }
 
 /// Steam on disk with PLAYER logged in.
-struct SteamAt(TempDir);
+struct SteamAt(PathBuf);
 
 impl SteamLocator for SteamAt {
     fn steam_folder(&self) -> Option<PathBuf> {
-        Some(self.0.path().to_path_buf())
+        Some(self.0.clone())
     }
 }
 
@@ -251,6 +251,7 @@ struct App {
     processes: ScriptedProcesses,
     _profile: TempDir,
     disk: TempDir,
+    steam: TempDir,
 }
 
 impl App {
@@ -267,7 +268,7 @@ impl App {
             ScriptedProcesses { looks: Arc::default(), clock: ScriptedClock(Arc::new(Mutex::new(NOW))) };
         let core = Core::new(
             Ports {
-                steam_locator: Box::new(SteamAt(steam_folder)),
+                steam_locator: Box::new(SteamAt(steam_folder.path().to_path_buf())),
                 downloader: Box::new(steam.clone()),
                 opener: Box::new(NoUrls),
                 secrets: Box::new(KeyStored),
@@ -284,7 +285,7 @@ impl App {
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
         );
-        Self { core, processes, _profile: profile, disk: tempfile::tempdir().unwrap() }
+        Self { core, processes, _profile: profile, disk: tempfile::tempdir().unwrap(), steam: steam_folder }
     }
 
     /// The executable of the Local Game `title` on the disk.
@@ -296,13 +297,44 @@ impl App {
     /// app sees its process run at both times and gone right after. The
     /// clock stands at NOW again afterwards.
     fn play(&self, title: &str, from: u64, to: u64) {
-        let running = vec![self.executable(title)];
+        self.run(&self.executable(title), from, to);
+    }
+
+    /// Records a Session of whatever Game `executable` is from `from` to
+    /// `to`, as [`Self::play`] does for a Local Game.
+    fn run(&self, executable: &Path, from: u64, to: u64) {
+        let running = vec![executable.to_path_buf()];
         self.processes.looks.lock().unwrap().extend([(from, running.clone()), (to, running), (to + 1, Vec::new())]);
         self.core.track_sessions(|event| match event {
             Tracking::Failed { .. } => ControlFlow::Break(()),
             _ => ControlFlow::Continue(()),
         });
         self.processes.clock.set(NOW);
+    }
+
+    /// Fully installs the Steam Game `app_id` in the Steam folder, as Steam
+    /// does, reads it in, and answers its executable.
+    fn install_steam_game(&self, app_id: u32, name: &str) -> PathBuf {
+        let steamapps = self.steam.path().join("steamapps");
+        fs::create_dir_all(&steamapps).unwrap();
+        let folder = self.steam.path().display().to_string().replace('\\', "\\\\");
+        fs::write(
+            steamapps.join("libraryfolders.vdf"),
+            format!("\"libraryfolders\"\n{{\n\t\"0\"\n\t{{\n\t\t\"path\"\t\t\"{folder}\"\n\t}}\n}}\n"),
+        )
+        .unwrap();
+        fs::write(
+            steamapps.join(format!("appmanifest_{app_id}.acf")),
+            format!(
+                "\"AppState\"\n{{\n\t\"appid\"\t\t\"{app_id}\"\n\t\"name\"\t\t\"{name}\"\n\t\"StateFlags\"\t\t\"4\"\n\t\"installdir\"\t\t\"{name}\"\n}}\n"
+            ),
+        )
+        .unwrap();
+        let executable = steamapps.join("common").join(name).join("game.exe");
+        fs::create_dir_all(executable.parent().unwrap()).unwrap();
+        fs::write(&executable, b"MZ").unwrap();
+        self.core.read_installed_games().unwrap();
+        executable
     }
 
     /// The app after a Sync with Steam.
@@ -568,6 +600,45 @@ fn steam_playtime_counts_in_no_week_since_steam_says_not_when_it_was_played() {
 
     assert_eq!(statistics.playtime_minutes, 1_260 + 95);
     assert!(statistics.weeks.iter().all(|week| week.minutes == 0));
+
+    // The Sessions the app records of a Steam Game count in their weeks;
+    // Steam's figure stays the Game's Playtime.
+    let portal_2 = app.install_steam_game(620, "Portal 2");
+    app.run(&portal_2, NOW - 2 * DAY, NOW - 2 * DAY + 90 * 60);
+    app.run(&portal_2, NOW - 9 * DAY, NOW - 9 * DAY + 20 * 60);
+
+    let statistics = app.statistics();
+    assert_eq!((statistics.weeks[6].minutes, statistics.weeks[7].minutes), (20, 90));
+    assert_eq!(statistics.weeks.iter().map(|week| week.minutes).sum::<u32>(), 110);
+}
+
+#[test]
+fn the_sessions_of_a_hidden_steam_game_count_in_no_week() {
+    let app = App::synced(&FakeSteam::owning(vec![portal_2()]));
+    let portal_2 = app.install_steam_game(620, "Portal 2");
+    app.run(&portal_2, NOW - 2 * DAY, NOW - 2 * DAY + HOUR);
+    assert_eq!(app.statistics().weeks[7].minutes, 60);
+
+    app.core.hide_game("steam:620").unwrap();
+
+    assert!(app.statistics().weeks.iter().all(|week| week.minutes == 0));
+}
+
+#[test]
+fn a_playtime_adjustment_counts_in_the_total_and_the_most_played_but_in_no_week() {
+    let app = App::synced(&FakeSteam::owning(vec![portal_2(), half_life()]));
+    let celeste = app.add_local_game("Celeste");
+    let tunic = app.add_local_game("Tunic");
+    app.play("Celeste", NOW - DAY, NOW - DAY + HOUR);
+    app.core.set_playtime_adjustment(&celeste, Some(1_500)).unwrap();
+    app.core.set_playtime_adjustment(&tunic, Some(45)).unwrap();
+
+    let statistics = app.statistics();
+
+    assert_eq!(statistics.playtime_minutes, 1_260 + 30 + 60 + 1_500 + 45);
+    assert_eq!(most_played(&statistics), ["Celeste", "Portal 2", "Tunic", "Half-Life"]);
+    assert_eq!(statistics.most_played[0].playtime_minutes, Some(60 + 1_500));
+    assert_eq!(statistics.weeks[7].minutes, 60);
 }
 
 #[test]

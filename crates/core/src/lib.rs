@@ -936,6 +936,10 @@ impl Core {
     /// Local Game, is refused and changes nothing. Fails when there is no
     /// such Local Game.
     pub fn set_manual_progress(&self, game_id: &str, percent: Option<i64>) -> Result<ManualProgress, Error> {
+        self.logged_outcome("set_manual_progress", self.record_manual_progress(game_id, percent))
+    }
+
+    fn record_manual_progress(&self, game_id: &str, percent: Option<i64>) -> Result<ManualProgress, Error> {
         let Some(id) = local_game_id(game_id) else {
             return Ok(ManualProgress::NotALocalGame);
         };
@@ -1532,7 +1536,10 @@ impl Core {
                 None => Default::default(),
             };
             let now = clock::seconds_since_epoch(self.ports.clock.now());
-            let sessions = self.store.sessions_ended_after(statistics::first_week_start(now))?;
+            // The Steam Sessions as the detail page lists them (see `stored_sessions`).
+            let account = self.current_steam_account()?;
+            let sessions =
+                self.store.sessions_ended_after(statistics::first_week_start(now), account.as_deref())?;
             Ok(statistics::of(
                 &games,
                 |game| steam_app_id(&game.id).and_then(|app_id| achievements.get(&app_id).copied()),
@@ -1598,7 +1605,14 @@ impl Core {
     /// the adjustment, never below zero. `None` or zero clears it. A Steam
     /// Game, or a Game that is not in the Library, is refused.
     pub fn set_playtime_adjustment(&self, game_id: &str, minutes: Option<i32>) -> Result<Game, Error> {
-        self.logged("set_playtime_adjustment", self.record_playtime_adjustment(game_id, minutes))
+        let adjusted = self.record_playtime_adjustment(game_id, minutes);
+        if adjusted.is_ok() {
+            self.note(match playtime_adjustment::stored(minutes) {
+                Some(_) => "set_playtime_adjustment: set",
+                None => "set_playtime_adjustment: cleared",
+            });
+        }
+        self.logged("set_playtime_adjustment", adjusted)
     }
 
     fn record_playtime_adjustment(&self, game_id: &str, minutes: Option<i32>) -> Result<Game, Error> {

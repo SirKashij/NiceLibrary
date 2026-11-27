@@ -204,6 +204,8 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 }
 .game-list-head { border-top: 0; color: var(--color-text-muted); font-size: var(--text-size-label); }
 .game-row .cover { margin-bottom: 0; }
+/* The title with the Game's Progress under it, as on its Cover card. */
+.game-row-title { display: grid; min-width: 0; }
 .open-row { display: block; border-radius: var(--radius-cover); }
 .open-row::after { content: ''; position: absolute; inset: 0; }
 .game-list li:hover { background: var(--color-surface); }

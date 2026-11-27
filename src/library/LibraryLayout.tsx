@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useFormat, useT, type MessageKey } from '../i18n';
 import { FavoriteToggle } from '../Favorites';
 import type { Game, LibraryLayout, Operations, Source } from '../operations';
+import { ProgressBadge } from './Progress';
 import { STATUS_LABELS } from './Status';
 import { GameActionButton, installable } from './GameAction';
 
@@ -85,8 +86,8 @@ const SOURCES: Record<Source, MessageKey> = {
 };
 
 /**
- * The Library as a list: one row per Game with its small Cover, title,
- * Status, Source, Playtime, Last Played, its Favorite star and main action,
+ * The Library as a list: one row per Game with its small Cover, title and
+ * Progress under it, Status, Source, Playtime, Last Played, its Favorite star and main action,
  * in the order given, the same as the cover grid's. The whole row opens the
  * Game's detail page.
  */
@@ -131,7 +132,10 @@ export function GameList({
             >
               {cover(game)}
             </button>
-            <h2 className="game-title">{game.title}</h2>
+            <span className="game-row-title">
+              <h2 className="game-title">{game.title}</h2>
+              <ProgressBadge progress={game.progress} />
+            </span>
             <Fact label="game.status" value={t(STATUS_LABELS[game.status])} />
             <Fact label="game.source" value={t(SOURCES[game.source])} />
             <Facts game={game} />
