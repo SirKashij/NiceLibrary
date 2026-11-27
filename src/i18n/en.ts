@@ -174,6 +174,10 @@ export const en = {
   'tray.notice':
     'When you close the window, NiceLibrary keeps running in the tray so it can go on tracking your playtime. Click its tray icon to open it again, or quit it from the icon’s menu. You can change this in the Settings under Window.',
   'tray.ok': 'OK',
+  'cover.chooseImage': 'Choose an image…',
+  'cover.useIcon': 'Use the executable’s icon',
+  'cover.notAnImage': 'That file is not a PNG or JPEG image. The cover stays as it was.',
+  'cover.changeFailed': 'The cover could not be changed.',
 } as const;
 
 export type MessageKey = keyof typeof en;

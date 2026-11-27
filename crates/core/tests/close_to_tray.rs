@@ -89,6 +89,8 @@ impl Profile {
             web_api: Box::new(Nothing),
             clock: Box::new(Nothing),
             executable_picker: Box::new(Nothing),
+            icon_extractor: Box::new(NoIconsNoImages),
+            image_picker: Box::new(NoIconsNoImages),
         };
         let store = Store::open(&self.path().join("nicelibrary.db")).unwrap();
         Core::new(ports, store, CoverCache::new(self.path().join("covers")))
@@ -156,4 +158,20 @@ fn the_close_to_tray_setting_is_kept_after_a_restart() {
 
     assert!(!restarted.close_to_tray().unwrap());
     assert_eq!(restarted.close_window().unwrap(), WindowClose::Quit);
+}
+
+/// A computer whose executables show no icon and whose user chooses no
+/// image; these tests need neither.
+struct NoIconsNoImages;
+
+impl nicelibrary_core::IconExtractor for NoIconsNoImages {
+    fn largest_icon(&self, _executable: &std::path::Path) -> Result<Option<nicelibrary_core::Icon>, String> {
+        Ok(None)
+    }
+}
+
+impl nicelibrary_core::ImagePicker for NoIconsNoImages {
+    fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

@@ -121,6 +121,8 @@ impl App {
                 web_api: Box::new(NoSecretsNoWebApi),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(user.clone()),
+                icon_extractor: Box::new(NoIconsNoImages),
+                image_picker: Box::new(NoIconsNoImages),
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.join("covers")),
@@ -265,6 +267,8 @@ fn a_failing_file_dialog_is_an_error() {
             web_api: Box::new(NoSecretsNoWebApi),
             clock: Box::new(StoppedClock),
             executable_picker: Box::new(BrokenDialog),
+            icon_extractor: Box::new(NoIconsNoImages),
+            image_picker: Box::new(NoIconsNoImages),
         },
         Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.path().join("covers")),
@@ -448,4 +452,20 @@ fn a_local_game_is_found_by_the_local_source_and_installed_only_filters() {
     let filter = nicelibrary_core::LibraryFilter { source: Some(Source::Local), installed_only: true, ..Default::default() };
 
     assert_eq!(app.core.filter_library(&filter).unwrap(), [game]);
+}
+
+/// A computer whose executables show no icon and whose user chooses no
+/// image; these tests need neither.
+struct NoIconsNoImages;
+
+impl nicelibrary_core::IconExtractor for NoIconsNoImages {
+    fn largest_icon(&self, _executable: &std::path::Path) -> Result<Option<nicelibrary_core::Icon>, String> {
+        Ok(None)
+    }
+}
+
+impl nicelibrary_core::ImagePicker for NoIconsNoImages {
+    fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

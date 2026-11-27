@@ -229,6 +229,12 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     </p>
   );
 
+  // How often each Game's Cover changed, so its image loads again.
+  const [coverRevisions, setCoverRevisions] = useState<Record<string, number>>({});
+  const coverUrl = (game: Game) => operations.coverUrl(game, coverRevisions[game.id]);
+  const coverChanged = (game: Game) =>
+    setCoverRevisions((revisions) => ({ ...revisions, [game.id]: (revisions[game.id] ?? 0) + 1 }));
+
   // The Game whose detail page is open. The Library stays mounted behind it,
   // so going back finds it as it was.
   const [opened, setOpened] = useState<Game>();
@@ -285,7 +291,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           )}
           {isFiltering(filter) && games?.length === 0 && <NoMatch onReset={() => setFilter(NO_FILTER)} />}
           {games && games.length > 0 && (
-            <CoverGrid games={games} coverUrl={operations.coverUrl} onPlay={launch} onOpen={open} />
+            <CoverGrid games={games} coverUrl={coverUrl} onPlay={launch} onOpen={open} />
           )}
         </Page>
       </div>
@@ -295,10 +301,11 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           operations={operations}
           game={opened}
           syncs={syncs}
-          cover={(game) => <Cover key={game.id} title={game.title} src={operations.coverUrl(game)} />}
+          cover={(game) => <Cover key={game.id} title={game.title} src={coverUrl(game)} />}
           notice={launchNotice}
           onPlay={launch}
           onBack={back}
+          onCoverChanged={coverChanged}
         />
       )}
     </>
@@ -369,10 +376,11 @@ function Played({ game }: { game: Game }) {
 /** A Game's Cover, or a neutral placeholder with its title when there is none or it cannot be loaded. */
 function Cover({ title, src }: { title: string; src: string }) {
   const t = useT();
-  const [failed, setFailed] = useState(false);
+  // The address that failed to load; a new one, after the Cover changed, is tried again.
+  const [failedSrc, setFailedSrc] = useState<string>();
   const label = t('library.cover', { title });
 
-  if (failed) {
+  if (failedSrc === src) {
     return (
       <div className="cover cover-placeholder" role="img" aria-label={label}>
         <span>{title}</span>
@@ -380,7 +388,7 @@ function Cover({ title, src }: { title: string; src: string }) {
     );
   }
   return (
-    <img className="cover" src={src} alt={label} loading="lazy" decoding="async" onError={() => setFailed(true)} />
+    <img className="cover" src={src} alt={label} loading="lazy" decoding="async" onError={() => setFailedSrc(src)} />
   );
 }
 

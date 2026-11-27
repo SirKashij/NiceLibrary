@@ -137,6 +137,8 @@ impl Computer {
                 web_api: Box::new(SteamOwning),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(NoExecutableChosen),
+                icon_extractor: Box::new(NoIconsNoImages),
+                image_picker: Box::new(NoIconsNoImages),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -235,5 +237,21 @@ fn an_order_arrives_from_the_interface_in_the_shape_the_interface_sends() {
     ] {
         assert_eq!(serde_json::from_value::<LibrarySort>(serde_json::json!(sent)).unwrap(), sort);
         assert_eq!(serde_json::to_value(sort).unwrap(), serde_json::json!(sent));
+    }
+}
+
+/// A computer whose executables show no icon and whose user chooses no
+/// image; these tests need neither.
+struct NoIconsNoImages;
+
+impl nicelibrary_core::IconExtractor for NoIconsNoImages {
+    fn largest_icon(&self, _executable: &std::path::Path) -> Result<Option<nicelibrary_core::Icon>, String> {
+        Ok(None)
+    }
+}
+
+impl nicelibrary_core::ImagePicker for NoIconsNoImages {
+    fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
     }
 }

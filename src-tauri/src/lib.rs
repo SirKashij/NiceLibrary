@@ -7,7 +7,7 @@ mod tray;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
+    AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, CoverImageChoice, Error,
     ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, SteamAccountChoice, SteamAppList, SteamAppListFetch,
     SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
@@ -175,6 +175,22 @@ async fn fetch_steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppLi
     core.fetch_steam_app_list()
 }
 
+/// Async, so the window stays responsive while the file dialog is open.
+#[tauri::command]
+async fn choose_cover_image(core: tauri::State<'_, Core>, game_id: String) -> Result<CoverImageChoice, Error> {
+    core.choose_cover_image(&game_id)
+}
+
+#[tauri::command]
+fn cover_image_chosen(core: tauri::State<'_, Core>, game_id: String) -> Result<bool, Error> {
+    core.cover_image_chosen(&game_id)
+}
+
+#[tauri::command]
+fn remove_cover_image(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Error> {
+    core.remove_cover_image(&game_id)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -203,6 +219,10 @@ const DATABASE: &str = "nicelibrary.db";
 /// The folder of downloaded Covers in the app's cache folder in the user
 /// profile (`%LOCALAPPDATA%\<identifier>` on Windows).
 const COVERS: &str = "covers";
+
+/// The folder of images the user chose as Covers, in the app's data folder
+/// next to the database: data, not cache, as they cannot be fetched again.
+const CHOSEN_COVERS: &str = "covers";
 
 pub fn run() {
     tauri::Builder::default()
@@ -246,7 +266,10 @@ pub fn run() {
             close_to_tray,
             set_close_to_tray,
             close_window,
-            show_tray_menu
+            show_tray_menu,
+            choose_cover_image,
+            cover_image_chosen,
+            remove_cover_image
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
@@ -258,7 +281,8 @@ pub fn run() {
         })
         .setup(|app| {
             let store = Store::open(&app.path().app_data_dir()?.join(DATABASE))?;
-            let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
+            let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS))
+                .with_chosen_images_in(app.path().app_data_dir()?.join(CHOSEN_COVERS));
             app.manage(Core::new(ports::real_ports(), store, covers));
             start_automatic_syncs(app)?;
             tray::create(app.handle())?;

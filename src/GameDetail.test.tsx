@@ -42,6 +42,9 @@ function fakeOperations(
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
+    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
+    coverImageChosen: async () => false,
+    removeCoverImage: async () => {},
     launch: (game) => {
       calls.launched.push(game.id);
       return options.launch ? options.launch(game) : Promise.resolve({ outcome: 'launched' });
