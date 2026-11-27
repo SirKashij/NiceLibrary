@@ -75,6 +75,7 @@ function fakeOperations({
       return outcome;
     },
     lastSync: async () => last,
+    filterLibrary: async () => [],
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -83,6 +84,7 @@ function fakeOperations({
     createCollection: async () => ({ outcome: 'named', id: 1 }),
     renameCollection: async (id) => ({ outcome: 'named', id }),
     deleteCollection: async () => {},
+    game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
   };
   return { operations, calls, automaticSync, listeners };
 }

@@ -69,6 +69,16 @@ export interface Collection {
 /** How naming a Collection went, when nothing failed. Every outcome but `named` changed nothing. Mirrors `CollectionNaming` in crates/core. */
 export type CollectionNaming = { outcome: 'named'; id: number } | { outcome: 'emptyName' } | { outcome: 'nameTaken' };
 
+/** What the Library is narrowed to; every part that is set must match. Mirrors `LibraryFilter` in crates/core. */
+export interface LibraryFilter {
+  /** Text the title must contain, ignoring case; empty matches every title. */
+  search: string;
+  /** Only Games of this Source; `null` for both Sources. */
+  source: Source | null;
+  /** Only Installed Games. */
+  installedOnly: boolean;
+}
+
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
@@ -137,6 +147,10 @@ export interface Operations {
   renameCollection(id: number, name: string): Promise<CollectionNaming>;
   /** Deletes a Collection. Its Games stay in the Library. */
   deleteCollection(id: number): Promise<void>;
+  /** The Games in the stored Library that match the filter, ordered by title like `library`. */
+  filterLibrary(filter: LibraryFilter): Promise<Game[]>;
+  /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
+  game(gameId: string): Promise<Game | null>;
 }
 
 export const tauriOperations: Operations = {
@@ -165,4 +179,6 @@ export const tauriOperations: Operations = {
   createCollection: (name) => invoke<CollectionNaming>('create_collection', { name }),
   renameCollection: (id, name) => invoke<CollectionNaming>('rename_collection', { id, name }),
   deleteCollection: (id) => invoke<void>('delete_collection', { id }),
+  filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
+  game: (gameId) => invoke<Game | null>('game', { gameId }),
 };

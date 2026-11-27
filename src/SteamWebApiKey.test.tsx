@@ -41,11 +41,13 @@ function fakeOperations({ stored = false } = {}) {
     },
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
     renameCollection: async (id) => ({ outcome: 'named', id }),
     deleteCollection: async () => {},
+    game: async () => null,
   };
   return { operations, calls };
 }

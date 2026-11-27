@@ -57,6 +57,20 @@ jobs:
       - name: npm dependencies
         run: node scripts/check-npm-licenses.ts
 
+  # Reports Rust dependencies with a RustSec advisory: known vulnerabilities,
+  # unsound code or crates that are no longer maintained. It is a separate,
+  # non-required check, so a new advisory shows up on every pull request
+  # without blocking work that has nothing to do with it.
+  advisories:
+    name: Dependency advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check advisories
+
   windows:
     name: Windows (build and test)
     runs-on: windows-latest

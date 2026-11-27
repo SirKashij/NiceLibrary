@@ -45,6 +45,8 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    filterLibrary: async () => library,
+    game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
     collections: async () => [...collections].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())),
     createCollection: async (raw) => name(null, raw),
     renameCollection: async (id, raw) => name(id, raw),
