@@ -1,12 +1,16 @@
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useT, type MessageKey } from '../i18n';
-import type { Game, LibraryFilter, Operations, Source } from '../operations';
+import type { Game, LibraryFilter, LibrarySort, Operations, Source } from '../operations';
+import { LIBRARY_ORDER } from './LibrarySort';
+
+/** What the Library is narrowed to: the filter without its order. */
+export type Narrowing = Omit<LibraryFilter, 'sort'>;
 
 /** The filter that narrows nothing: the whole Library. */
-export const NO_FILTER: LibraryFilter = { search: '', source: null, installedOnly: false };
+export const NO_FILTER: Narrowing = { search: '', source: null, installedOnly: false };
 
 /** Whether `filter` narrows the Library at all. */
-export function isFiltering(filter: LibraryFilter): boolean {
+export function isFiltering(filter: Narrowing): boolean {
   return filter.search !== '' || filter.source !== null || filter.installedOnly;
 }
 
@@ -14,23 +18,27 @@ export function isFiltering(filter: LibraryFilter): boolean {
 export type FilteredLibrary = { state: 'ready'; games: Game[] | undefined } | { state: 'failed' };
 
 /**
- * The Games to show for `filter`. Without a filter that is `library` itself;
- * otherwise the core answers (see `filterLibrary` in src/operations.ts),
- * asked again whenever the filter or the Library changes. Until the answer
- * for a new filter arrives, the answer before stays.
+ * The Games to show for `narrowing` in `sort`; none while `sort` is not
+ * known yet. When nothing is narrowed and `sort` is the order `library`
+ * answers in, that is `library` itself; otherwise the core answers (see
+ * `filterLibrary` in src/operations.ts), asked again whenever the filter,
+ * the order or the Library changes. Until the answer for a new filter
+ * arrives, the answer before stays.
  */
 export function useFilteredLibrary(
   operations: Operations,
-  filter: LibraryFilter,
+  narrowing: Narrowing,
+  sort: LibrarySort | undefined,
   library: Game[] | undefined,
 ): FilteredLibrary {
-  const filtering = isFiltering(filter);
+  const filtering = sort !== undefined && (isFiltering(narrowing) || sort !== LIBRARY_ORDER);
+  const filter = useMemo(() => sort && { ...narrowing, sort }, [narrowing, sort]);
   const [answer, setAnswer] = useState<FilteredLibrary>({ state: 'ready', games: undefined });
 
   useEffect(() => {
     // Once the filters are cleared, the next filter starts again from the whole Library.
     if (!filtering) setAnswer({ state: 'ready', games: undefined });
-    if (!filtering || library === undefined) return;
+    if (!filtering || !filter || library === undefined) return;
     // Only the answer to the latest filter counts; an earlier one may answer later.
     let latest = true;
     operations.filterLibrary(filter).then(
@@ -42,6 +50,7 @@ export function useFilteredLibrary(
     };
   }, [operations, filter, filtering, library]);
 
+  if (sort === undefined) return { state: 'ready', games: undefined };
   if (!filtering) return { state: 'ready', games: library };
   if (answer.state === 'ready' && answer.games === undefined) return { state: 'ready', games: library };
   return answer;
@@ -53,13 +62,15 @@ const SOURCES: { source: Source | null; label: MessageKey }[] = [
   { source: 'local', label: 'filter.local' },
 ];
 
-/** The toolbar above the Library: search, Source and Installed only. */
+/** The toolbar above the Library: search, Source and Installed only, then `children`. */
 export function LibraryToolbar({
   filter,
   onChange,
+  children,
 }: {
-  filter: LibraryFilter;
-  onChange: (filter: LibraryFilter) => void;
+  filter: Narrowing;
+  onChange: (filter: Narrowing) => void;
+  children?: ReactNode;
 }) {
   const t = useT();
   return (
@@ -92,6 +103,7 @@ export function LibraryToolbar({
         />
         {t('filter.installedOnly')}
       </label>
+      {children}
     </div>
   );
 }

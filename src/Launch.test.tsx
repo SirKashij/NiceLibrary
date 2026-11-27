@@ -27,6 +27,8 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     launch: (game) => {
       requested.push(game.id);
       return launch(game);

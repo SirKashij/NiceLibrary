@@ -6,7 +6,7 @@ pub mod ports;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AutomaticSync, Core, CoverCache, Error, Game, Launch, LibraryFilter, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
+    AutomaticSync, Core, CoverCache, Error, Game, Launch, LibraryFilter, LibrarySort, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
     SyncOutcome,
 };
 use percent_encoding::percent_decode_str;
@@ -82,6 +82,16 @@ fn game(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<Game>, E
     core.game(&game_id)
 }
 
+#[tauri::command]
+fn library_sort(core: tauri::State<'_, Core>) -> Result<LibrarySort, Error> {
+    core.library_sort()
+}
+
+#[tauri::command]
+fn choose_library_sort(core: tauri::State<'_, Core>, sort: LibrarySort) -> Result<(), Error> {
+    core.choose_library_sort(sort)
+}
+
 /// Async, so a slow start of the browser does not block the window.
 #[tauri::command]
 async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(), Error> {
@@ -133,7 +143,9 @@ pub fn run() {
             sync,
             last_sync,
             filter_library,
-            game
+            game,
+            library_sort,
+            choose_library_sort
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

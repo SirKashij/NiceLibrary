@@ -58,7 +58,17 @@ export type LaunchOutcome = { outcome: 'launched' } | { outcome: 'steamNotFound'
 /** How storing the Steam Web API key went, when nothing failed. Mirrors `SteamWebApiKeyCheck` in crates/core. */
 export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' } | { outcome: 'steamUnreachable' };
 
-/** What the Library is narrowed to; every part that is set must match. Mirrors `LibraryFilter` in crates/core. */
+/**
+ * The order of the Library: Last Played (most recent first), title, or
+ * Playtime (longest first). Games without a value come last, Games with the
+ * same value by title. Mirrors `LibrarySort` in crates/core.
+ */
+export type LibrarySort = 'recentlyPlayed' | 'name' | 'playtime';
+
+/**
+ * What the Library is narrowed to, and in which order; every part that is set
+ * must match. Mirrors `LibraryFilter` in crates/core.
+ */
 export interface LibraryFilter {
   /** Text the title must contain, ignoring case; empty matches every title. */
   search: string;
@@ -66,6 +76,8 @@ export interface LibraryFilter {
   source: Source | null;
   /** Only Installed Games. */
   installedOnly: boolean;
+  /** The order the Games are answered in. */
+  sort: LibrarySort;
 }
 
 export interface Operations {
@@ -124,10 +136,14 @@ export interface Operations {
    * the function that stops listening.
    */
   onAutomaticSync(listener: (event: AutomaticSync) => void): () => void;
-  /** The Games in the stored Library that match the filter, ordered by title like `library`. */
+  /** The Games in the stored Library that match the filter, in the order it asks for. */
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /** The order the user chose for the Library; `recentlyPlayed` until they choose. */
+  librarySort(): Promise<LibrarySort>;
+  /** Makes `sort` the order of the Library, also after a restart. */
+  chooseLibrarySort(sort: LibrarySort): Promise<void>;
 }
 
 export const tauriOperations: Operations = {
@@ -154,4 +170,6 @@ export const tauriOperations: Operations = {
   },
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  librarySort: () => invoke<LibrarySort>('library_sort'),
+  chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
 };

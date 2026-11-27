@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize, Serializer};
 pub use clock::{Clock, Wakeup};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
-pub use library_filter::LibraryFilter;
+pub use library_filter::{LibraryFilter, LibrarySort};
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
@@ -136,16 +136,29 @@ impl Core {
             Some(account) => self.store.steam_games(&account)?,
             None => Vec::new(),
         };
-        games.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()).then_with(|| a.id.cmp(&b.id)));
+        games.sort_by(library_filter::by_title);
         Ok(games)
     }
 
-    /// The Games in the Library that match `filter`, as last stored, ordered
-    /// by title like [`Self::library`].
+    /// The Games in the Library that match `filter`, as last stored, in the
+    /// order `filter` asks for.
     pub fn filter_library(&self, filter: &LibraryFilter) -> Result<Vec<Game>, Error> {
         let mut games = self.library()?;
         games.retain(|game| filter.matches(game));
+        filter.sort.sort(&mut games);
         Ok(games)
+    }
+
+    /// The order the user chose for the Library; recently played until they
+    /// choose.
+    pub fn library_sort(&self) -> Result<LibrarySort, Error> {
+        Ok(self.store.library_sort()?.and_then(|name| LibrarySort::from_stored_name(&name)).unwrap_or_default())
+    }
+
+    /// Makes `sort` the order of the Library, from now on and after every
+    /// restart.
+    pub fn choose_library_sort(&self, sort: LibrarySort) -> Result<(), Error> {
+        self.store.choose_library_sort(sort.stored_name())
     }
 
     /// The Game `game_id` as the Library shows it, for its detail page;

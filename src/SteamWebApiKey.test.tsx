@@ -44,6 +44,8 @@ function fakeOperations({ stored = false } = {}) {
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
   };
   return { operations, calls };
 }

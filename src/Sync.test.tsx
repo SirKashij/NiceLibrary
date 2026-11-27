@@ -81,6 +81,8 @@ function fakeOperations({
       return () => listeners.delete(listener);
     },
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
   };
   return { operations, calls, automaticSync, listeners };
 }

@@ -60,6 +60,8 @@ function fakeOperations(
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     launch: async () => ({ outcome: 'launched' }),
   };
   return { operations, chosen };

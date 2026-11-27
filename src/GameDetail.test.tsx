@@ -54,6 +54,8 @@ function fakeOperations(
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
     filterLibrary: async () => games,
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     game: async (gameId) => {
       calls.game.push(gameId);
       return games.find((game) => game.id === gameId) ?? null;

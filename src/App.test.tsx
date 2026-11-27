@@ -24,6 +24,8 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     launch: async () => ({ outcome: 'launched' }),
   };
 }

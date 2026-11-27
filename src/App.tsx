@@ -3,6 +3,7 @@ import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
+import { SortChoice, useLibrarySort } from './library/LibrarySort';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -183,7 +184,8 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
 
   const library = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
   const [filter, setFilter] = useState(NO_FILTER);
-  const filtered = useFilteredLibrary(operations, filter, library);
+  const librarySort = useLibrarySort(operations);
+  const filtered = useFilteredLibrary(operations, filter, librarySort.sort, library);
   const games = filtered.state === 'ready' ? filtered.games : undefined;
   const failure: MessageKey | undefined =
     fromSteam.state !== 'failed'
@@ -244,7 +246,14 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     <>
       <div ref={libraryView} hidden={opened !== undefined}>
         <Page title="nav.library">
-          <LibraryToolbar filter={filter} onChange={setFilter} />
+          <LibraryToolbar filter={filter} onChange={setFilter}>
+            <SortChoice sort={librarySort.sort} choose={librarySort.choose} />
+          </LibraryToolbar>
+          {librarySort.notKept && (
+            <p className="note" role="alert">
+              {t('sort.notKept')}
+            </p>
+          )}
           {filtered.state === 'failed' && (
             <p className="note" role="alert">
               {t('filter.failed')}
