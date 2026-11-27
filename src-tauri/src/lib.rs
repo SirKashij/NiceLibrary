@@ -8,8 +8,8 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
-    ExecutableChoice, Game, Launch, LibraryFilter, LibraryLayout, SteamAccountChoice, SteamAppList, SteamAppListFetch,
-    SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
+    ExecutableChoice, Game, Launch, LibraryFilter, LibraryLayout, LibrarySort, SteamAccountChoice, SteamAppList,
+    SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -83,6 +83,16 @@ fn filter_library(core: tauri::State<'_, Core>, filter: LibraryFilter) -> Result
 #[tauri::command]
 fn game(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<Game>, Error> {
     core.game(&game_id)
+}
+
+#[tauri::command]
+fn library_sort(core: tauri::State<'_, Core>) -> Result<LibrarySort, Error> {
+    core.library_sort()
+}
+
+#[tauri::command]
+fn choose_library_sort(core: tauri::State<'_, Core>, sort: LibrarySort) -> Result<(), Error> {
+    core.choose_library_sort(sort)
 }
 
 /// Async, so a slow start of the browser does not block the window.
@@ -239,6 +249,8 @@ pub fn run() {
             fetch_steam_app_list,
             filter_library,
             game,
+            library_sort,
+            choose_library_sort,
             choose_local_game_executable,
             add_local_game,
             library_layout,

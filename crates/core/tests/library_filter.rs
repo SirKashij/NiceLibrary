@@ -151,7 +151,8 @@ fn titles(core: &Core, filter: LibraryFilter) -> Vec<String> {
 }
 
 #[test]
-fn a_filter_that_filters_nothing_answers_the_whole_library_ordered_by_title() {
+fn a_filter_that_filters_nothing_answers_the_whole_library() {
+    // None of these Games was ever played, so recently played leaves them in the order of their titles.
     let core = Computer::new().start();
 
     assert_eq!(titles(&core, LibraryFilter::default()), ["Hades", "Half-Life 2", "Portal 2"]);
@@ -178,7 +179,12 @@ fn filtering_to_installed_games_leaves_out_the_games_that_are_not_installed() {
 #[test]
 fn the_filters_combine_with_each_other_and_with_the_search() {
     let core = Computer::new().start();
-    let filter = |search: &str, source, installed_only| LibraryFilter { search: search.into(), source, installed_only };
+    let filter = |search: &str, source, installed_only| LibraryFilter {
+        search: search.into(),
+        source,
+        installed_only,
+        ..Default::default()
+    };
 
     // "ha" is in Hades and Half-Life 2; only Hades is Installed.
     assert_eq!(titles(&core, filter("HA", None, false)), ["Hades", "Half-Life 2"]);
@@ -191,7 +197,10 @@ fn the_filters_combine_with_each_other_and_with_the_search() {
 fn a_filter_arrives_from_the_interface_in_the_shape_the_interface_sends() {
     let sent = serde_json::json!({ "search": "ha", "source": "local", "installedOnly": true });
     let filter: LibraryFilter = serde_json::from_value(sent).unwrap();
-    assert_eq!(filter, LibraryFilter { search: "ha".into(), source: Some(Source::Local), installed_only: true });
+    assert_eq!(
+        filter,
+        LibraryFilter { search: "ha".into(), source: Some(Source::Local), installed_only: true, ..Default::default() }
+    );
 
     let for_both_sources = serde_json::json!({ "search": "", "source": null, "installedOnly": false });
     assert_eq!(serde_json::from_value::<LibraryFilter>(for_both_sources).unwrap(), LibraryFilter::default());

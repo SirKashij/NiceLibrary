@@ -40,6 +40,8 @@ function fakeOperations({ closeToTray = true } = {}) {
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     filterLibrary: async () => [],
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},

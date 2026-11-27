@@ -30,8 +30,8 @@ pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
+pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
-pub use library_filter::LibraryFilter;
 pub use library_layout::LibraryLayout;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_app_list::{AutomaticSteamAppListFetch, SteamAppList, SteamAppListFetch, SteamTitle};
@@ -167,16 +167,29 @@ impl Core {
             None => Vec::new(),
         };
         games.extend(self.store.local_games()?.into_iter().map(|game| Game::local(game.id, game.title)));
-        games.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()).then_with(|| a.id.cmp(&b.id)));
+        games.sort_by(library_filter::by_title);
         Ok(games)
     }
 
-    /// The Games in the Library that match `filter`, as last stored, ordered
-    /// by title like [`Self::library`].
+    /// The Games in the Library that match `filter`, as last stored, in the
+    /// order `filter` asks for.
     pub fn filter_library(&self, filter: &LibraryFilter) -> Result<Vec<Game>, Error> {
         let mut games = self.library()?;
         games.retain(|game| filter.matches(game));
+        filter.sort.sort(&mut games);
         Ok(games)
+    }
+
+    /// The order the user chose for the Library; recently played until they
+    /// choose.
+    pub fn library_sort(&self) -> Result<LibrarySort, Error> {
+        Ok(self.store.library_sort()?.and_then(|name| LibrarySort::from_stored_name(&name)).unwrap_or_default())
+    }
+
+    /// Makes `sort` the order of the Library, from now on and after every
+    /// restart.
+    pub fn choose_library_sort(&self, sort: LibrarySort) -> Result<(), Error> {
+        self.store.choose_library_sort(sort.stored_name())
     }
 
     /// The Game `game_id` as the Library shows it, for its detail page;

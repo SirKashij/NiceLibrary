@@ -97,6 +97,8 @@ function fakeOperations({
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
   };

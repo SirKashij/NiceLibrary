@@ -87,6 +87,10 @@ _Avoid_: Category, tag, folder, list
 The page of one Game, opened from the Library: its large Cover, Source, whether it is Installed, Playtime, Last Played and its Launch. Going back returns to the Library as it was left.
 _Avoid_: Game page, info screen, dialog
 
+**Sort Order**:
+The order the Library is shown in: recently played (by Last Played, the default), name or Playtime. Games without a value come last, Games with the same value by title. The chosen Sort Order survives a restart.
+_Avoid_: Sorting, ranking
+
 ### Artwork
 
 **Cover**:

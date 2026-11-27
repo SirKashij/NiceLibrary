@@ -59,6 +59,8 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     libraryLayout: () => stored,
     chooseLibraryLayout: async (layout) => {
       chosen.push(layout);

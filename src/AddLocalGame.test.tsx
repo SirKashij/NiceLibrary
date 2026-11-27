@@ -56,6 +56,8 @@ function fakeOperations({
     filterLibrary: async () => [...games],
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: choice,
     addLocalGame: async (executable, title) => {

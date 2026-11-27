@@ -70,6 +70,8 @@ function fakeOperations(
     filterLibrary: async () => games,
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     game: async (gameId) => {
       calls.game.push(gameId);
       return games.find((game) => game.id === gameId) ?? null;

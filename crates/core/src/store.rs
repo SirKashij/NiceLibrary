@@ -76,6 +76,9 @@ const LAST_READ_STEAM_ACCOUNT: &str = "steam_account";
 /// The setting that names the Steam Account the user chose.
 const CHOSEN_STEAM_ACCOUNT: &str = "chosen_steam_account";
 
+/// The setting that names the order the user chose for the Library.
+const LIBRARY_SORT: &str = "library_sort";
+
 /// The setting that holds the theme the user chose.
 const THEME: &str = "theme";
 
@@ -142,6 +145,21 @@ impl Store {
             "INSERT INTO settings (key, value) VALUES (?1, ?2)
              ON CONFLICT (key) DO UPDATE SET value = excluded.value",
             params![CHOSEN_STEAM_ACCOUNT, steam_id],
+        )?;
+        Ok(())
+    }
+
+    /// The name of the order the user chose for the Library, if they chose one.
+    pub(crate) fn library_sort(&self) -> Result<Option<String>, Error> {
+        self.setting(LIBRARY_SORT)
+    }
+
+    /// Remembers `name` as the order the user chose for the Library.
+    pub(crate) fn choose_library_sort(&self, name: &str) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![LIBRARY_SORT, name],
         )?;
         Ok(())
     }

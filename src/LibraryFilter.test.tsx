@@ -57,6 +57,8 @@ function fakeOperations() {
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
@@ -92,7 +94,7 @@ describe('Filtering the Library', () => {
     const source = screen.getByRole('group', { name: 'Source' });
     await user.click(within(source).getByRole('button', { name: 'Steam' }));
 
-    expect(asked.at(-1)).toEqual({ search: '', source: 'steam', installedOnly: false });
+    expect(asked.at(-1)).toEqual({ search: '', source: 'steam', installedOnly: false, sort: 'name' });
     expect(within(source).getByRole('button', { name: 'Steam' })).toHaveAttribute('aria-pressed', 'true');
     expect(within(source).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'false');
   });
@@ -109,7 +111,7 @@ describe('Filtering the Library', () => {
     await user.type(screen.getByRole('searchbox', { name: 'Search the library' }), 'ha');
     await user.click(screen.getByRole('button', { name: 'Steam' }));
 
-    expect(asked.at(-1)).toEqual({ search: 'ha', source: 'steam', installedOnly: true });
+    expect(asked.at(-1)).toEqual({ search: 'ha', source: 'steam', installedOnly: true, sort: 'name' });
     expect(await shownTitles(1)).toEqual(['Hades']);
   });
 
@@ -152,7 +154,7 @@ describe('Filtering the Library', () => {
     expect(screen.getByRole('checkbox', { name: 'Installed only' })).not.toBeChecked();
     expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByText('No games match these filters.')).not.toBeInTheDocument();
-    expect(asked.at(-1)).toEqual({ search: 'half', source: null, installedOnly: true });
+    expect(asked.at(-1)).toEqual({ search: 'half', source: null, installedOnly: true, sort: 'name' });
   });
 
   it('shows the empty state for a Source without Games', async () => {

@@ -123,7 +123,17 @@ export type AutomaticSteamAppListFetch =
   | ({ state: 'finished' } & SteamAppListFetch)
   | { state: 'failed'; reason: string };
 
-/** What the Library is narrowed to; every part that is set must match. Mirrors `LibraryFilter` in crates/core. */
+/**
+ * The order of the Library: Last Played (most recent first), title, or
+ * Playtime (longest first). Games without a value come last, Games with the
+ * same value by title. Mirrors `LibrarySort` in crates/core.
+ */
+export type LibrarySort = 'recentlyPlayed' | 'name' | 'playtime';
+
+/**
+ * What the Library is narrowed to, and in which order; every part that is set
+ * must match. Mirrors `LibraryFilter` in crates/core.
+ */
 export interface LibraryFilter {
   /** Text the title must contain, ignoring case; empty matches every title. */
   search: string;
@@ -131,6 +141,8 @@ export interface LibraryFilter {
   source: Source | null;
   /** Only Installed Games. */
   installedOnly: boolean;
+  /** The order the Games are answered in. */
+  sort: LibrarySort;
 }
 
 /** How the Library shows its Games: a grid of Covers or one row per Game. Mirrors `LibraryLayout` in crates/core. */
@@ -233,7 +245,7 @@ export interface Operations {
    * list is a week old. Answers the function that stops listening.
    */
   onAutomaticSteamAppListFetch(listener: (event: AutomaticSteamAppListFetch) => void): () => void;
-  /** The Games in the stored Library that match the filter, ordered by title like `library`. */
+  /** The Games in the stored Library that match the filter, in the order it asks for. */
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
@@ -258,6 +270,10 @@ export interface Operations {
   onTrayNotice(listener: () => void): () => void;
   /** Gives the Tray icon its tooltip and menu, in the interface language. */
   showTrayMenu(texts: TrayMenuTexts): Promise<void>;
+  /** The order the user chose for the Library; `recentlyPlayed` until they choose. */
+  librarySort(): Promise<LibrarySort>;
+  /** Makes `sort` the order of the Library, also after a restart. */
+  chooseLibrarySort(sort: LibrarySort): Promise<void>;
 }
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
@@ -324,4 +340,6 @@ export const tauriOperations: Operations = {
     };
   },
   showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
+  librarySort: () => invoke<LibrarySort>('library_sort'),
+  chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
 };
