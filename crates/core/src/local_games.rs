@@ -54,11 +54,14 @@ pub(crate) struct StoredLocalGame {
     pub id: i64,
     pub title: String,
     pub executable: String,
+    /// The percentage the user set by hand, from 0 to 100.
+    pub manual_progress: Option<u8>,
 }
 
 impl Game {
     /// The Local Game stored under `id`. A Local Game is always Installed;
-    /// without Sessions its Playtime is nothing yet.
+    /// without Sessions its Playtime is nothing yet, and without Manual
+    /// Progress it has no Progress.
     pub(crate) fn local(id: i64, title: String) -> Self {
         Self {
             id: format!("local:{id}"),
@@ -67,7 +70,13 @@ impl Game {
             installed: true,
             playtime_minutes: Some(0),
             last_played: None,
+            progress: None,
         }
+    }
+
+    /// The Local Game as the store keeps it, with its Progress.
+    pub(crate) fn from_stored_local(stored: StoredLocalGame) -> Self {
+        Self { progress: crate::progress::of_local_game(stored.manual_progress), ..Self::local(stored.id, stored.title) }
     }
 }
 

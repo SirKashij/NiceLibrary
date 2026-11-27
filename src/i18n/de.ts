@@ -176,4 +176,12 @@ export const de: Record<MessageKey, string> = {
   'tray.notice':
     'Wenn du das Fenster schließt, läuft NiceLibrary im Infobereich der Taskleiste weiter und erfasst weiter deine Spielzeit. Ein Klick auf das Symbol dort öffnet es wieder, über sein Menü beendest du es. Ändern kannst du das in den Einstellungen unter Fenster.',
   'tray.ok': 'OK',
+  'game.progress': 'Fortschritt',
+  'progress.manual': 'Manueller Fortschritt',
+  'progress.manualField': 'Manueller Fortschritt in Prozent',
+  'progress.manualHint': 'Wie weit du bist, von 0 bis 100. Lass das Feld leer, wenn du ihn nicht festhalten willst.',
+  'progress.save': 'Speichern',
+  'progress.clear': 'Entfernen',
+  'progress.invalid': 'Gib eine ganze Zahl von 0 bis 100 ein.',
+  'progress.saveFailed': 'Der manuelle Fortschritt konnte nicht gespeichert werden.',
 };

@@ -67,6 +67,7 @@ function fakeOperations({
     deleteCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     steamAppList: async () => list,

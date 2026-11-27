@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LibraryFilter, Operations } from './operations';
 
 function steamGame(appId: number, title: string, installed: boolean): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, progress: null };
 }
 
 const LIBRARY = [steamGame(1145360, 'Hades', true), steamGame(220, 'Half-Life 2', false), steamGame(620, 'Portal 2', true)];
@@ -59,6 +59,7 @@ function fakeOperations() {
     chooseLibrarySort: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
   };
   return { operations, asked };
 }

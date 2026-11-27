@@ -174,6 +174,14 @@ export const en = {
   'tray.notice':
     'When you close the window, NiceLibrary keeps running in the tray so it can go on tracking your playtime. Click its tray icon to open it again, or quit it from the icon’s menu. You can change this in the Settings under Window.',
   'tray.ok': 'OK',
+  'game.progress': 'Progress',
+  'progress.manual': 'Manual Progress',
+  'progress.manualField': 'Manual Progress in percent',
+  'progress.manualHint': 'How far you are, from 0 to 100. Leave it empty if you do not want to track it.',
+  'progress.save': 'Save',
+  'progress.clear': 'Clear',
+  'progress.invalid': 'Enter a whole number from 0 to 100.',
+  'progress.saveFailed': 'The Manual Progress could not be saved.',
 } as const;
 
 export type MessageKey = keyof typeof en;

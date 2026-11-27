@@ -13,7 +13,7 @@ const LAST_WEEK = 1_795_205_700;
 const pending = <T,>() => new Promise<T>(() => {});
 
 function steamGame(appId: number, title: string, installed: boolean, minutes: number | null, lastPlayed: number | null): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: minutes, lastPlayed };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: minutes, lastPlayed, progress: null };
 }
 
 /**
@@ -99,6 +99,7 @@ function fakeOperations({
     chooseLibrarySort: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
   };
   return { operations, calls, automaticSync, listeners };
 }

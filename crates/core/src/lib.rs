@@ -11,6 +11,7 @@ pub mod keyvalues;
 mod launch;
 mod local_games;
 mod library_filter;
+mod progress;
 mod steam;
 mod steam_app_list;
 mod steam_web_api;
@@ -31,6 +32,7 @@ pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
+pub use progress::ManualProgress;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_app_list::{AutomaticSteamAppListFetch, SteamAppList, SteamAppListFetch, SteamTitle};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
@@ -64,11 +66,15 @@ pub struct Game {
     /// Last Played, in seconds since the Unix epoch; `None` for never or
     /// not known.
     pub last_played: Option<u64>,
+    /// Progress in percent, from 0 to 100, as its Source works it out (see
+    /// `progress`): for a Local Game its Manual Progress. `None` when the
+    /// Game has none.
+    pub progress: Option<u8>,
 }
 
 impl Game {
-    /// The Steam Game with Steam's app id `app_id`, without Playtime and
-    /// Last Played.
+    /// The Steam Game with Steam's app id `app_id`, without Playtime, Last
+    /// Played and Progress.
     pub(crate) fn steam(app_id: u32, title: String, installed: bool) -> Self {
         Self {
             id: format!("steam:{app_id}"),
@@ -77,6 +83,7 @@ impl Game {
             installed,
             playtime_minutes: None,
             last_played: None,
+            progress: None,
         }
     }
 }
@@ -164,7 +171,7 @@ impl Core {
             Some(account) => self.store.steam_games(&account)?,
             None => Vec::new(),
         };
-        games.extend(self.store.local_games()?.into_iter().map(|game| Game::local(game.id, game.title)));
+        games.extend(self.store.local_games()?.into_iter().map(Game::from_stored_local));
         games.sort_by(library_filter::by_title);
         Ok(games)
     }
@@ -434,6 +441,31 @@ impl Core {
         Ok(AddLocalGame::Added { game: Game::local(id, title.to_owned()) })
     }
 
+    /// Sets the Manual Progress of the Local Game `game_id` to `percent`, a
+    /// whole number from 0 to 100, or clears it with `None`; it is then the
+    /// Game's Progress. Anything outside 0 to 100, and any Game that is not a
+    /// Local Game, is refused and changes nothing. Fails when there is no
+    /// such Local Game.
+    pub fn set_manual_progress(&self, game_id: &str, percent: Option<i64>) -> Result<ManualProgress, Error> {
+        let Some(id) = local_game_id(game_id) else {
+            return Ok(ManualProgress::NotALocalGame);
+        };
+        let manual_progress = match percent {
+            Some(percent) => match progress::percent_in(percent) {
+                Some(percent) => Some(percent),
+                None => return Ok(ManualProgress::OutOfRange),
+            },
+            None => None,
+        };
+        if !self.store.set_manual_progress(id, manual_progress)? {
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
+        }
+        match self.game(game_id)? {
+            Some(game) => Ok(ManualProgress::Set { game }),
+            None => Err(Error::new(format!("no such game in the library: {game_id}"))),
+        }
+    }
+
     /// Opens the Steam page where the user creates their Steam Web API key,
     /// in the browser.
     pub fn open_steam_web_api_key_page(&self) -> Result<(), Error> {
@@ -641,4 +673,9 @@ fn most_recent_account(folder: &std::path::Path) -> Option<String> {
 /// Steam's app id in a Steam Game's id (`steam:<app id>`).
 fn steam_app_id(game_id: &str) -> Option<u32> {
     game_id.strip_prefix("steam:")?.parse().ok()
+}
+
+/// The store's id in a Local Game's id (`local:<number>`).
+fn local_game_id(game_id: &str) -> Option<i64> {
+    game_id.strip_prefix("local:")?.parse().ok()
 }

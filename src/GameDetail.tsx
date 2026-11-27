@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFormat, useT, type MessageKey } from './i18n';
+import { ManualProgressForm } from './ManualProgress';
 import type { Game, Operations, Source } from './operations';
 
 const SOURCES: Record<Source, MessageKey> = {
@@ -9,9 +10,10 @@ const SOURCES: Record<Source, MessageKey> = {
 
 /**
  * The detail page of one Game: its large Cover, title, Source, whether it is
- * Installed, Playtime, Last Played and the main action, and the way back to
- * the Library. Shows the Game as opened at once and as the core answers it
- * then, again after each Sync.
+ * Installed, Playtime, Last Played, Progress when it has one, the main action,
+ * for a Local Game its Manual Progress, and the way back to the Library.
+ * Shows the Game as opened at once and as the core answers it then, again
+ * after each Sync and after each change of its Manual Progress.
  */
 export function GameDetail({
   operations,
@@ -102,7 +104,16 @@ export function GameDetail({
                   <dt>{t('game.lastPlayed')}</dt>
                   <dd>{lastPlayed}</dd>
                 </div>
+                {game.progress !== null && (
+                  <div>
+                    <dt>{t('game.progress')}</dt>
+                    <dd>{format.percent(game.progress)}</dd>
+                  </div>
+                )}
               </dl>
+              {game.source === 'local' && (
+                <ManualProgressForm operations={operations} game={game} onSet={setGame} />
+              )}
             </>
           )}
         </div>

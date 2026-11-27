@@ -62,6 +62,7 @@ function fakeOperations({ stored = false } = {}) {
     chooseLibrarySort: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
   };
   return { operations, calls };
 }

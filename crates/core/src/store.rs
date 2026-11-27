@@ -65,6 +65,8 @@ const MIGRATIONS: &[&str] = &[
          name   TEXT    NOT NULL,
          search TEXT    NOT NULL
      );",
+    // 6: The Manual Progress of a Local Game, in percent; NULL while the user has set none.
+    "ALTER TABLE local_games ADD COLUMN manual_progress INTEGER;",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
@@ -272,11 +274,28 @@ impl Store {
     /// Every Local Game, in the order they were added.
     pub(crate) fn local_games(&self) -> Result<Vec<StoredLocalGame>, Error> {
         let connection = self.connection();
-        let mut statement = connection.prepare("SELECT id, title, executable FROM local_games ORDER BY id")?;
+        let mut statement =
+            connection.prepare("SELECT id, title, executable, manual_progress FROM local_games ORDER BY id")?;
         let games = statement
-            .query_map([], |row| Ok(StoredLocalGame { id: row.get(0)?, title: row.get(1)?, executable: row.get(2)? }))?
+            .query_map([], |row| {
+                Ok(StoredLocalGame {
+                    id: row.get(0)?,
+                    title: row.get(1)?,
+                    executable: row.get(2)?,
+                    manual_progress: row.get(3)?,
+                })
+            })?
             .collect::<Result<_, _>>()?;
         Ok(games)
+    }
+
+    /// Stores `manual_progress` as the Manual Progress of the Local Game
+    /// `id`, or clears it with `None`. Answers whether there is such a Game.
+    pub(crate) fn set_manual_progress(&self, id: i64, manual_progress: Option<u8>) -> Result<bool, Error> {
+        let changed = self
+            .connection()
+            .execute("UPDATE local_games SET manual_progress = ?1 WHERE id = ?2", params![manual_progress, id])?;
+        Ok(changed > 0)
     }
 
     /// Adds the Local Game `title` with its `executable` and answers its id.

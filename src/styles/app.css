@@ -192,3 +192,10 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
   background: var(--color-surface-raised); border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control);
 }
 .tray-notice h2 { font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display); }
+
+/* Manual Progress of a Local Game, on its detail page. */
+.manual-progress { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); }
+.manual-progress h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.manual-progress form { display: grid; gap: var(--space-2); }
+.manual-progress .field-row { align-items: center; }
+.field-row .manual-progress-field { flex: none; width: calc(var(--space-7) + var(--space-5)); text-align: right; }

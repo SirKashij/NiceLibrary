@@ -12,6 +12,7 @@ function steamGame(appId: number, title: string, details: Partial<Game> = {}): G
     installed: true,
     playtimeMinutes: null,
     lastPlayed: null,
+    progress: null,
     ...details,
   };
 }
@@ -76,6 +77,7 @@ function fakeOperations(
     },
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
   };
   return { operations, calls, change: (next: Game[]) => (games = next) };
 }

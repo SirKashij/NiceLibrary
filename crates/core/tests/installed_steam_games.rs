@@ -168,6 +168,7 @@ fn installed(app_id: u32, title: &str) -> Game {
         installed: true,
         playtime_minutes: None,
         last_played: None,
+        progress: None,
     }
 }
 
