@@ -271,10 +271,14 @@ impl Core {
     /// The Games in the Library that match `filter`, as last stored, in the
     /// order `filter` asks for.
     pub fn filter_library(&self, filter: &LibraryFilter) -> Result<Vec<Game>, Error> {
-        let games = self.stored_library().map(|mut games| {
+        let games = self.stored_library().and_then(|mut games| {
             games.retain(|game| filter.matches(game));
+            if let Some(collection) = filter.collection {
+                let members = self.store.games_in_collection(collection)?;
+                games.retain(|game| members.contains(&game.id));
+            }
             filter.sort.sort(&mut games);
-            games
+            Ok(games)
         });
         self.logged("filter_library", games)
     }
@@ -862,6 +866,48 @@ impl Core {
             self.note("delete_collection: deleted");
         }
         self.logged("delete_collection", deleted)
+    }
+
+    /// The ids of the Collections the Game `game_id` is in, ordered like
+    /// [`Self::collections`]; empty when it is in none.
+    pub fn game_collections(&self, game_id: &str) -> Result<Vec<i64>, Error> {
+        let ids = self.store.collection_games().and_then(|members| {
+            Ok(self
+                .stored_collections()?
+                .into_iter()
+                .map(|collection| collection.id)
+                .filter(|id| members.iter().any(|(of, game)| of == id && game == game_id))
+                .collect())
+        });
+        self.logged("game_collections", ids)
+    }
+
+    /// Puts the Game `game_id` into the Collection `collection`, besides any
+    /// other Collections it is in; a Game already in it stays there once.
+    /// Fails when there is no such Collection or the Game is not in the
+    /// Library.
+    pub fn add_game_to_collection(&self, collection: i64, game_id: &str) -> Result<(), Error> {
+        let added = self.stored_library().and_then(|games| {
+            if !games.iter().any(|game| game.id == game_id) {
+                return Err(Error::new(format!("no such game in the library: {game_id}")));
+            }
+            self.store.add_game_to_collection(collection, game_id)
+        });
+        if added.is_ok() {
+            self.note("add_game_to_collection: added");
+        }
+        self.logged("add_game_to_collection", added)
+    }
+
+    /// Takes the Game `game_id` out of the Collection `collection`; it stays
+    /// in the Library and in its other Collections. Changes nothing when it
+    /// is not in that Collection.
+    pub fn remove_game_from_collection(&self, collection: i64, game_id: &str) -> Result<(), Error> {
+        let removed = self.store.remove_game_from_collection(collection, game_id);
+        if removed.is_ok() {
+            self.note("remove_game_from_collection: removed");
+        }
+        self.logged("remove_game_from_collection", removed)
     }
 
     /// Whether closing the window keeps the app running in the Tray, so

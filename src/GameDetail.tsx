@@ -15,16 +15,17 @@ const SOURCES: Record<Source, MessageKey> = {
 
 /**
  * The detail page of one Game: its large Cover, title, Source, whether it is
- * Installed, its Status to set, Playtime, Last Played and the main action, its
- * Achievements, marking it as a Favorite, and the way back to the Library.
- * Shows the Game as opened at once and as the core answers it then, again
- * after each change.
+ * Installed, its Status to set, Playtime, Last Played, its Collections and
+ * the main action, its Achievements, marking it as a Favorite, and the way
+ * back to the Library. Shows the Game as opened at once and as the core
+ * answers it then, again after each change.
  */
 export function GameDetail({
   operations,
   game: opened,
   syncs,
   cover,
+  collections,
   notice,
   onPlay,
   onStatusSet,
@@ -42,6 +43,8 @@ export function GameDetail({
   /** Further actions on the Game as the core answered it, such as editing a Local Game. */
   actions?: (game: Game) => ReactNode;
   cover: (game: Game) => ReactNode;
+  /** Which Collections the Game is in, shown while it is in the Library. */
+  collections?: ReactNode;
   /** Why the last Launch did not start, if it did not. */
   notice?: ReactNode;
   onPlay: (game: Game) => void;
@@ -157,6 +160,7 @@ export function GameDetail({
                   {t('status.setFailed', { title: game.title })}
                 </p>
               )}
+              {collections}
               <HideGameButton operations={operations} game={game} onHidden={onHidden} />
               {game.source === 'local' && <LaunchOptionsForm operations={operations} game={game} />}
               {actions?.(game)}

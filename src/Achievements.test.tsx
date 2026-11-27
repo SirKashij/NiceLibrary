@@ -107,6 +107,9 @@ function fakeOperations(games: Game[], achievements: Record<string, GameAchievem
     removeLocalGame: async () => {},
     markFavorite: async () => {},
     favoriteCount: async () => 0,
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
   };
   return { operations, asked };
 }

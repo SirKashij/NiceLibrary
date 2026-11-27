@@ -185,6 +185,8 @@ export interface LibraryFilter {
   status: Status | null;
   /** Only Favorites. */
   favoritesOnly: boolean;
+  /** Only Games in the Collection with this id, the one chosen in the sidebar; left out for every Game. */
+  collection?: number;
 }
 
 /**
@@ -324,6 +326,15 @@ export interface Operations {
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /** The ids of the Collections the Game is in, ordered like `collections`; empty when it is in none. */
+  gameCollections(gameId: string): Promise<number[]>;
+  /**
+   * Puts a Game into a Collection, besides the other Collections it is in.
+   * Rejects when there is no such Collection or the Game is not in the Library.
+   */
+  addGameToCollection(collection: number, gameId: string): Promise<void>;
+  /** Takes a Game out of a Collection; it stays in the Library and in its other Collections. */
+  removeGameFromCollection(collection: number, gameId: string): Promise<void>;
   /** Whether closing the window keeps the app running in the Tray. On until the user turns it off. */
   closeToTray(): Promise<boolean>;
   /** Turns close-to-tray on or off, also after a restart. */
@@ -484,6 +495,9 @@ export const tauriOperations: Operations = {
   },
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  gameCollections: (gameId) => invoke<number[]>('game_collections', { gameId }),
+  addGameToCollection: (collection, gameId) => invoke<void>('add_game_to_collection', { collection, gameId }),
+  removeGameFromCollection: (collection, gameId) => invoke<void>('remove_game_from_collection', { collection, gameId }),
   closeToTray: () => invoke<boolean>('close_to_tray'),
   setCloseToTray: (on) => invoke<void>('set_close_to_tray', { on }),
   closeWindow: () => invoke<void>('close_window'),

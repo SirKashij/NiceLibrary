@@ -17,7 +17,8 @@ export function isFiltering(filter: Narrowing): boolean {
     filter.source !== null ||
     filter.installedOnly ||
     filter.status !== null ||
-    filter.favoritesOnly
+    filter.favoritesOnly ||
+    filter.collection !== undefined
   );
 }
 
@@ -29,7 +30,7 @@ export type FilteredLibrary = { state: 'ready'; games: Game[] | undefined } | { 
  * known yet. When nothing is narrowed and `sort` is the order `library`
  * answers in, that is `library` itself; otherwise the core answers (see
  * `filterLibrary` in src/operations.ts), asked again whenever the filter,
- * the order or the Library changes. Until the answer for a new filter
+ * the order, the Library or `changes` changes. Until the answer for a new filter
  * arrives, the answer before stays.
  */
 export function useFilteredLibrary(
@@ -37,6 +38,8 @@ export function useFilteredLibrary(
   narrowing: Narrowing,
   sort: LibrarySort | undefined,
   library: Game[] | undefined,
+  /** Changes whenever the core may answer the same filter differently, as after a change of what is in a Collection. */
+  changes = 0,
 ): FilteredLibrary {
   const filtering = sort !== undefined && (isFiltering(narrowing) || sort !== LIBRARY_ORDER);
   const filter = useMemo(() => sort && { ...narrowing, sort }, [narrowing, sort]);
@@ -55,7 +58,7 @@ export function useFilteredLibrary(
     return () => {
       latest = false;
     };
-  }, [operations, filter, filtering, library]);
+  }, [operations, filter, filtering, library, changes]);
 
   if (sort === undefined) return { state: 'ready', games: undefined };
   if (!filtering) return { state: 'ready', games: library };

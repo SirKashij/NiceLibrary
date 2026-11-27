@@ -190,6 +190,21 @@ fn delete_collection(core: tauri::State<'_, Core>, id: i64) -> Result<(), Error>
 }
 
 #[tauri::command]
+fn game_collections(core: tauri::State<'_, Core>, game_id: String) -> Result<Vec<i64>, Error> {
+    core.game_collections(&game_id)
+}
+
+#[tauri::command]
+fn add_game_to_collection(core: tauri::State<'_, Core>, collection: i64, game_id: String) -> Result<(), Error> {
+    core.add_game_to_collection(collection, &game_id)
+}
+
+#[tauri::command]
+fn remove_game_from_collection(core: tauri::State<'_, Core>, collection: i64, game_id: String) -> Result<(), Error> {
+    core.remove_game_from_collection(collection, &game_id)
+}
+
+#[tauri::command]
 fn close_to_tray(core: tauri::State<'_, Core>) -> Result<bool, Error> {
     core.close_to_tray()
 }
@@ -367,6 +382,9 @@ pub fn run() {
             choose_library_sort,
             choose_local_game_executable,
             add_local_game,
+            game_collections,
+            add_game_to_collection,
+            remove_game_from_collection,
             close_to_tray,
             set_close_to_tray,
             close_window,

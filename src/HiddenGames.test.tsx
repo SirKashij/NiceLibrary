@@ -90,6 +90,9 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     removeLocalGame: async () => {},
     markFavorite: async () => {},
     favoriteCount: async () => 0,
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
   };
   return { operations, hidden };
 }

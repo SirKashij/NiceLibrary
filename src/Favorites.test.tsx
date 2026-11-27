@@ -99,6 +99,9 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
   };
   return { operations, asked, marks };
 }

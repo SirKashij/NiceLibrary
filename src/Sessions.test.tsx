@@ -81,6 +81,9 @@ function fakeOperations(initial: Game[]) {
     removeLocalGame: async () => {},
     markFavorite: async () => {},
     favoriteCount: async () => 0,
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
   };
   const send = (event: SessionEvent) => act(() => listeners.forEach((listener) => listener(event)));
   return { operations, send, listening: () => listeners.size, change: (next: Game[]) => (games = next) };

@@ -73,6 +73,9 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     removeLocalGame: async () => {},
     markFavorite: async () => {},
     favoriteCount: async () => 0,
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
   };
   const removeOutsideTheApp = () => {
     entry = false;

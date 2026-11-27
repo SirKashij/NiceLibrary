@@ -95,6 +95,9 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     removeLocalGame: async () => {},
     markFavorite: async () => {},
     favoriteCount: async () => 0,
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
   };
   return { operations, asked, chosen };
 }

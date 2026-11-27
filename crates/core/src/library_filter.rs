@@ -1,6 +1,6 @@
 //! Which Games of the Library the user wants to see, and in which order:
-//! filters by Source, to Installed Games, by Status and to Favorites,
-//! combined with a search in the title, and a sort order.
+//! filters by Source, to Installed Games, by Status, to Favorites and to a
+//! Collection, combined with a search in the title, and a sort order.
 
 use std::cmp::Ordering;
 
@@ -26,6 +26,9 @@ pub struct LibraryFilter {
     pub sort: LibrarySort,
     /// Only Favorites.
     pub favorites_only: bool,
+    /// Only Games in the Collection with this id, the one chosen in the
+    /// sidebar; `None` for every Game. A Collection that is gone holds none.
+    pub collection: Option<i64>,
 }
 
 impl LibraryFilter {
