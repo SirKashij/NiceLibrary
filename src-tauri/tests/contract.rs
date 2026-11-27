@@ -809,7 +809,7 @@ mod autostart {
 /// `Some` with the absolute path of the file the user chose, `None` when
 /// they cancel; blocks until they decide. The "Save as" dialog of
 /// `ExportFilePicker` offers the suggested name and adds `.json` to a name
-/// typed without an extension.
+/// typed without an extension; its "Open" dialog answers the file to import.
 ///
 /// The tests play the user: they find the dialog this process opens, type a
 /// path into its file name box and confirm, or cancel it. A dialog shows on
@@ -1139,6 +1139,37 @@ mod executable_picker {
         let answer = open_save_dialog();
 
         press(the_save_dialog().0, IDCANCEL);
+
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+
+    fn open_import_dialog() -> JoinHandle<Result<Option<PathBuf>, String>> {
+        std::thread::spawn(|| WindowsExportFilePicker.choose_import_file())
+    }
+
+    #[test]
+    fn answers_the_export_file_the_user_chose_to_import_without_changing_it() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let folder = tempfile::tempdir().unwrap();
+        let file = folder.path().join("backup.json");
+        fs::write(&file, b"{}").unwrap();
+        let answer = open_import_dialog();
+
+        let dialog = the_dialog();
+        type_path(dialog, &file);
+        press(dialog, IDOK);
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen file");
+        assert_eq!(fs::canonicalize(chosen).unwrap(), fs::canonicalize(&file).unwrap());
+        assert_eq!(fs::read(&file).unwrap(), b"{}", "the dialog only chooses; the core reads");
+    }
+
+    #[test]
+    fn answers_no_file_when_the_user_cancels_importing() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = open_import_dialog();
+
+        press(the_dialog(), IDCANCEL);
 
         assert_eq!(answer.join().unwrap(), Ok(None));
     }

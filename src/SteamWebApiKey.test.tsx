@@ -110,6 +110,7 @@ function fakeOperations({ stored = false } = {}) {
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
   };
   return { operations, calls };
 }

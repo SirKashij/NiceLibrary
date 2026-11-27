@@ -7,7 +7,7 @@ use crate::store::Store;
 use crate::Error;
 
 /// The setting that turns close-to-tray off ("false"); on while it is missing.
-const CLOSE_TO_TRAY: &str = "close_to_tray";
+pub(crate) const CLOSE_TO_TRAY: &str = "close_to_tray";
 
 /// The setting that records that the Tray notice was shown ("true").
 const TRAY_NOTICE_SHOWN: &str = "tray_notice_shown";

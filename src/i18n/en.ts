@@ -375,6 +375,22 @@ export const en = {
   'export.running': 'Exporting…',
   'export.done': 'Your data was exported to {file}.',
   'export.failed': 'Your data could not be exported.',
+  'import.what': 'Importing an Export File replaces your data here with the data in the file.',
+  'import.button': 'Import data…',
+  'import.question': 'Replace your data with an Export File?',
+  'import.replaces':
+    'The import replaces your Local Games with their launch options, cover images and progress, your sessions, playtime adjustments, statuses, favorites, hidden games, Collections and settings with those in the file.',
+  'import.lost': 'What is here now is lost. Export it first if you want to keep it.',
+  'import.keeps': 'Your Steam games stay, as they come from Steam, and your Steam Web API key is not touched.',
+  'import.confirm': 'Choose a file and replace',
+  'import.keep': 'Keep my data',
+  'import.running': 'Importing…',
+  'import.done': 'Your data was imported from {file}. Local Games: {count}.',
+  'import.executables': 'If a game’s executable is in another place on this computer, choose it again on the game’s page.',
+  'import.newerVersion':
+    'This file was made by a newer version of NiceLibrary. Update the app to import it. Nothing was changed.',
+  'import.damaged': 'This file is not an Export File of NiceLibrary, or it is damaged. Nothing was changed.',
+  'import.failed': 'Your data could not be imported.',
 } as const;
 
 export type MessageKey = keyof typeof en;

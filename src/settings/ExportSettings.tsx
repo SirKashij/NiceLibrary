@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import { useT } from '../i18n';
 import type { Operations } from '../operations';
+import { ImportData } from './ImportData';
 
 type Export = { state: 'idle' } | { state: 'running' } | { state: 'exported'; file: string } | { state: 'failed' };
 
 /**
  * The backup: what an Export File holds, and a button that asks where to
  * save one and writes it (`exportData`). Cancelling the dialog says nothing.
+ * Below it, importing one (see `ImportData`).
  */
 export function ExportSettings({ operations }: { operations: Operations }) {
   const t = useT();
@@ -47,6 +49,7 @@ export function ExportSettings({ operations }: { operations: Operations }) {
           {t('export.failed')}
         </p>
       )}
+      <ImportData operations={operations} />
     </section>
   );
 }

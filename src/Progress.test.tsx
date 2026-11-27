@@ -47,6 +47,7 @@ function fakeOperations(initial: Game[], sort: LibrarySort = 'name') {
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
     exportData: async () => ({ outcome: 'cancelled' }),
     language: async () => 'system',
     chooseLanguage: async () => {},

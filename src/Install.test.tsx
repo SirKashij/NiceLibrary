@@ -101,6 +101,7 @@ function fakeOperations(games: Game[], install: (game: Game) => Promise<InstallO
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
   };
   return { operations, installs, launches };
 }

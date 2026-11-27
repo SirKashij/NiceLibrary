@@ -43,6 +43,7 @@ function fakeOperations({ closeToTray = true } = {}) {
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
     onAutomaticSteamAppListFetch: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),

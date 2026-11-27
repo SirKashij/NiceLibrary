@@ -32,14 +32,20 @@ pub(crate) const FORMAT: &str = "nicelibrary-export";
 pub(crate) const VERSION: u32 = 1;
 
 /// Port: asks the user where to save an Export File, as a "Save as" dialog
-/// does, offering `suggested_name` as the file name.
+/// does, or which one to import, as an "Open" dialog does.
 ///
-/// Contract: `Ok(Some(path))` with the absolute path of the file the user
-/// chose, which may exist already (the user agreed to replace it);
-/// `Ok(None)` when they cancel. Blocks until they have decided. `Err` when no
-/// dialog can be shown, described for a log or a developer.
+/// Contract of both: `Ok(None)` when the user cancels; blocks until they
+/// have decided; `Err` when no dialog can be shown, described for a log or a
+/// developer. Neither reads nor writes the file.
 pub trait ExportFilePicker: Send + Sync {
+    /// Offers `suggested_name` as the file name and answers `Ok(Some(path))`
+    /// with the absolute path of the file the user chose, which may exist
+    /// already (the user agreed to replace it).
     fn choose_export_file(&self, suggested_name: &str) -> Result<Option<PathBuf>, String>;
+
+    /// Answers `Ok(Some(path))` with the absolute path of the file the user
+    /// chose to import, which existed when they chose it.
+    fn choose_import_file(&self) -> Result<Option<PathBuf>, String>;
 }
 
 /// How exporting the data went, when nothing failed.
@@ -96,6 +102,18 @@ pub(crate) struct ExportedLocalGame {
     pub manual_progress: Option<u8>,
     pub playtime_adjustment_minutes: Option<i32>,
     pub cover_image: Option<ExportedImage>,
+    /// The Steam title whose Cover it borrows; optional, as files written
+    /// before Cover Matches existed have none.
+    #[serde(default)]
+    pub cover_match: Option<ExportedCoverMatch>,
+}
+
+/// A Cover Match: the Steam title, with its name as it was when matched.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ExportedCoverMatch {
+    pub app_id: u32,
+    pub name: String,
 }
 
 /// A Cover image the person chose, as the bytes of the file.
@@ -110,13 +128,18 @@ pub(crate) struct ExportedImage {
 
 /// One Session. Version 1 writes Sessions of Local Games only; Sessions of
 /// Steam Games (#39) will use the same entry with a `steam:<appid>` Game id
-/// and the Steam Account they were played with (docs/export-format.md).
+/// and the Steam Account they were played with (docs/export-format.md),
+/// which an import reads already.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ExportedSession {
     pub game_id: String,
     pub started_at: u64,
     pub ended_at: u64,
+    /// The SteamID64 of the Steam Account a Steam Session was played with;
+    /// `None` when none was known, and for a Local Game.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub steam_account: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -150,6 +173,9 @@ pub(crate) fn contents(
                 media_type: cover.media_type.to_owned(),
                 data: base64::engine::general_purpose::STANDARD.encode(&cover.bytes),
             });
+            let cover_match = store
+                .cover_match(game.id)?
+                .map(|title| ExportedCoverMatch { app_id: title.app_id, name: title.name });
             Ok(ExportedLocalGame {
                 id: sessions::game_id(game.id),
                 title: game.title,
@@ -159,13 +185,19 @@ pub(crate) fn contents(
                 manual_progress: game.manual_progress,
                 playtime_adjustment_minutes: adjustments.get(&game.id).copied(),
                 cover_image,
+                cover_match,
             })
         })
         .collect::<Result<_, Error>>()?;
     let sessions = store
         .local_game_sessions()?
         .into_iter()
-        .map(|(game, started_at, ended_at)| ExportedSession { game_id: sessions::game_id(game), started_at, ended_at })
+        .map(|(game, started_at, ended_at)| ExportedSession {
+            game_id: sessions::game_id(game),
+            started_at,
+            ended_at,
+            steam_account: None,
+        })
         .collect();
     let mut statuses: Vec<_> =
         store.statuses()?.into_iter().map(|(game_id, status)| ExportedStatus { game_id, status }).collect();

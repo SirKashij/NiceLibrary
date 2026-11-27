@@ -132,6 +132,7 @@ function fakeOperations({
     setCoverMatch: async (gameId, appId) => {
       matched.push([gameId, appId]);
     },
+    importData: async () => ({ outcome: 'cancelled' }),
   };
   return { operations, added, matched };
 }

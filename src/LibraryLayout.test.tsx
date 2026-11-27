@@ -116,6 +116,7 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');

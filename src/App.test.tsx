@@ -91,6 +91,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
   };
 }
 

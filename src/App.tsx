@@ -24,6 +24,7 @@ import { SortChoice, useLibrarySort } from './library/LibrarySort';
 import { StatusBadge } from './library/Status';
 import { ProgressBadge } from './library/Progress';
 import { ExportSettings } from './settings/ExportSettings';
+import { ImportReloadProvider, useImportReload } from './settings/importReload';
 import { LogSettings } from './settings/LogSettings';
 import { StatisticsPage } from './statistics/StatisticsPage';
 import { GameActionButton, useGameAction } from './library/GameAction';
@@ -39,17 +40,21 @@ const VIEWS: { view: View; label: MessageKey }[] = [
 /** The whole interface; `lang` is the system language, shown until the user chooses another. */
 export function App({ operations, lang }: { operations: Operations; lang: Lang }) {
   return (
-    <LanguageProvider operations={operations} system={lang}>
-      <ThemeProvider operations={operations}>
-        <Shell operations={operations} />
-      </ThemeProvider>
-    </LanguageProvider>
+    <ImportReloadProvider>
+      <LanguageProvider operations={operations} system={lang}>
+        <ThemeProvider operations={operations}>
+          <Shell operations={operations} />
+        </ThemeProvider>
+      </LanguageProvider>
+    </ImportReloadProvider>
   );
 }
 
 function Shell({ operations }: { operations: Operations }) {
   const t = useT();
-  const [view, setView] = useState<View>('library');
+  // After an import the interface starts over where the import was made.
+  const { imported } = useImportReload();
+  const [view, setView] = useState<View>(imported ? 'settings' : 'library');
   // How many Syncs succeeded while the app runs; each one changes the stored Library.
   const [syncs, setSyncs] = useState(0);
   // How often the user chose a Steam Account while the app runs; each choice changes whose Sync and Library are shown.

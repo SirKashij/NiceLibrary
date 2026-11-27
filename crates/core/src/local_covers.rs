@@ -111,6 +111,14 @@ pub(crate) fn keep_chosen_image(covers: &CoverCache, id: i64, image: &Path) -> R
     Ok(CoverImageChoice::Chosen)
 }
 
+/// Keeps `bytes`, a PNG or JPEG image, as the image chosen for the Local
+/// Game `id`, in place of any image kept for it before.
+pub(crate) fn keep_chosen_bytes(covers: &CoverCache, id: i64, bytes: &[u8]) -> Result<(), Error> {
+    let file = chosen_image_file(covers, id);
+    covers::keep(&covers.chosen_images, &file, bytes)
+        .map_err(|error| Error::new(format!("cannot keep {}: {error}", file.display())))
+}
+
 /// Forgets the image the user chose as the Cover of the Local Game `id`, if
 /// they chose one.
 pub(crate) fn remove_chosen_image(covers: &CoverCache, id: i64) -> Result<(), Error> {

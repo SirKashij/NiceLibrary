@@ -7,6 +7,7 @@
 
 mod export;
 mod hidden_games;
+mod import;
 mod playtime_adjustments;
 mod steam_app_list;
 

@@ -152,6 +152,11 @@ _Avoid_: Start folder, current directory
 **Export File**:
 One file the person saves from the settings that holds everything in the app that is their own: Local Games with their Launch Options and chosen Cover images, Sessions, Playtime Adjustments, Manual Progress, Statuses, Favorites, Hidden Games, Collections and the settings. It is a backup, and the way to move to another computer by importing it there. It never holds the Steam Web API key or anything the app can fetch again from Steam. Its format is versioned and documented in docs/export-format.md. The German interface calls the area "Datensicherung".
 _Avoid_: Backup file, dump, archive
+
+**Import**:
+Reading an Export File back, on the same or another computer. It replaces everything that is the person's own with what the file holds, after the app said so and the person confirmed; Steam Games and the Steam Web API key stay as they are. Each Local Game gets a new number. A file of a newer version or a damaged one is refused and changes nothing.
+_Avoid_: Restore, merge, sync
+
 **Install**:
 Asking Steam, from the app, to install a Steam Game that is owned but not Installed. Steam shows its own install dialog and does the installing; the Game counts as Installed once Steam reports it so.
 _Avoid_: Download, setup

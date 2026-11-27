@@ -107,6 +107,7 @@ function fakeOperations(library: Game[] = LIBRARY) {
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
   };
   return { operations, asked };
 }

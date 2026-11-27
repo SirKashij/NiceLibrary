@@ -195,13 +195,18 @@ impl ImagePicker for WindowsImagePicker {
 /// Shows Windows' "Save as" dialog for an Export File (`*.json`), with the
 /// suggested name filled in. It asks before replacing a file that exists,
 /// and adds `.json` when the user types a name without an extension. Its
-/// title and buttons are Windows' own, in the language of Windows.
+/// title and buttons are Windows' own, in the language of Windows. Importing
+/// one shows Windows' "Open" dialog for `*.json` files that exist.
 pub struct WindowsExportFilePicker;
 
 impl ExportFilePicker for WindowsExportFilePicker {
     fn choose_export_file(&self, suggested_name: &str) -> Result<Option<PathBuf>, String> {
         let suggested = suggested_name.to_owned();
         on_own_thread("export-file-picker", move || show_save_dialog(&suggested))
+    }
+
+    fn choose_import_file(&self) -> Result<Option<PathBuf>, String> {
+        show_dialog_on_own_thread("import-file-picker", "*.json")
     }
 }
 

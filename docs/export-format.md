@@ -1,6 +1,6 @@
 # The Export File format
 
-An Export File holds everything in NiceLibrary that is the person's own, so it can serve as a backup or move to another computer. The app writes it from **Settings → Backup** (`export_data` in `crates/core/src/lib.rs`, format in `crates/core/src/export.rs`); an import reads it back (#52).
+An Export File holds everything in NiceLibrary that is the person's own, so it can serve as a backup or move to another computer. The app writes it from **Settings → Backup** (`export_data` in `crates/core/src/lib.rs`, format in `crates/core/src/export.rs`); **Settings → Backup → Import data…** reads it back (`import_data`, rules in `crates/core/src/import.rs`), see [Importing](#importing).
 
 It is one UTF-8 JSON file, written in one step (a failed export leaves no half file). The app offers the name `NiceLibrary-<yyyy>-<mm>-<dd>.json`, with the date in UTC.
 
@@ -85,6 +85,7 @@ One entry per Local Game, in the order they were added.
 | `manualProgress` | integer or null | The Manual Progress in percent, 0 to 100; `null` while none is set. |
 | `playtimeAdjustmentMinutes` | integer or null | The Playtime Adjustment in minutes, negative when time was removed; `null` for none. |
 | `coverImage` | object or null | The Cover image the person chose, `null` when they chose none. |
+| `coverMatch` | object or null | The Cover Match: the Steam title whose Cover the Game borrows, `null` for none. Optional: a file without the field reads as `null`. |
 
 `coverImage` holds the image file itself:
 
@@ -93,7 +94,12 @@ One entry per Local Game, in the order they were added.
 | `mediaType` | string | `image/png` or `image/jpeg`. |
 | `data` | string | The bytes of the image in standard Base64 (RFC 4648, with padding). |
 
-Cover Matches (#37) do not exist yet. When they do, they are expected as an optional field of a Local Game.
+`coverMatch` holds the Steam title as it was matched:
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `appId` | integer | Steam's app id of the title. |
+| `name` | string | The title's name when it was matched. |
 
 ## `sessions`
 
@@ -128,3 +134,11 @@ The Collections in the order they were created.
 | --- | --- | --- |
 | `name` | string | The name; names are unique regardless of case. |
 | `gameIds` | array of strings | The Games in the Collection, in ascending order. |
+
+## Importing
+
+An import replaces, all at once, everything that is the person's own with what the file holds: the Local Games (with their Launch Options, Manual Progress, Playtime Adjustments, Cover Matches and chosen Cover images), every Session, Status, Favorite, Hidden Game and Collection, and the settings above, including whether the app starts with Windows. What was there before is gone; the interface says so and asks before it opens the file. It keeps the Steam Games and Steam's figures (they come from Steam), the Steam App List, the last Sync, the Log and app-internal bookkeeping, and it never reads, writes or removes the Steam Web API key.
+
+- Each Local Game gets a new number on this computer; every `local:<n>` in the file is rewritten to it. The executable paths are kept as they are, even when they do not exist here.
+- Sessions with a `steam:` Game id are accepted but not kept yet: this version stores Sessions of Local Games only.
+- The file is refused, and nothing changes, when it is not JSON, its `format` is not `nicelibrary-export`, its `version` is missing, below 1 or newer than the app knows, a required field is missing or has a value the format does not allow (an unknown Status or setting, a Manual Progress over 100, a Session that ends before it begins, a Cover image that is not valid Base64 PNG or JPEG of the stated type), two Local Games share an `id` or an `executable`, two Collections share a name in any case, or a Game id names neither a Steam Game nor a Local Game of the file.

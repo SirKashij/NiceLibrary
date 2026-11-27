@@ -15,6 +15,7 @@ mod covers;
 mod executables_in_folder;
 mod export;
 mod favorites;
+mod import;
 pub mod keyvalues;
 mod language;
 mod launch;
@@ -53,6 +54,7 @@ pub use cover_hue::CoverHue;
 pub use covers::{Cover, CoverCache, Downloader};
 pub use executables_in_folder::{FolderSuggestions, SuggestedExecutable};
 pub use export::{DataExport, ExportFilePicker};
+pub use import::DataImport;
 pub use language::Language;
 pub use launch::{Install, Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
@@ -1530,6 +1532,38 @@ impl Core {
         let contents = export::contents(&self.store, &self.covers, self.ports.autostart.as_ref(), now)?;
         export::write(&file, &contents)?;
         Ok(DataExport::Exported { file: file.display().to_string() })
+    }
+
+    /// Imports an Export File the user chooses in an "Open" dialog: its
+    /// Local Games with how they are launched and the Cover images chosen
+    /// for them, Sessions, Playtime Adjustments, Manual Progress, Statuses,
+    /// Favorites, Hidden Games, Collections and settings replace those here,
+    /// all at once. Steam Games stay, and the Steam Web API key is never
+    /// touched. Each Local Game gets a new number here. A file of a newer
+    /// version, or one that is damaged or no Export File, is refused and
+    /// changes nothing; so does cancelling.
+    pub fn import_data(&self) -> Result<DataImport, Error> {
+        self.logged_outcome("import_data", self.read_import())
+    }
+
+    fn read_import(&self) -> Result<DataImport, Error> {
+        let chosen = self
+            .ports
+            .export_file_picker
+            .choose_import_file()
+            .map_err(|reason| Error::new(format!("file dialog: {reason}")))?;
+        let Some(file) = chosen else {
+            return Ok(DataImport::Cancelled);
+        };
+        let bytes =
+            std::fs::read(&file).map_err(|error| Error::new(format!("cannot read {}: {error}", file.display())))?;
+        let checked = match import::check(&bytes) {
+            Ok(checked) => checked,
+            Err(refused) => return Ok(refused),
+        };
+        import::replace(&self.store, &self.covers, self.ports.autostart.as_ref(), &checked)?;
+        let local_games = u32::try_from(checked.file.local_games.len()).unwrap_or(u32::MAX);
+        Ok(DataImport::Imported { file: file.display().to_string(), local_games })
     }
 
     /// The dominant hue of the Game `game_id`'s Cover, from which its Detail

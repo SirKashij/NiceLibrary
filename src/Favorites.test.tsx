@@ -82,6 +82,7 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
     chooseCoverImage: async () => ({ outcome: 'cancelled' }),
     coverImageChosen: async () => false,
     removeCoverImage: async () => {},

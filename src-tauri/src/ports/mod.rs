@@ -260,12 +260,16 @@ fn export_file_picker() -> Box<dyn ExportFilePicker> {
 
 #[cfg(not(windows))]
 fn export_file_picker() -> Box<dyn ExportFilePicker> {
-    /// Exporting on Linux and macOS is not part of version 1.
+    /// Exporting and importing on Linux and macOS is not part of version 1.
     struct NoFileDialog;
 
     impl ExportFilePicker for NoFileDialog {
         fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
             Err("choosing where to save is not supported on this system".into())
+        }
+
+        fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
+            Err("choosing a file to import is not supported on this system".into())
         }
     }
 

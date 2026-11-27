@@ -122,6 +122,7 @@ fn local_games_are_exported_with_how_they_are_launched_their_manual_progress_and
                 "manualProgress": 40,
                 "playtimeAdjustmentMinutes": -15,
                 "coverImage": null,
+                "coverMatch": null,
             },
             {
                 "id": hades,
@@ -132,6 +133,7 @@ fn local_games_are_exported_with_how_they_are_launched_their_manual_progress_and
                 "manualProgress": null,
                 "playtimeAdjustmentMinutes": null,
                 "coverImage": null,
+                "coverMatch": null,
             },
         ])
     );
@@ -439,6 +441,10 @@ impl ExportFilePicker for UserSaves {
     fn choose_export_file(&self, suggested_name: &str) -> Result<Option<PathBuf>, String> {
         self.offered.lock().unwrap().push(suggested_name.to_owned());
         self.answer.lock().unwrap().clone()
+    }
+
+    fn choose_import_file(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
     }
 }
 

@@ -379,4 +379,20 @@ export const de: Record<MessageKey, string> = {
   'export.running': 'Wird exportiert …',
   'export.done': 'Deine Daten wurden nach {file} exportiert.',
   'export.failed': 'Deine Daten konnten nicht exportiert werden.',
+  'import.what': 'Ein Import ersetzt deine Daten hier durch die Daten aus einer Exportdatei.',
+  'import.button': 'Daten importieren …',
+  'import.question': 'Deine Daten durch eine Exportdatei ersetzen?',
+  'import.replaces':
+    'Der Import ersetzt deine lokalen Spiele mit ihren Startoptionen, Coverbildern und ihrem Fortschritt, deine Sitzungen, Spielzeit-Korrekturen, Status, Favoriten, ausgeblendeten Spiele, Sammlungen und Einstellungen durch die aus der Datei.',
+  'import.lost': 'Was jetzt hier ist, geht verloren. Exportiere es vorher, wenn du es behalten willst.',
+  'import.keeps': 'Deine Steam-Spiele bleiben, denn sie kommen von Steam, und dein Steam-Web-API-Schlüssel bleibt unberührt.',
+  'import.confirm': 'Datei wählen und ersetzen',
+  'import.keep': 'Meine Daten behalten',
+  'import.running': 'Wird importiert …',
+  'import.done': 'Deine Daten wurden aus {file} importiert. Lokale Spiele: {count}.',
+  'import.executables': 'Liegt die Programmdatei eines Spiels auf diesem Computer woanders, wähle sie auf der Seite des Spiels neu.',
+  'import.newerVersion':
+    'Diese Datei stammt von einer neueren Version von NiceLibrary. Aktualisiere die App, um sie zu importieren. Es wurde nichts geändert.',
+  'import.damaged': 'Diese Datei ist keine Exportdatei von NiceLibrary, oder sie ist beschädigt. Es wurde nichts geändert.',
+  'import.failed': 'Deine Daten konnten nicht importiert werden.',
 };

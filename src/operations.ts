@@ -554,6 +554,15 @@ export interface Operations {
    * Library, and for an app id not in the Steam App List.
    */
   setCoverMatch(gameId: string, appId: number | null): Promise<void>;
+  /**
+   * Asks the user to choose an Export File in the operating system's "Open"
+   * dialog and replaces everything that is the user's own with what it holds
+   * (docs/export-format.md): Local Games, Sessions, Playtime Adjustments,
+   * Progress, Statuses, Favorites, Hidden Games, Collections and settings.
+   * Steam Games and the Steam Web API key stay. A newer, damaged or foreign
+   * file is refused with nothing changed. Rejects when that failed.
+   */
+  importData(): Promise<DataImport>;
 }
 
 /** One title of the Steam App List. Mirrors `SteamTitle` in crates/core. */
@@ -575,6 +584,16 @@ export type CoverImageChoice = { outcome: 'chosen' } | { outcome: 'cancelled' } 
 
 /** How exporting the data went: written to `file`, or cancelled with nothing written. Mirrors `DataExport` in crates/core. */
 export type DataExport = { outcome: 'exported'; file: string } | { outcome: 'cancelled' };
+
+/**
+ * How importing the data went. Every outcome but imported changed nothing: the user cancelled, the file
+ * was written by a newer version of the app, or it is damaged or no Export File. Mirrors DataImport in crates/core.
+ */
+export type DataImport =
+  | { outcome: 'imported'; file: string; localGames: number }
+  | { outcome: 'cancelled' }
+  | { outcome: 'newerVersion'; version: number }
+  | { outcome: 'damaged' };
 
 /** What the About dialog tells of the app itself. Mirrors `About` in crates/core. */
 export interface About {
@@ -709,6 +728,7 @@ export const tauriOperations: Operations = {
   proposeCoverMatch: (title) => invoke<SteamTitle | null>('propose_cover_match', { title }),
   coverMatch: (gameId) => invoke<SteamTitle | null>('cover_match', { gameId }),
   setCoverMatch: (gameId, appId) => invoke<void>('set_cover_match', { gameId, appId }),
+  importData: () => invoke<DataImport>('import_data'),
 };
 
 /** Mirrors `Statistics` in crates/core: the totals over the Games in the Library. */

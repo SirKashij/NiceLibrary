@@ -39,6 +39,7 @@ function fakeOperations(initial: Game[], options: { setManualProgress?: Operatio
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    importData: async () => ({ outcome: 'cancelled' }),
     exportData: async () => ({ outcome: 'cancelled' }),
     language: async () => 'system',
     chooseLanguage: async () => {},

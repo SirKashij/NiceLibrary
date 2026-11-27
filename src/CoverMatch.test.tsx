@@ -114,6 +114,7 @@ function fakeOperations({
       return appList.find((steam) => searchable(steam.name) === search) ?? null;
     },
     coverMatch: async (gameId) => matched.get(gameId) ?? null,
+    importData: async () => ({ outcome: 'cancelled' }),
     setCoverMatch: async (gameId, appId) => {
       calls.setCoverMatch.push([gameId, appId]);
       const title = appList.find((steam) => steam.appId === appId);

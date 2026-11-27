@@ -13,7 +13,7 @@ A free, open-source Windows desktop app that gathers your games from Steam and f
 - Lets you search, filter and sort the Library, group Games into Collections and set a Status on each Game.
 - Launches Steam Games through Steam itself, so the overlay, cloud saves and Steam's own playtime keep working, and Local Games by starting their executable.
 - Keeps running in the Tray when you close the window, so tracking goes on.
-- Exports your own data into one file, as a backup or to move to another computer; your Steam Web API key is never in it ([format](docs/export-format.md)).
+- Exports your own data into one file, as a backup or to move to another computer, and imports it there; your Steam Web API key is never in it ([format](docs/export-format.md)).
 - Speaks English and German, in a dark or a light Theme.
 
 The app is in early development; there is no release yet.
@@ -87,7 +87,7 @@ Eine kostenlose, quelloffene Windows-App, die deine Spiele aus Steam und von dei
 - Du kannst die Bibliothek durchsuchen, filtern und sortieren, Spiele in Sammlungen ordnen und jedem Spiel einen Status geben.
 - Steam-Spiele startet sie über Steam selbst, damit Overlay, Cloud-Speicherstände und Steams eigene Spielzeit weiter funktionieren, lokale Spiele über ihre ausführbare Datei.
 - Wenn du das Fenster schließt, läuft sie im Infobereich weiter, damit die Aufzeichnung nicht abbricht.
-- Sie exportiert deine eigenen Daten in eine Datei, als Sicherung oder für den Umzug auf einen anderen Computer; dein Steam-Web-API-Schlüssel ist nie darin ([Format](docs/export-format.md)).
+- Sie exportiert deine eigenen Daten in eine Datei, als Sicherung oder für den Umzug auf einen anderen Computer, und importiert sie dort wieder; dein Steam-Web-API-Schlüssel ist nie darin ([Format](docs/export-format.md)).
 - Sie spricht Deutsch und Englisch, in einem dunklen oder hellen Design.
 
 Die App ist in früher Entwicklung; es gibt noch kein Release.

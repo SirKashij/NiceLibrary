@@ -196,11 +196,15 @@ impl nicelibrary_core::ProcessStarter for NothingStarted {
     }
 }
 
-/// No export is made here: the user cancels every "Save as" dialog.
+/// No export or import is made here: the user cancels every file dialog.
 struct NoExportFile;
 
 impl nicelibrary_core::ExportFilePicker for NoExportFile {
     fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+
+    fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
     }
 }
