@@ -20,7 +20,7 @@ The app is in early development; there is no release yet.
 
 ## Installing
 
-Releases are published on [GitHub Releases](https://github.com/SirKashij/NiceLibrary/releases) as an installer for Windows 10 (22H2) and 11, 64-bit. Each one is built from the tagged source by GitHub Actions, not on a personal computer, and its release page lists the SHA-256 checksum of the installer.
+Releases will be published on [GitHub Releases](https://github.com/SirKashij/NiceLibrary/releases) as an installer for Windows 10 (22H2) and 11, 64-bit. Each one is built from the tagged source by GitHub Actions, not on a personal computer, and its release page lists the SHA-256 checksum of the installer.
 
 The first release is not code-signed (see [ADR-0006](docs/adr/0006-unsigned-first-release-then-signpath.md)), so Windows SmartScreen will probably warn with "Windows protected your PC" when you start the installer. You can check that you have the genuine file by comparing the checksum on the release page with the checksum of your download:
 
@@ -30,7 +30,7 @@ Get-FileHash .\NiceLibrary_0.1.0_x64-setup.exe -Algorithm SHA256
 
 If the two match, choose **More info**, then **Run anyway**. If they do not match, do not run the file. Later releases are meant to be signed through the SignPath Foundation, which removes the warning.
 
-To uninstall, open **Settings > Apps > Installed apps** in Windows and uninstall NiceLibrary. This also removes the entry for starting with Windows. Tick **Delete the application data** to remove your Library, the Covers and the stored Steam Web API key too; otherwise they stay for a later installation.
+To uninstall, open **Settings > Apps > Installed apps** in Windows and uninstall NiceLibrary. This also turns off **Start with Windows**. Tick **Delete the application data** to remove your Library, the Covers and the stored Steam Web API key too; otherwise they stay for a later installation.
 
 ## Privacy
 
@@ -95,7 +95,7 @@ Die App ist in früher Entwicklung; es gibt noch kein Release.
 
 ### Installieren
 
-Releases erscheinen auf [GitHub Releases](https://github.com/SirKashij/NiceLibrary/releases) als Installer für Windows 10 (22H2) und 11, 64 Bit. Jedes wird von GitHub Actions aus dem getaggten Quellcode gebaut, nicht auf einem privaten Rechner, und seine Release-Seite gibt die SHA-256-Prüfsumme des Installers an.
+Releases werden auf [GitHub Releases](https://github.com/SirKashij/NiceLibrary/releases) als Installer für Windows 10 (22H2) und 11, 64 Bit, erscheinen. Jedes wird von GitHub Actions aus dem getaggten Quellcode gebaut, nicht auf einem privaten Rechner, und seine Release-Seite gibt die SHA-256-Prüfsumme des Installers an.
 
 Das erste Release ist nicht codesigniert (siehe [ADR-0006](docs/adr/0006-unsigned-first-release-then-signpath.md)), deshalb warnt Windows SmartScreen beim Start des Installers wahrscheinlich mit „Der Computer wurde durch Windows geschützt“. Du kannst prüfen, ob du die echte Datei hast, indem du die Prüfsumme auf der Release-Seite mit der Prüfsumme deines Downloads vergleichst:
 
@@ -105,7 +105,7 @@ Get-FileHash .\NiceLibrary_0.1.0_x64-setup.exe -Algorithm SHA256
 
 Stimmen beide überein, wähle **Weitere Informationen** und dann **Trotzdem ausführen**. Stimmen sie nicht überein, führe die Datei nicht aus. Spätere Releases sollen über die SignPath Foundation signiert werden; dann entfällt die Warnung.
 
-Zum Deinstallieren öffne in Windows **Einstellungen > Apps > Installierte Apps** und deinstalliere NiceLibrary. Dabei verschwindet auch der Eintrag für den Start mit Windows. Setze den Haken bei **Lösche die Anwendungsdaten**, um auch deine Bibliothek, die Cover und den gespeicherten Steam-Web-API-Schlüssel zu entfernen; sonst bleiben sie für eine spätere Installation erhalten.
+Zum Deinstallieren öffne in Windows **Einstellungen > Apps > Installierte Apps** und deinstalliere NiceLibrary. Dabei wird auch **Mit Windows starten** ausgeschaltet. Setze den Haken bei **Lösche die Anwendungsdaten**, um auch deine Bibliothek, die Cover und den gespeicherten Steam-Web-API-Schlüssel zu entfernen; sonst bleiben sie für eine spätere Installation erhalten.
 
 ### Datenschutz
 

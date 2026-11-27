@@ -10,12 +10,12 @@ if (!tag) {
   process.exit(1);
 }
 
-const json = (path: string) => (JSON.parse(readFileSync(path, 'utf8')) as { version: string }).version;
+const versionIn = (path: string) => (JSON.parse(readFileSync(path, 'utf8')) as { version: string }).version;
 const cargo = parse(readFileSync('Cargo.toml', 'utf8')) as { workspace: { package: { version: string } } };
 
 const errors = releaseVersionErrors(tag, {
-  'package.json': json('package.json'),
-  'src-tauri/tauri.conf.json': json('src-tauri/tauri.conf.json'),
+  'package.json': versionIn('package.json'),
+  'src-tauri/tauri.conf.json': versionIn('src-tauri/tauri.conf.json'),
   'Cargo.toml': cargo.workspace.package.version,
 });
 

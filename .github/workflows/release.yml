@@ -10,7 +10,10 @@
 # Signing becomes one more job between `build` and `publish`: it submits the
 # artifact `build` uploaded (signpath/github-action-submit-signing-request,
 # with `github-artifact-id: needs.build.outputs.artifact-id`) and uploads the
-# signed installer, which `publish` then downloads instead.
+# signed installer, which `publish` then downloads instead. To sign the app's
+# own executable inside the installer as well, the build step splits into
+# `tauri build --no-bundle`, a signing request for nicelibrary.exe and
+# `tauri bundle`; the jobs stay as they are.
 name: Release
 
 on:
@@ -58,8 +61,8 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
-      # No Rust cache: a release is built from scratch, so nothing a pull
-      # request run left in the cache can reach the installer.
+      # No Rust or npm cache: a release is built from scratch, so nothing a
+      # pull request run left in a cache can reach the installer.
       - name: Install npm dependencies
         run: npm ci
 

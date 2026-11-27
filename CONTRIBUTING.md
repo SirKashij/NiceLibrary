@@ -99,6 +99,6 @@ Releases are built only by the workflow `.github/workflows/release.yml`, from a 
 
 The approval is the `release` environment of the repository (**Settings > Environments**), which must name the maintainer as a required reviewer and allow deployments only from tags matching `v*`. The `publish` job fails if the environment has no required reviewers, so a missing environment never publishes unapproved.
 
-The installer is the NSIS installer Tauri generates, in English and German. `src-tauri/windows/hooks.nsh` adds to its uninstaller: besides the entry for starting with Windows, which Tauri removes, it always removes whether that entry was switched off in the Task Manager, and with **Delete the application data** also the Steam Web API key in the Credential Manager. Unit tests check that the hook names the same registry values and credential the app writes.
+The installer is the NSIS installer Tauri generates, in English and German. `src-tauri/windows/hooks.nsh` adds to its uninstaller: besides the autostart entry of Start with Windows, which Tauri removes, it always removes whether that entry was switched off in the Task Manager, and with **Delete the application data** also the Steam Web API key in the Credential Manager. Unit tests check that the hook names the same registry values and credential the app writes.
 
 Signing through the SignPath Foundation is planned as one more job between `build` and `publish`; the comment at the top of the workflow says how it fits in.

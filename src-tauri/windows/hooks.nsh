@@ -18,7 +18,7 @@
   ${If} $DeleteAppDataCheckboxState = 1
   ${AndIf} $UpdateMode <> 1
     ; The Steam Web API key in the Credential Manager is app data as well.
-    nsExec::Exec 'cmdkey /delete:io.github.sirkashij.nicelibrary/steam-web-api-key'
+    nsExec::Exec '"$SYSDIR\cmdkey.exe" /delete:io.github.sirkashij.nicelibrary/steam-web-api-key'
     Pop $0
   ${EndIf}
 !macroend

@@ -124,7 +124,7 @@ mod tests {
 
     #[test]
     fn uninstalling_with_the_app_data_removes_the_steam_web_api_key() {
-        let command = format!("cmdkey /delete:{APP_PREFIX}{}", nicelibrary_core::STEAM_WEB_API_KEY_SECRET);
+        let command = format!(r#"cmdkey.exe" /delete:{APP_PREFIX}{}"#, nicelibrary_core::STEAM_WEB_API_KEY_SECRET);
         assert!(INSTALLER_HOOKS.contains(&command), "the uninstaller does not run `{command}`");
     }
 }
