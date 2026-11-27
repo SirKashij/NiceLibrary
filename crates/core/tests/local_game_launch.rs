@@ -8,11 +8,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
-use nicelibrary_core::{
-    AddLocalGame, Core, CoverCache, Downloader, ExecutablePicker, Launch, LaunchOptions, OpenError, Opener, Ports,
-    ProcessStarter, SteamLocator, Store,
-};
+use nicelibrary_core::{AddLocalGame, Core, CoverCache, Launch, LaunchOptions, Ports, ProcessStarter, Store};
 use tempfile::TempDir;
+use nicelibrary_core::stand_ins;
 
 /// One process the app started, as the operating system was asked to.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,76 +52,6 @@ impl ProcessStarter for RecordingStarter {
     }
 }
 
-/// A computer whose secret store holds nothing and whose network reaches no
-/// Web API; these tests need neither.
-struct NoSecretsNoWebApi;
-
-impl nicelibrary_core::SecretStore for NoSecretsNoWebApi {
-    fn read(&self, _name: &str) -> Result<Option<String>, String> {
-        Ok(None)
-    }
-
-    fn write(&self, _name: &str, _secret: &str) -> Result<(), String> {
-        Err("this test stores no secret".into())
-    }
-
-    fn delete(&self, _name: &str) -> Result<(), String> {
-        Ok(())
-    }
-}
-
-impl nicelibrary_core::WebApi for NoSecretsNoWebApi {
-    fn get(&self, _url: &str) -> Result<nicelibrary_core::WebAnswer, String> {
-        Err("this test asks no Web API".into())
-    }
-}
-
-/// A computer that opens no URL: a Local Game is never launched through one.
-struct NoUrls;
-
-impl Opener for NoUrls {
-    fn open_url(&self, url: &str) -> Result<(), OpenError> {
-        Err(OpenError::Failed(format!("this test opens no URL, not even {url}")))
-    }
-}
-
-struct NoSteam;
-
-impl SteamLocator for NoSteam {
-    fn steam_folder(&self) -> Option<PathBuf> {
-        None
-    }
-}
-
-/// A computer without a network connection.
-struct Offline;
-
-impl Downloader for Offline {
-    fn download(&self, _url: &str) -> Result<Option<Vec<u8>>, String> {
-        Err("no network connection".into())
-    }
-}
-
-/// A clock that stands still; these tests do not depend on the time.
-struct StoppedClock;
-
-impl nicelibrary_core::Clock for StoppedClock {
-    fn now(&self) -> std::time::SystemTime {
-        std::time::UNIX_EPOCH
-    }
-
-    fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
-}
-
-/// A user who chooses no executable; these tests add Local Games directly.
-struct NoExecutableChosen;
-
-impl ExecutablePicker for NoExecutableChosen {
-    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
-        Ok(None)
-    }
-}
-
 /// One running app with a disk of its own that games can be put on.
 struct App {
     core: Core,
@@ -143,19 +71,8 @@ impl App {
     fn core_in(profile: &Path, processes: &RecordingStarter) -> Core {
         Core::new(
             Ports {
-                steam_locator: Box::new(NoSteam),
-                downloader: Box::new(Offline),
-                opener: Box::new(NoUrls),
-                secrets: Box::new(NoSecretsNoWebApi),
-                web_api: Box::new(NoSecretsNoWebApi),
-                clock: Box::new(StoppedClock),
-                executable_picker: Box::new(NoExecutableChosen),
-                autostart: Box::new(NoAutostart),
-                processes: Box::new(NothingRuns),
                 process_starter: Box::new(processes.clone()),
-                icon_extractor: Box::new(NoIconsNoImages),
-                image_picker: Box::new(NoIconsNoImages),
-                data_file_picker: Box::new(NoExportFile),
+                ..stand_ins::ports()
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.join("covers")),
@@ -328,7 +245,7 @@ fn a_process_that_cannot_be_started_is_an_error_naming_the_game() {
 
 #[test]
 fn launching_a_local_game_opens_no_url() {
-    // `NoUrls` fails every URL; launching through it would be an error.
+    // `stand_ins::NoUrls` fails every URL; launching through it would be an error.
     let app = App::start();
     let (game, _) = app.add("Games/Celeste/Celeste.exe", "Celeste");
 
@@ -351,59 +268,4 @@ fn launching_a_local_game_not_in_the_library_is_an_error() {
 
     assert!(app.core.launch("local:999").is_err());
     assert!(app.processes.started().is_empty());
-}
-
-/// A computer where the app does not start with Windows; these tests do not turn it on.
-struct NoAutostart;
-
-impl nicelibrary_core::Autostart for NoAutostart {
-    fn is_on(&self) -> Result<bool, String> {
-        Ok(false)
-    }
-
-    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
-        Err("this test does not start the app with Windows".into())
-    }
-
-    fn turn_off(&self) -> Result<(), String> {
-        Ok(())
-    }
-}
-
-/// A computer on which no process runs; these tests record no Sessions.
-struct NothingRuns;
-
-impl nicelibrary_core::ProcessList for NothingRuns {
-    fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
-        Ok(Vec::new())
-    }
-}
-
-/// A computer whose executables show no icon and whose user chooses no
-/// image; these tests need neither.
-struct NoIconsNoImages;
-
-impl nicelibrary_core::IconExtractor for NoIconsNoImages {
-    fn largest_icon(&self, _executable: &std::path::Path) -> Result<Option<nicelibrary_core::Icon>, String> {
-        Ok(None)
-    }
-}
-
-impl nicelibrary_core::ImagePicker for NoIconsNoImages {
-    fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
-        Ok(None)
-    }
-}
-
-/// No export or import is made here: the user cancels every file dialog.
-struct NoExportFile;
-
-impl nicelibrary_core::DataFilePicker for NoExportFile {
-    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
-        Ok(None)
-    }
-
-    fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
-        Ok(None)
-    }
 }

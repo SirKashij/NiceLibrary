@@ -28,6 +28,8 @@ mod library_layout;
 mod log;
 mod playtime_adjustment;
 mod sessions;
+#[cfg(feature = "test-support")]
+pub mod stand_ins;
 mod statistics;
 mod status;
 mod steam;

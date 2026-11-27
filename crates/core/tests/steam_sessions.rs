@@ -12,10 +12,11 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSync, Clock, Core, CoverCache, Downloader, ExecutablePicker, Game, Log, OpenError, Opener,
-    Ports, ProcessList, SecretStore, Session, SteamLocator, Store, SyncOutcome, Tracking, Wakeup, WebAnswer, WebApi,
+    AddLocalGame, AutomaticSync, Clock, Core, CoverCache, Game, Log, Ports, ProcessList, SecretStore, Session,
+    SteamLocator, Store, SyncOutcome, Tracking, Wakeup, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
+use nicelibrary_core::stand_ins;
 
 /// A key Steam accepts in these tests.
 const KEY: &str = "0123456789ABCDEF0123456789ABCDEF";
@@ -138,73 +139,6 @@ impl WebApi for SteamWebApi {
     }
 }
 
-struct Offline;
-
-impl Downloader for Offline {
-    fn download(&self, _url: &str) -> Result<Option<Vec<u8>>, String> {
-        Err("no network connection".into())
-    }
-}
-
-struct NoUrls;
-
-impl Opener for NoUrls {
-    fn open_url(&self, url: &str) -> Result<(), OpenError> {
-        Err(OpenError::Failed(format!("this test opens no URL, not even {url}")))
-    }
-}
-
-struct NoExecutableChosen;
-
-impl ExecutablePicker for NoExecutableChosen {
-    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
-        Ok(None)
-    }
-}
-
-/// These tests start no executable.
-struct NothingStarted;
-
-impl nicelibrary_core::ProcessStarter for NothingStarted {
-    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
-        Err(format!("this test starts no executable, not even {}", executable.display()))
-    }
-}
-
-/// A computer where the app does not start with Windows; these tests do not turn it on.
-struct NoAutostart;
-
-impl nicelibrary_core::Autostart for NoAutostart {
-    fn is_on(&self) -> Result<bool, String> {
-        Ok(false)
-    }
-
-    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
-        Err("this test does not start the app with Windows".into())
-    }
-
-    fn turn_off(&self) -> Result<(), String> {
-        Ok(())
-    }
-}
-
-
-/// A computer whose executables show no icon and whose user chooses no
-/// image; these tests need neither.
-struct NoIconsNoImages;
-
-impl nicelibrary_core::IconExtractor for NoIconsNoImages {
-    fn largest_icon(&self, _executable: &Path) -> Result<Option<nicelibrary_core::Icon>, String> {
-        Ok(None)
-    }
-}
-
-impl nicelibrary_core::ImagePicker for NoIconsNoImages {
-    fn choose_image(&self) -> Result<Option<PathBuf>, String> {
-        Ok(None)
-    }
-}
-
 /// The app on a computer with Steam, the player logged in, and a disk the
 /// test puts Games on.
 struct App {
@@ -235,18 +169,11 @@ impl App {
         let core = Core::new(
             Ports {
                 steam_locator: Box::new(SteamAt(steam.path().to_path_buf())),
-                downloader: Box::new(Offline),
-                opener: Box::new(NoUrls),
                 secrets: Box::new(secrets.clone()),
                 web_api: Box::new(SteamWebApi),
                 clock: Box::new(processes.clock.clone()),
-                executable_picker: Box::new(NoExecutableChosen),
                 processes: Box::new(processes.clone()),
-                process_starter: Box::new(NothingStarted),
-                autostart: Box::new(NoAutostart),
-                icon_extractor: Box::new(NoIconsNoImages),
-                image_picker: Box::new(NoIconsNoImages),
-                data_file_picker: Box::new(NoExportFile),
+                ..stand_ins::ports()
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -625,17 +552,4 @@ fn a_running_session_of_a_steam_game_is_marked_as_running() {
         app.core.sessions("steam:620").unwrap(),
         [Session { started_at: at(10, 0, 0), seconds: 30 * 60, running: false }]
     );
-}
-
-/// No export or import is made here: the user cancels every file dialog.
-struct NoExportFile;
-
-impl nicelibrary_core::DataFilePicker for NoExportFile {
-    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
-        Ok(None)
-    }
-
-    fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
-        Ok(None)
-    }
 }

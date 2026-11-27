@@ -9,10 +9,11 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
 use nicelibrary_core::{
-    AddLocalGame, Core, CoverCache, Downloader, Icon, IconExtractor, OpenError, Opener, Ports, SecretStore,
-    SteamAppListFetch, SteamLocator, SteamTitle, Store, WebAnswer, WebApi,
+    AddLocalGame, Core, CoverCache, Downloader, Icon, IconExtractor, Ports, SecretStore, SteamAppListFetch, SteamTitle,
+    Store, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
+use nicelibrary_core::stand_ins;
 
 /// A key Steam accepts in these tests.
 const KEY: &str = "0123456789ABCDEF0123456789ABCDEF";
@@ -132,19 +133,12 @@ impl App {
     fn core_in(profile: &Path, secrets: &Secrets, artwork: &Artwork, user: &UserChooses) -> Core {
         Core::new(
             Ports {
-                steam_locator: Box::new(NoSteam),
                 downloader: Box::new(artwork.clone()),
-                opener: Box::new(NoUrls),
                 secrets: Box::new(secrets.clone()),
                 web_api: Box::new(SteamWebApi),
-                clock: Box::new(StoppedClock),
-                autostart: Box::new(NoAutostart),
-                executable_picker: Box::new(NoExecutableChosen),
                 icon_extractor: Box::new(RedIcons),
                 image_picker: Box::new(user.clone()),
-                processes: Box::new(NothingRuns),
-                process_starter: Box::new(NothingStarted),
-                data_file_picker: Box::new(NoExportFile),
+                ..stand_ins::ports()
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.join("covers")).with_chosen_images_in(profile.join("chosen")),
@@ -388,84 +382,5 @@ struct UserChooses(Arc<Mutex<Option<PathBuf>>>);
 impl nicelibrary_core::ImagePicker for UserChooses {
     fn choose_image(&self) -> Result<Option<PathBuf>, String> {
         Ok(self.0.lock().unwrap().clone())
-    }
-}
-
-struct NoUrls;
-
-impl Opener for NoUrls {
-    fn open_url(&self, url: &str) -> Result<(), OpenError> {
-        Err(OpenError::Failed(format!("this test opens no URL, not even {url}")))
-    }
-}
-
-struct NoSteam;
-
-impl SteamLocator for NoSteam {
-    fn steam_folder(&self) -> Option<PathBuf> {
-        None
-    }
-}
-
-struct StoppedClock;
-
-impl nicelibrary_core::Clock for StoppedClock {
-    fn now(&self) -> std::time::SystemTime {
-        std::time::UNIX_EPOCH
-    }
-
-    fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
-}
-
-struct NoExecutableChosen;
-
-impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
-    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
-        Ok(None)
-    }
-}
-
-struct NoAutostart;
-
-impl nicelibrary_core::Autostart for NoAutostart {
-    fn is_on(&self) -> Result<bool, String> {
-        Ok(false)
-    }
-
-    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
-        Err("this test does not start the app with Windows".into())
-    }
-
-    fn turn_off(&self) -> Result<(), String> {
-        Ok(())
-    }
-}
-
-struct NothingStarted;
-
-impl nicelibrary_core::ProcessStarter for NothingStarted {
-    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
-        Err(format!("this test starts no process, not even {}", executable.display()))
-    }
-}
-
-struct NothingRuns;
-
-impl nicelibrary_core::ProcessList for NothingRuns {
-    fn running_executables(&self) -> Result<Vec<PathBuf>, String> {
-        Ok(Vec::new())
-    }
-}
-
-/// No export or import is made here: the user cancels every file dialog.
-struct NoExportFile;
-
-impl nicelibrary_core::DataFilePicker for NoExportFile {
-    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
-        Ok(None)
-    }
-
-    fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
-        Ok(None)
     }
 }

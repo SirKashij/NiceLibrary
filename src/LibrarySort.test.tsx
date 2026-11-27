@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
 import type { Game, LibraryFilter, LibrarySort, Operations } from './operations';
+import { baseOperations } from './test/operations';
 
 function steamGame(appId: number, title: string, playtimeMinutes: number | null, lastPlayed: number | null): Game {
   return { id: `steam:${appId}`, title, source: 'steam', installed: true, playtimeMinutes, lastPlayed, progress: null, status: 'unplayed', favorite: false };
@@ -32,100 +33,23 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
   const asked: LibraryFilter[] = [];
   const chosen: LibrarySort[] = [];
   const operations: Operations = {
+    ...baseOperations(),
     library: async () => LIBRARY,
     readInstalledGames: async () => LIBRARY,
-    steamInstallation: async () => ({ state: 'notFound' }),
-    exportData: async () => ({ outcome: 'cancelled' }),
-    steamAccount: async () => null,
-    chooseSteamAccount: async () => ({ outcome: 'chosen' }),
-    coverUrl: (game) => `cover://localhost/${game.id}`,
-    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
-    coverImageChosen: async () => false,
-    removeCoverImage: async () => {},
-    launch: async () => ({ outcome: 'launched' }),
-    steamWebApiKeyStored: async () => false,
-    storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
-    removeSteamWebApiKey: async () => {},
-    openSteamWebApiKeyPage: async () => {},
-    sync: async () => ({ outcome: 'noKey' }),
-    lastSync: async () => null,
-    onAutomaticSync: () => () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);
       return ORDERED[filter.sort]
         .map((title) => LIBRARY.find((game) => game.title === title)!)
         .filter((game) => game.title.toLowerCase().includes(filter.search.toLowerCase()));
     },
-    libraryLayout: async () => 'coverGrid',
-    chooseLibraryLayout: async () => {},
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
-    launchOptions: async () => null,
-    setLaunchOptions: async () => {},
-    achievements: async () => ({ state: 'notFetchedYet' }),
-    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
-    theme: async () => 'system',
-    language: async () => 'system',
-    chooseLanguage: async () => {},
-    chooseTheme: async () => {},
-    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
-    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
-    addLocalGame: async () => ({ outcome: 'noTitle' }),
-    statistics: async () => {
-      throw new Error('this test shows no Statistics');
-    },
-    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
-    startsWithWindows: async () => false,
-    setStartWithWindows: async () => {},
-    install: async () => ({ outcome: 'started' }),
-    openLogFolder: async () => {},
-    limitedMode: async () => ({ outcome: 'off' }),
-    openSteamPrivacySettings: async () => {},
-    setStatus: async () => {
-      throw new Error('this test sets no Status');
-    },
-    collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),
     renameCollection: async () => ({ outcome: 'emptyName' }),
-    deleteCollection: async () => {},
-    hiddenGames: async () => [],
-    hideGame: async () => {},
-    unhideGame: async () => {},
-    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
-    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
-    onAutomaticSteamAppListFetch: () => () => {},
-    onSession: () => () => {},
-    playtimeAdjustment: async () => null,
-    setPlaytimeAdjustment: async () => {
-      throw new Error('this test adjusts no Playtime');
-    },
-    sessions: async () => [],
-    closeToTray: async () => true,
-    setCloseToTray: async () => {},
-    closeWindow: async () => {},
-    onTrayNotice: () => () => {},
-    showTrayMenu: async () => {},
-    about: async () => ({ version: '0.1.0', license: 'MIT' }),
-    openAboutPage: async () => {},
     librarySort: async () => stored,
     chooseLibrarySort: async (sort) => {
       chosen.push(sort);
       stored = sort;
     },
-    localGame: async () => null,
-    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
-    editLocalGame: async () => ({ outcome: 'noTitle' }),
-    removeLocalGame: async () => {},
-    markFavorite: async () => {},
-    favoriteCount: async () => 0,
-    findSteamTitles: async () => [],
-    proposeCoverMatch: async () => null,
-    coverMatch: async () => null,
-    setCoverMatch: async () => {},
-    importData: async () => ({ outcome: 'cancelled' }),
-    gameCollections: async () => [],
-    addGameToCollection: async () => {},
-    removeGameFromCollection: async () => {},
-    coverHue: async () => null,
   };
   return { operations, asked, chosen };
 }
