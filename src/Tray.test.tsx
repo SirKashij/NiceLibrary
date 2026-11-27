@@ -41,6 +41,7 @@ function fakeOperations({ closeToTray = true } = {}) {
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    sessions: async () => [],
     openLogFolder: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');

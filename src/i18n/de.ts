@@ -195,4 +195,11 @@ export const de: Record<MessageKey, string> = {
   'autostart.hint': 'Wenn du dich bei Windows anmeldest, startet NiceLibrary im Infobereich, ohne sein Fenster zu öffnen.',
   'autostart.loadFailed': 'Ob NiceLibrary mit Windows startet, konnte nicht gelesen werden.',
   'autostart.saveFailed': 'Der Start mit Windows konnte nicht geändert werden.',
+  'sessions.title': 'Spielsitzungen',
+  'sessions.of': 'Spielsitzungen von {title}',
+  'sessions.none': 'Noch keine Spielsitzungen. Eine Spielsitzung wird aufgezeichnet, sobald {title} läuft, egal wie du es startest.',
+  'sessions.running': 'Läuft',
+  'sessions.hoursMinutes': '{hours} Std. {minutes} Min.',
+  'sessions.underAMinute': 'unter 1 Min.',
+  'sessions.loadFailed': 'Die Spielsitzungen von {title} konnten nicht gelesen werden.',
 };

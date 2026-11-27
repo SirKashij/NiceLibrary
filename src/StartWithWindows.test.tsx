@@ -38,6 +38,7 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    sessions: async () => [],
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     setStatus: async () => {

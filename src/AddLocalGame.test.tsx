@@ -57,6 +57,7 @@ function fakeOperations({
     renameCollection: async () => ({ outcome: 'emptyName' }),
     deleteCollection: async () => {},
     onSession: () => () => {},
+    sessions: async () => [],
     filterLibrary: async () => [...games],
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

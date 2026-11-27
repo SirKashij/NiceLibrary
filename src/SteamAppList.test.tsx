@@ -91,6 +91,7 @@ function fakeOperations({
       return () => listeners.delete(listener);
     },
     onSession: () => () => {},
+    sessions: async () => [],
   };
   const automatic = {
     start: () => heard({ state: 'started' }),

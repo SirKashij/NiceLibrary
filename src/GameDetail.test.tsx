@@ -72,6 +72,7 @@ function fakeOperations(
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    sessions: async () => [],
     filterLibrary: async () => games,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

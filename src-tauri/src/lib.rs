@@ -9,7 +9,7 @@ use std::ops::ControlFlow;
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
     ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
-    SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking,
+    Session, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking,
     started_with_windows,
 };
 use percent_encoding::percent_decode_str;
@@ -197,6 +197,11 @@ async fn open_log_folder(core: tauri::State<'_, Core>) -> Result<(), Error> {
     core.open_log_folder()
 }
 
+#[tauri::command]
+fn sessions(core: tauri::State<'_, Core>, game_id: String) -> Result<Vec<Session>, Error> {
+    core.sessions(&game_id)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -281,7 +286,8 @@ pub fn run() {
             set_status,
             open_log_folder,
             starts_with_windows,
-            set_start_with_windows
+            set_start_with_windows,
+            sessions
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

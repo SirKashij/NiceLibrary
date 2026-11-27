@@ -38,6 +38,7 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    sessions: async () => [],
     filterLibrary: async () => [],
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

@@ -106,6 +106,7 @@ function fakeOperations({
       throw new Error('this test sets no Status');
     },
     onSession: () => () => {},
+    sessions: async () => [],
   };
   return { operations, calls, automaticSync, listeners };
 }
