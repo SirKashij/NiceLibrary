@@ -7,6 +7,7 @@ import { LocalGameActions } from './library/LocalGameActions';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { ThemeSettings } from './settings/ThemeSettings';
 import { ThemeProvider } from './theme';
+import { SteamAppListSettings } from './settings/SteamAppListSettings';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
 import { WindowSettings } from './settings/WindowSettings';
 import { Tray } from './Tray';
@@ -405,6 +406,7 @@ function SettingsView({ operations, onAccountChosen }: { operations: Operations;
       <SteamWebApiKeySettings operations={operations} />
       <ThemeSettings />
       <WindowSettings operations={operations} />
+      <SteamAppListSettings operations={operations} />
     </Page>
   );
 }

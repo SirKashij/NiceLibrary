@@ -96,6 +96,10 @@ _Avoid_: Box art, poster, artwork, thumbnail
 **Cover Match**:
 The link between a Local Game and the Steam title whose Cover it borrows. The person confirms or changes it when adding the Game.
 
+**Steam App List**:
+Steam's list of the titles it offers, each with its app id and name, fetched with the Steam Web API key and kept on this computer as the basis for Cover Matches. It is fetched, not synced: it belongs to no Steam Account.
+_Avoid_: App database, catalogue, Sync (for fetching it)
+
 ### Operation
 
 **Sync**:
