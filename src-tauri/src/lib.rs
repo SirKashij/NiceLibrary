@@ -11,12 +11,36 @@ use nicelibrary_core::{
     CoverHue, CoverImageChoice, DataExport, DataImport, EditLocalGame, Error, ExecutableChoice, FolderSuggestions, Game,
     GameAchievements, Install, Language, Launch, LaunchOptions, LibraryFilter, LibraryLayout, LimitedMode, LibrarySort,
     LocalGame, Log, ManualProgress, Session, Statistics, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
-    SteamInstallation, SteamTitle, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
+    SteamInstallation, SteamTitle, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, UnreadableCore,
+    Database, started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
 use tauri::{App, AppHandle, Emitter, Manager, WebviewWindowBuilder, WindowEvent};
 use tray::TrayMenuTexts;
+
+/// Whether the store is open, or why not; the interface asks first, to
+/// choose between the Library and the page of the Unreadable Database.
+#[tauri::command]
+fn database(app: AppHandle) -> Database {
+    match (app.try_state::<Core>(), app.try_state::<UnreadableCore>()) {
+        (Some(core), _) => core.database(),
+        (None, Some(unreadable)) => unreadable.database(),
+        (None, None) => unreachable!("the setup manages one of the two"),
+    }
+}
+
+/// Async, so a slow start of File Explorer does not block the window.
+#[tauri::command]
+async fn open_database_folder(unreadable: tauri::State<'_, UnreadableCore>) -> Result<(), Error> {
+    unreadable.open_database_folder()
+}
+
+/// Ends the app, from the page of the Unreadable Database, which has no Tray to quit from.
+#[tauri::command]
+fn quit(app: AppHandle) {
+    app.exit(0);
+}
 
 #[tauri::command]
 fn library(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
@@ -480,6 +504,9 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            database,
+            open_database_folder,
+            quit,
             library,
             read_installed_games,
             launch,
@@ -560,20 +587,35 @@ pub fn run() {
             let path = request.uri().path().to_owned();
             // Off the main thread: a Cover may have to be downloaded first.
             tauri::async_runtime::spawn_blocking(move || {
-                responder.respond(cover_response(&app.state::<Core>(), &path));
+                // Without a store (Unreadable Database) there are no Covers.
+                let response = match app.try_state::<Core>() {
+                    Some(core) => cover_response(&core, &path),
+                    None => Response::builder()
+                        .status(StatusCode::SERVICE_UNAVAILABLE)
+                        .body(Vec::new())
+                        .expect("a valid response"),
+                };
+                responder.respond(response);
             });
         })
         .setup(|app| {
-            let store = Store::open(&app.path().app_data_dir()?.join(DATABASE))?;
+            let log = Log::new(app.path().app_data_dir()?.join(LOGS));
+            let store = match Store::open(&app.path().app_data_dir()?.join(DATABASE)) {
+                Ok(store) => store,
+                // Only the window, to say why: nothing else can work without the store.
+                Err(unreadable) => {
+                    app.manage(UnreadableCore::new(ports::real_ports(), unreadable, log));
+                    return create_main_window(app, Shown::Always);
+                }
+            };
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS))
                 .with_chosen_images_in(app.path().app_data_dir()?.join(CHOSEN_COVERS));
-            let log = Log::new(app.path().app_data_dir()?.join(LOGS));
             app.manage(Core::new(ports::real_ports(), store, covers).with_log(log));
             start_automatic_syncs(app)?;
             tray::create(app.handle())?;
             start_automatic_steam_app_list_fetches(app)?;
             start_session_tracking(app)?;
-            create_main_window(app)
+            create_main_window(app, Shown::UnlessStartedWithWindows)
         })
         .run(tauri::generate_context!())
         .expect("error while running NiceLibrary");
@@ -641,12 +683,20 @@ fn start_session_tracking(app: &App) -> std::io::Result<()> {
     Ok(())
 }
 
+/// When the main window shows at start.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Shown {
+    /// Started with Windows, the app starts hidden in the Tray.
+    UnlessStartedWithWindows,
+    /// Without a Tray (Unreadable Database), a hidden window could never be opened.
+    Always,
+}
+
 /// Creates the window declared in tauri.conf.json (`"create": false` there).
-/// Started with Windows, the app starts hidden in the Tray: the window is
-/// created, so the interface runs, but not shown.
-fn create_main_window(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
+/// A hidden window is still created, so the interface runs, but not shown.
+fn create_main_window(app: &mut App, shown: Shown) -> Result<(), Box<dyn std::error::Error>> {
     let mut config = app.config().app.windows.first().ok_or("tauri.conf.json declares no window")?.clone();
-    if started_with_windows(std::env::args()) {
+    if shown == Shown::UnlessStartedWithWindows && started_with_windows(std::env::args()) {
         config.visible = false;
     }
     let builder = WebviewWindowBuilder::from_config(app.handle(), &config)?;

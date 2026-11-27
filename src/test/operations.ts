@@ -12,6 +12,9 @@ import type { Operations } from '../operations';
  */
 export function baseOperations(): Operations {
   return {
+    database: async () => ({ state: 'open' }),
+    openDatabaseFolder: async () => {},
+    quit: async () => {},
     library: async () => [],
     readInstalledGames: async () => [],
     steamInstallation: async () => ({ state: 'notFound' }),

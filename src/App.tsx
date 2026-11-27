@@ -12,7 +12,7 @@ import { AddFromFolderButton } from './library/AddFromFolder';
 import { HiddenGamesPage } from './library/HiddenGames';
 import { useSessionChanges } from './library/Sessions';
 import { LocalGameActions } from './library/LocalGameActions';
-import type { Collection, Game, Operations, SteamLogin, SyncOutcome } from './operations';
+import type { Collection, Database, Game, Operations, SteamLogin, SyncOutcome } from './operations';
 import { ThemeSettings } from './settings/ThemeSettings';
 import { ThemeProvider } from './theme';
 import { GameList, LibraryLayoutSwitch, useLibraryLayout } from './library/LibraryLayout';
@@ -29,6 +29,7 @@ import { LogSettings } from './settings/LogSettings';
 import { StatisticsPage } from './statistics/StatisticsPage';
 import { GameActionButton, useGameAction } from './library/GameAction';
 import { LimitedModeHint } from './LimitedModeHint';
+import { UnreadableDatabasePage } from './UnreadableDatabase';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -39,7 +40,19 @@ const VIEWS: { view: View; label: MessageKey }[] = [
 ];
 
 /** The whole interface; `lang` is the system language, shown until the user chooses another. */
-export function App({ operations, lang }: { operations: Operations; lang: Lang }) {
+export function App({
+  operations,
+  lang,
+  database = { state: 'open' },
+}: {
+  operations: Operations;
+  lang: Lang;
+  /** Whether the store is open, as `operations.database()` answered before the interface started. */
+  database?: Database;
+}) {
+  if (database.state === 'unreadable') {
+    return <UnreadableDatabasePage operations={operations} lang={lang} reason={database.reason} path={database.path} />;
+  }
   return (
     <ImportReloadProvider>
       <LanguageProvider operations={operations} system={lang}>

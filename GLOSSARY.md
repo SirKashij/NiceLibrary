@@ -183,6 +183,10 @@ _Avoid_: Download, setup
 The files on this computer the app writes its errors and notable events to, for the person to attach to a bug report themselves. It never holds the Steam Web API key or a full SteamID, and the app never sends it.
 _Avoid_: Crash report, telemetry, diagnostics
 
+**Unreadable Database**:
+The reduced state the app starts in when its database cannot be opened, for one of three reasons: a newer version of the app wrote it, the file is damaged, or its folder cannot be written. The app then opens only its window, which names the reason and the database's full path and offers to show its folder or quit; the Library is not shown, and nothing runs that needs the database. The file is never changed, moved or deleted.
+_Avoid_: Corrupt database, database error, safe mode
+
 ### Interface
 
 **Theme**:

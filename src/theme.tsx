@@ -27,6 +27,15 @@ function useSystemTheme(): ShownTheme {
   return theme;
 }
 
+/** Shows the system's theme, without asking for the stored choice: for a start without a database. */
+export function SystemTheme({ children }: { children: ReactNode }) {
+  const shown = useSystemTheme();
+  useLayoutEffect(() => {
+    document.documentElement.dataset.theme = shown;
+  }, [shown]);
+  return <>{children}</>;
+}
+
 interface ThemeChoice {
   /** The theme the user chose; `system` until they choose. */
   theme: Theme;

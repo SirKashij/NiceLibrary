@@ -38,6 +38,7 @@ mod steam_web_api;
 mod store;
 mod sync;
 mod theme;
+mod unreadable_database;
 mod window;
 
 use std::collections::BTreeSet;
@@ -78,6 +79,7 @@ pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
 pub use sync::{AutomaticSync, SyncOutcome};
 pub use theme::Theme;
+pub use unreadable_database::{Database, UnreadableCore, UnreadableDatabase, UnreadableReason};
 pub use window::WindowClose;
 
 /// The origin a Game is read from.
@@ -248,6 +250,12 @@ impl Core {
     /// Writes a notable event to the Log.
     fn note(&self, event: &str) {
         self.log.write(self.ports.clock.now(), Level::Info, event);
+    }
+
+    /// Whether the store is open: always, for a core that has one (see
+    /// [`UnreadableCore::database`] for the start without it).
+    pub fn database(&self) -> Database {
+        Database::Open
     }
 
     /// Shows the folder of the Log in the file manager, so the user can

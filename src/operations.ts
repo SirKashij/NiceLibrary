@@ -286,7 +286,27 @@ export type LimitedMode =
   | { outcome: 'gameDetailsPrivate' }
   | { outcome: 'steamUnreachable' };
 
+/**
+ * Why the database could not be opened: a newer version of the app wrote it, it is damaged, or its
+ * folder cannot be written. Mirrors `UnreadableReason` in crates/core.
+ */
+export type UnreadableReason = 'newerVersion' | 'damaged' | 'folderNotWritable';
+
+/** Whether the store is open, or why not and where the database lies. Mirrors `Database` in crates/core. */
+export type Database =
+  | { state: 'open' }
+  | { state: 'unreadable'; reason: UnreadableReason; /** The database file, in full. */ path: string };
+
 export interface Operations {
+  /**
+   * Whether the store is open. When it is not (Unreadable Database), every other operation that needs
+   * the store rejects, and only `openDatabaseFolder` and `quit` work.
+   */
+  database(): Promise<Database>;
+  /** Shows the folder of the Unreadable Database in File Explorer. Rejects when it could not be shown. */
+  openDatabaseFolder(): Promise<void>;
+  /** Ends the app. */
+  quit(): Promise<void>;
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
   /** Reads which Steam Games are Installed, stores it and answers the Library. */
@@ -661,6 +681,9 @@ export interface TrayMenuTexts {
   quit: string;
 }
 export const tauriOperations: Operations = {
+  database: () => invoke<Database>('database'),
+  openDatabaseFolder: () => invoke<void>('open_database_folder'),
+  quit: () => invoke<void>('quit'),
   library: () => invoke<Game[]>('library'),
   readInstalledGames: () => invoke<Game[]>('read_installed_games'),
   steamInstallation: () => invoke<SteamInstallation>('steam_installation'),

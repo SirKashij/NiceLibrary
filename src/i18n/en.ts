@@ -419,6 +419,17 @@ export const en = {
     'This file was made by a newer version of NiceLibrary. Update the app to import it. Nothing was changed.',
   'import.damaged': 'This file is not an Export File of NiceLibrary, or it is damaged. Nothing was changed.',
   'import.failed': 'Your data could not be imported.',
+  'unreadable.title': 'Your library cannot be opened',
+  'unreadable.newerVersion':
+    'Your library was saved by a newer version of NiceLibrary. Update the app to open it.',
+  'unreadable.damaged': 'The file of your library is damaged or is not a NiceLibrary database.',
+  'unreadable.folderNotWritable':
+    'NiceLibrary cannot write to the folder of your library. Check that the folder exists and that you may change files in it.',
+  'unreadable.path': 'Database file',
+  'unreadable.untouched': 'NiceLibrary has not changed, moved or deleted the file.',
+  'unreadable.openFolder': 'Open folder',
+  'unreadable.openFolderFailed': 'The folder could not be opened.',
+  'unreadable.quit': 'Quit',
 } as const;
 
 export type MessageKey = keyof typeof en;

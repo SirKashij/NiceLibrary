@@ -72,6 +72,18 @@ button:focus-visible, input:focus-visible {
 }
 .note { color: var(--color-text-muted); max-width: var(--note-max-width); }
 
+/* The page of the Unreadable Database: the whole window, without the sidebar. */
+.unreadable-database {
+  display: grid; gap: var(--space-3); align-content: center; height: 100%; overflow: auto;
+  max-width: var(--note-max-width); margin: 0 auto; padding: var(--space-6) var(--space-5);
+}
+.unreadable-database h1 {
+  font-family: var(--font-display); font-size: var(--text-size-page-title); font-weight: var(--weight-display);
+  line-height: var(--line-height-title); letter-spacing: var(--tracking-title);
+}
+.unreadable-path { display: grid; gap: var(--space-1); }
+.unreadable-path code { font: inherit; overflow-wrap: anywhere; user-select: text; }
+
 /* Settings: sections separated by hairlines, no cards (ADR-0007). */
 .settings-section { display: grid; gap: var(--space-2); max-width: var(--note-max-width); padding-top: var(--space-5); border-top: var(--hairline) solid var(--color-line); }
 .settings-section h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
