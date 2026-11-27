@@ -94,6 +94,37 @@ export interface Collection {
 /** How naming a Collection went, when nothing failed. Every outcome but `named` changed nothing. Mirrors `CollectionNaming` in crates/core. */
 export type CollectionNaming = { outcome: 'named'; id: number } | { outcome: 'emptyName' } | { outcome: 'nameTaken' };
 
+/** What is stored of the Steam App List. Mirrors `SteamAppList` in crates/core. */
+export interface SteamAppList {
+  /** How many titles are stored. */
+  titles: number;
+  /** When the last fetch that ran to its end ended, in seconds since the Unix epoch; `null` before the first. */
+  fetchedAt: number | null;
+  /** Whether a fetch stopped before its end; the next one continues it. */
+  unfinished: boolean;
+}
+
+/**
+ * How fetching the Steam App List went, when nothing failed. The pages
+ * fetched before Steam stopped answering stay stored. Mirrors
+ * `SteamAppListFetch` in crates/core.
+ */
+export type SteamAppListFetch =
+  | { outcome: 'fetched'; /** Seconds since the Unix epoch. */ at: number }
+  | { outcome: 'noKey' }
+  | { outcome: 'keyRejected' }
+  | { outcome: 'steamUnreachable' };
+
+/**
+ * What happens in a fetch of the Steam App List the core starts on its own.
+ * Mirrors `AutomaticSteamAppListFetch` in crates/core; a round that fetches
+ * nothing never reaches the interface.
+ */
+export type AutomaticSteamAppListFetch =
+  | { state: 'started' }
+  | ({ state: 'finished' } & SteamAppListFetch)
+  | { state: 'failed'; reason: string };
+
 /** What the Library is narrowed to; every part that is set must match. Mirrors `LibraryFilter` in crates/core. */
 export interface LibraryFilter {
   /** Text the title must contain, ignoring case; empty matches every title. */
@@ -189,10 +220,41 @@ export interface Operations {
   renameCollection(id: number, name: string): Promise<CollectionNaming>;
   /** Deletes a Collection. Its Games stay in the Library. */
   deleteCollection(id: number): Promise<void>;
+  /** What is stored of the Steam App List, the basis for Cover Matches. */
+  steamAppList(): Promise<SteamAppList>;
+  /**
+   * Fetches the Steam App List with the stored Steam Web API key, page by
+   * page. An unfinished fetch is continued where it stopped; otherwise the
+   * whole list is fetched anew while the stored one stays usable.
+   */
+  fetchSteamAppList(): Promise<SteamAppListFetch>;
+  /**
+   * Hears the fetches of the Steam App List the core runs on its own: a
+   * minute after the start, right after a key is stored, and whenever the
+   * list is a week old. Answers the function that stops listening.
+   */
+  onAutomaticSteamAppListFetch(listener: (event: AutomaticSteamAppListFetch) => void): () => void;
   /** The Games in the stored Library that match the filter, ordered by title like `library`. */
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /** Whether closing the window keeps the app running in the Tray. On until the user turns it off. */
+  closeToTray(): Promise<boolean>;
+  /** Turns close-to-tray on or off, also after a restart. */
+  setCloseToTray(on: boolean): Promise<void>;
+  /**
+   * Closes the window as its close button does: with close-to-tray on the
+   * window hides and the app keeps running in the Tray, otherwise it quits.
+   */
+  closeWindow(): Promise<void>;
+  /**
+   * Hears the first close of the window with close-to-tray on. The window
+   * then stays open to explain the Tray, and `closeWindow` closes it once
+   * the user has read that. Answers the function that stops listening.
+   */
+  onTrayNotice(listener: () => void): () => void;
+  /** Gives the Tray icon its tooltip and menu, in the interface language. */
+  showTrayMenu(texts: TrayMenuTexts): Promise<void>;
   /**
    * Marks a Game as a Favorite, or with `false` unmarks it. The mark stays
    * through Syncs and restarts. Rejects when the Game is not in the Library.
@@ -202,6 +264,14 @@ export interface Operations {
   favoriteCount(): Promise<number>;
 }
 
+/** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
+export interface TrayMenuTexts {
+  tooltip: string;
+  /** The menu entry that opens the window. */
+  open: string;
+  /** The menu entry that quits the app. */
+  quit: string;
+}
 export const tauriOperations: Operations = {
   library: () => invoke<Game[]>('library'),
   readInstalledGames: () => invoke<Game[]>('read_installed_games'),
@@ -232,8 +302,30 @@ export const tauriOperations: Operations = {
   createCollection: (name) => invoke<CollectionNaming>('create_collection', { name }),
   renameCollection: (id, name) => invoke<CollectionNaming>('rename_collection', { id, name }),
   deleteCollection: (id) => invoke<void>('delete_collection', { id }),
+  steamAppList: () => invoke<SteamAppList>('steam_app_list'),
+  fetchSteamAppList: () => invoke<SteamAppListFetch>('fetch_steam_app_list'),
+  onAutomaticSteamAppListFetch: (listener) => {
+    // AUTOMATIC_STEAM_APP_LIST_FETCH_EVENT in src-tauri/src/lib.rs.
+    const listening = listen<AutomaticSteamAppListFetch>('automatic-steam-app-list-fetch', (event) =>
+      listener(event.payload),
+    );
+    return () => {
+      void listening.then((stop) => stop());
+    };
+  },
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  closeToTray: () => invoke<boolean>('close_to_tray'),
+  setCloseToTray: (on) => invoke<void>('set_close_to_tray', { on }),
+  closeWindow: () => invoke<void>('close_window'),
+  onTrayNotice: (listener) => {
+    // TRAY_NOTICE_EVENT in src-tauri/src/tray.rs.
+    const listening = listen('tray-notice', () => listener());
+    return () => {
+      void listening.then((stop) => stop());
+    };
+  },
+  showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
   markFavorite: (gameId, favorite) => invoke<void>('mark_favorite', { gameId, favorite }),
   favoriteCount: () => invoke<number>('favorite_count'),
 };

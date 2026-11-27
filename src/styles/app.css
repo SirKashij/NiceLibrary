@@ -178,6 +178,15 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .game-facts dt { color: var(--color-text-muted); }
 .game-facts dd { margin: 0; }
 .game-detail[data-installed='false'] .cover { filter: var(--filter-not-installed); }
+/* Close-to-tray setting and the Tray notice (src/settings/WindowSettings.tsx, src/Tray.tsx). */
+.checkbox-row { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
+.tray-notice-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: var(--color-backdrop); }
+.tray-notice {
+  display: grid; gap: var(--space-3); justify-items: start; max-width: var(--note-max-width); padding: var(--space-5);
+  background: var(--color-surface-raised); border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control);
+}
+.tray-notice h2 { font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display); }
 
 /* Favorites: the sidebar entry with its count, and the star on a Cover that marks a Favorite. */
 .favorites-entry {

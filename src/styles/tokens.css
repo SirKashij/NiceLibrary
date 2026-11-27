@@ -17,6 +17,8 @@
   --color-text-muted: #9b9c98;
   --color-accent: var(--color-text);
   --color-accent-ink: var(--color-bg);
+  /* Behind a dialog: the window dimmed. */
+  --color-backdrop: rgb(0 0 0 / 0.6);
 
   /* Type */
   --font-display: 'Bricolage Grotesque Variable', sans-serif;
@@ -78,4 +80,5 @@
   --color-text-muted: #5c5d59;
   --color-accent: var(--color-text);
   --color-accent-ink: var(--color-bg);
+  --color-backdrop: rgb(26 27 28 / 0.4);
 }
