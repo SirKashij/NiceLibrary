@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
+import { AddLocalGameButton } from './library/AddLocalGame';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
 
@@ -160,6 +161,9 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
 
 function LibraryView({ operations, syncs }: { operations: Operations; syncs: number }) {
   const t = useT();
+  // How many Local Games were added here; each one changes the stored Library.
+  const [additions, setAdditions] = useState(0);
+  const changes = syncs + additions;
   // The stored Library answers at once; reading Steam again replaces it.
   const stored = useOperation(operations, (o) => o.library());
   const fromSteam = useOperation(operations, (o) => o.readInstalledGames());
@@ -169,7 +173,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     if (fromSteam.state === 'ready') setFresh(fromSteam.value);
   }, [fromSteam]);
   useEffect(() => {
-    if (syncs === 0) return;
+    if (changes === 0) return;
     let active = true;
     // A Library that cannot be loaded now stays as shown; the next answer replaces it.
     operations.library().then(
@@ -179,7 +183,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     return () => {
       active = false;
     };
-  }, [operations, syncs]);
+  }, [operations, changes]);
 
   const library = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
   const [filter, setFilter] = useState(NO_FILTER);
@@ -244,6 +248,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     <>
       <div ref={libraryView} hidden={opened !== undefined}>
         <Page title="nav.library">
+          <AddLocalGameButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
           <LibraryToolbar filter={filter} onChange={setFilter} />
           {filtered.state === 'failed' && (
             <p className="note" role="alert">

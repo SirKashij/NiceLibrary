@@ -44,6 +44,8 @@ function fakeOperations({ stored = false } = {}) {
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, calls };
 }

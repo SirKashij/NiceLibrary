@@ -11,6 +11,7 @@ use std::sync::{Mutex, MutexGuard};
 
 use rusqlite::{Connection, params};
 
+use crate::local_games::StoredLocalGame;
 use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
 use crate::{Error, Game};
@@ -37,6 +38,12 @@ const MIGRATIONS: &[&str] = &[
      CREATE TABLE steam_syncs (
          steam_account TEXT    PRIMARY KEY,
          synced_at     INTEGER NOT NULL
+     );",
+    // 3: Local Games, each with the path of its executable as chosen.
+    "CREATE TABLE local_games (
+         id         INTEGER PRIMARY KEY AUTOINCREMENT,
+         title      TEXT    NOT NULL,
+         executable TEXT    NOT NULL UNIQUE
      );",
 ];
 
@@ -191,6 +198,25 @@ impl Store {
             })?
             .collect::<Result<_, _>>()?;
         Ok(games)
+    }
+}
+
+impl Store {
+    /// Every Local Game, in the order they were added.
+    pub(crate) fn local_games(&self) -> Result<Vec<StoredLocalGame>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare("SELECT id, title, executable FROM local_games ORDER BY id")?;
+        let games = statement
+            .query_map([], |row| Ok(StoredLocalGame { id: row.get(0)?, title: row.get(1)?, executable: row.get(2)? }))?
+            .collect::<Result<_, _>>()?;
+        Ok(games)
+    }
+
+    /// Adds the Local Game `title` with its `executable` and answers its id.
+    pub(crate) fn add_local_game(&self, title: &str, executable: &str) -> Result<i64, Error> {
+        let connection = self.connection();
+        connection.execute("INSERT INTO local_games (title, executable) VALUES (?1, ?2)", params![title, executable])?;
+        Ok(connection.last_insert_rowid())
     }
 }
 

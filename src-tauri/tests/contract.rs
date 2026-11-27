@@ -576,3 +576,121 @@ mod secret_store {
         assert_eq!(test.open().read("key"), Ok(Some(text.to_owned())));
     }
 }
+
+/// `ExecutablePicker` (crates/core): `Some` with the absolute path of the
+/// file the user chose, `None` when they cancel; blocks until they decide.
+///
+/// The tests play the user: they find the dialog this process opens, type a
+/// path into its file name box and confirm, or cancel it. A dialog shows on
+/// the screen briefly; nothing on disk changes but a temporary folder.
+#[cfg(windows)]
+mod executable_picker {
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::Mutex;
+    use std::thread::JoinHandle;
+    use std::time::{Duration, Instant};
+
+    use nicelibrary_core::ExecutablePicker;
+    use nicelibrary_lib::ports::WindowsExecutablePicker;
+    use windows_sys::Win32::Foundation::{HWND, LPARAM, WPARAM};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{
+        EnumWindows, GetClassNameW, GetDlgItem, GetWindowThreadProcessId, IDCANCEL, IDOK, IsWindowVisible,
+        PostMessageW, SendMessageW, WM_COMMAND, WM_SETTEXT,
+    };
+
+    /// The id of the file name box in Windows' file dialogs (`cmb13`).
+    const FILE_NAME_BOX: i32 = 0x47c;
+
+    /// One dialog at a time, so each test finds its own.
+    static ONE_DIALOG: Mutex<()> = Mutex::new(());
+
+    fn open_dialog() -> JoinHandle<Result<Option<PathBuf>, String>> {
+        std::thread::spawn(|| WindowsExecutablePicker.choose_executable())
+    }
+
+    /// The visible file dialog of this process, waiting for it up to ten seconds.
+    fn the_dialog() -> HWND {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while Instant::now() < deadline {
+            let mut found: HWND = std::ptr::null_mut();
+            // SAFETY: the callback only writes through the pointer it is given, which outlives the call.
+            unsafe { EnumWindows(Some(remember_dialog), &mut found as *mut HWND as LPARAM) };
+            // The file name box exists once the dialog is ready for input.
+            if !found.is_null() && !unsafe { GetDlgItem(found, FILE_NAME_BOX) }.is_null() {
+                return found;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        panic!("no file dialog appeared");
+    }
+
+    unsafe extern "system" fn remember_dialog(window: HWND, found: LPARAM) -> i32 {
+        let mut process = 0;
+        let mut class = [0u16; 16];
+        // SAFETY: plain Win32 calls on a window handle Windows just gave us.
+        let (ours, length) = unsafe {
+            GetWindowThreadProcessId(window, &mut process);
+            (process == std::process::id() && IsWindowVisible(window) != 0, GetClassNameW(window, class.as_mut_ptr(), 16))
+        };
+        // "#32770" is the window class of dialogs.
+        if ours && String::from_utf16_lossy(&class[..length as usize]) == "#32770" {
+            // SAFETY: `found` is the `&mut HWND` handed to EnumWindows.
+            unsafe { *(found as *mut HWND) = window };
+            return 0;
+        }
+        1
+    }
+
+    fn press(dialog: HWND, button: i32) {
+        // SAFETY: plain Win32 call; the message carries no pointers.
+        unsafe { PostMessageW(dialog, WM_COMMAND, button as WPARAM, 0) };
+    }
+
+    #[test]
+    fn answers_the_file_the_user_chose() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let folder = tempfile::tempdir().unwrap();
+        let game = folder.path().join("Celeste.exe");
+        fs::write(&game, b"MZ").unwrap();
+        let answer = open_dialog();
+
+        let dialog = the_dialog();
+        let typed: Vec<u16> = game.display().to_string().encode_utf16().chain([0]).collect();
+        // SAFETY: SendMessageW returns only once the dialog has copied the text.
+        unsafe { SendMessageW(GetDlgItem(dialog, FILE_NAME_BOX), WM_SETTEXT, 0, typed.as_ptr() as LPARAM) };
+        press(dialog, IDOK);
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen file");
+        assert_eq!(fs::canonicalize(chosen).unwrap(), fs::canonicalize(&game).unwrap());
+    }
+
+    #[test]
+    fn answers_none_when_the_user_cancels() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = open_dialog();
+
+        press(the_dialog(), IDCANCEL);
+
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+
+    #[test]
+    fn leaves_the_working_folder_where_it_was() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let before = std::env::current_dir().unwrap();
+        let folder = tempfile::tempdir().unwrap();
+        let game = folder.path().join("game.exe");
+        fs::write(&game, b"MZ").unwrap();
+        let answer = open_dialog();
+
+        let dialog = the_dialog();
+        let typed: Vec<u16> = game.display().to_string().encode_utf16().chain([0]).collect();
+        // SAFETY: SendMessageW returns only once the dialog has copied the text.
+        unsafe { SendMessageW(GetDlgItem(dialog, FILE_NAME_BOX), WM_SETTEXT, 0, typed.as_ptr() as LPARAM) };
+        press(dialog, IDOK);
+        answer.join().unwrap().unwrap();
+
+        assert_eq!(std::env::current_dir().unwrap(), before);
+    }
+}

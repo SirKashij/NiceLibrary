@@ -81,6 +81,8 @@ function fakeOperations({
       return () => listeners.delete(listener);
     },
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, calls, automaticSync, listeners };
 }

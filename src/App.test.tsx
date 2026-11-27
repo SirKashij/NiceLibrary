@@ -25,6 +25,8 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     onAutomaticSync: () => () => {},
     game: async () => null,
     launch: async () => ({ outcome: 'launched' }),
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
 }
 
