@@ -45,6 +45,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     hideGame: async () => {},
     unhideGame: async () => {},
     filterLibrary: async () => [],
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     game: async () => null,

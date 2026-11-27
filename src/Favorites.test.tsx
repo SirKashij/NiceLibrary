@@ -102,6 +102,8 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
   };
   return { operations, asked, marks };
 }

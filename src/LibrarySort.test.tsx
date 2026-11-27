@@ -53,6 +53,8 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
         .map((title) => LIBRARY.find((game) => game.title === title)!)
         .filter((game) => game.title.toLowerCase().includes(filter.search.toLowerCase()));
     },
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
     launchOptions: async () => null,
     setLaunchOptions: async () => {},

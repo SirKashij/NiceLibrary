@@ -192,6 +192,11 @@ export const de: Record<MessageKey, string> = {
   'game.never': 'Nie',
   'game.notKnown': 'Noch nicht bekannt',
   'game.gone': '{title} ist nicht mehr in deiner Bibliothek.',
+  'layout.choose': 'Ansicht',
+  'layout.coverGrid': 'Raster',
+  'layout.list': 'Liste',
+  'layout.titleColumn': 'Titel',
+  'layout.saveFailed': 'Die Ansicht konnte nicht gespeichert werden.',
   'settings.window': 'Fenster',
   'window.closeToTray': 'Beim Schließen des Fensters im Infobereich weiterlaufen',
   'window.closeToTrayOn':

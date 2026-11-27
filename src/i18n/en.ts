@@ -190,6 +190,11 @@ export const en = {
   'game.never': 'Never',
   'game.notKnown': 'Not known yet',
   'game.gone': '{title} is no longer in your library.',
+  'layout.choose': 'Layout',
+  'layout.coverGrid': 'Grid',
+  'layout.list': 'List',
+  'layout.titleColumn': 'Title',
+  'layout.saveFailed': 'The layout could not be saved.',
   'settings.window': 'Window',
   'window.closeToTray': 'Keep running in the tray when the window is closed',
   'window.closeToTrayOn':

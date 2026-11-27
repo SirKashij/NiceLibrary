@@ -67,6 +67,8 @@ function fakeOperations() {
           game.title.toLowerCase().includes(filter.search.toLowerCase()),
       );
     },
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

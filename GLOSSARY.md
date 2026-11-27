@@ -147,6 +147,10 @@ _Avoid_: Crash report, telemetry, diagnostics
 Whether the interface shows dark or light. Until the person chooses one in the settings, it follows the operating system's setting. The German interface calls it "Design".
 _Avoid_: Skin, mode, appearance
 
+**Library Layout**:
+How the Library shows its Games: as a cover grid, one card with a large Cover per Game, or as a list, one row per Game with a small Cover, title, Source, Playtime, Last Played and its Launch. Both show the same Games in the same order. Until the person switches, it is the cover grid. The German interface calls it "Ansicht".
+_Avoid_: View (the app's pages are views), mode, display
+
 **Tray**:
 The app's icon in the notification area of the Windows taskbar. While the window is closed the app keeps running there, so tracking goes on, unless the person turned close-to-tray off; its menu opens the window or quits the app. The German interface calls it "Infobereich".
 _Avoid_: System tray (in interface text), taskbar, background

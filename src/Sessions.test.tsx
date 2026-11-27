@@ -84,6 +84,8 @@ function fakeOperations(initial: Game[]) {
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
   };
   const send = (event: SessionEvent) => act(() => listeners.forEach((listener) => listener(event)));
   return { operations, send, listening: () => listeners.size, change: (next: Game[]) => (games = next) };

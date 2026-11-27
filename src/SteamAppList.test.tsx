@@ -59,6 +59,8 @@ function fakeOperations({
     hideGame: async () => {},
     unhideGame: async () => {},
     filterLibrary: async () => [],
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async () => null,
     launchOptions: async () => null,
     setLaunchOptions: async () => {},

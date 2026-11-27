@@ -189,6 +189,28 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .game-collection-list { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); }
 .collection-name { text-align: left; color: var(--color-text-muted); }
 .collection-name:hover, .collection-name[aria-current='page'] { color: var(--color-text); }
+
+/* Library as a list: one row per Game. The small Cover opens it, and so does the rest of the row;
+   the main action sits above that and stays its own button. */
+.game-list { padding-top: var(--space-3); }
+.game-row {
+  position: relative; display: grid; align-items: center; gap: var(--space-4);
+  grid-template-columns: var(--list-cover-width) minmax(0, 1fr) repeat(5, var(--list-fact-width));
+  padding: var(--space-2); border-top: var(--hairline) solid var(--color-line);
+}
+.game-list-head { border-top: 0; color: var(--color-text-muted); font-size: var(--text-size-label); }
+.game-row .cover { margin-bottom: 0; }
+.open-row { display: block; border-radius: var(--radius-cover); }
+.open-row::after { content: ''; position: absolute; inset: 0; }
+.game-list li:hover { background: var(--color-surface); }
+.game-row-fact { color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-row-action { position: relative; justify-self: end; display: flex; align-items: center; gap: var(--space-2); }
+/* The Favorite star sits before the main action, shown like on a Cover: on hover, on focus and when marked. */
+.game-row .favorite-toggle { position: static; }
+.game-row:hover .favorite-toggle, .game-row:focus-within .favorite-toggle { opacity: 1; }
+.game-row[data-installed='false'] .cover { filter: var(--filter-not-installed); }
+.game-row[data-installed='false'] .game-title { color: var(--color-text-muted); }
+
 /* Close-to-tray setting and the Tray notice (src/settings/WindowSettings.tsx, src/Tray.tsx). */
 .checkbox-row { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
 input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }

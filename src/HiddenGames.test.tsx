@@ -93,6 +93,8 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
   };
   return { operations, hidden };
 }

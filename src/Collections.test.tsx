@@ -63,6 +63,8 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     hideGame: async () => {},
     unhideGame: async () => {},
     filterLibrary: async () => library,
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,

@@ -76,6 +76,8 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
   };
   const removeOutsideTheApp = () => {
     entry = false;

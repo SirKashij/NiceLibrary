@@ -12,6 +12,7 @@ import { LocalGameActions } from './library/LocalGameActions';
 import type { Collection, Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { ThemeSettings } from './settings/ThemeSettings';
 import { ThemeProvider } from './theme';
+import { GameList, LibraryLayoutSwitch, useLibraryLayout } from './library/LibraryLayout';
 import { SteamAppListSettings } from './settings/SteamAppListSettings';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
 import { WindowSettings } from './settings/WindowSettings';
@@ -293,6 +294,7 @@ function LibraryView({
 
   const library = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
   const [filter, setFilter] = useState(NO_FILTER);
+  const layout = useLibraryLayout(operations);
   const librarySort = useLibrarySort(operations);
   // What the toolbar sets, narrowed to the Favorites or the Collection the sidebar asks for.
   const chosenId = collection?.id;
@@ -420,10 +422,16 @@ function LibraryView({
           )}
           <LibraryToolbar filter={filter} onChange={setFilter}>
             <SortChoice sort={librarySort.sort} choose={librarySort.choose} />
+            <LibraryLayoutSwitch choice={layout} />
           </LibraryToolbar>
           {librarySort.notKept && (
             <p className="note" role="alert">
               {t('sort.notKept')}
+            </p>
+          )}
+          {layout.saveFailed && (
+            <p className="note" role="alert">
+              {t('layout.saveFailed')}
             </p>
           )}
           {filtered.state === 'failed' && (
@@ -443,10 +451,19 @@ function LibraryView({
           {favoritesOnly && !isFiltering(filter) && games?.length === 0 && <NoFavorites />}
           {collection && !isFiltering(filter) && games?.length === 0 && <p className="note">{t('collections.empty')}</p>}
           {isFiltering(filter) && games?.length === 0 && <NoMatch onReset={() => setFilter(NO_FILTER)} />}
-          {games && games.length > 0 && (
+          {games && games.length > 0 && layout.layout === 'coverGrid' && (
             <CoverGrid
               games={games}
               coverUrl={coverUrl}
+              onPlay={launch}
+              onOpen={open}
+              onFavorite={favorite.toggle}
+            />
+          )}
+          {games && games.length > 0 && layout.layout === 'list' && (
+            <GameList
+              games={games}
+              cover={(game) => <Cover title={game.title} src={coverUrl(game)} />}
               onPlay={launch}
               onOpen={open}
               onFavorite={favorite.toggle}

@@ -96,6 +96,8 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
   };
   return { operations, calls };
 }

@@ -65,6 +65,8 @@ function fakeOperations({ closeToTray = true } = {}) {
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
     filterLibrary: async () => [],
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async () => null,
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,

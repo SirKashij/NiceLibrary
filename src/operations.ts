@@ -221,6 +221,8 @@ export type GameAchievements =
       /** Unlocked ones first, the most recently unlocked first, then the locked ones in Steam's order. */
       achievements: Achievement[];
     };
+/** How the Library shows its Games: a grid of Covers or one row per Game. Mirrors `LibraryLayout` in crates/core. */
+export type LibraryLayout = 'coverGrid' | 'list';
 
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
@@ -335,6 +337,10 @@ export interface Operations {
   addGameToCollection(collection: number, gameId: string): Promise<void>;
   /** Takes a Game out of a Collection; it stays in the Library and in its other Collections. */
   removeGameFromCollection(collection: number, gameId: string): Promise<void>;
+  /** How the Library shows its Games; `coverGrid` until the user switches. */
+  libraryLayout(): Promise<LibraryLayout>;
+  /** Makes a Library Layout the one the Library shows, also after a restart. */
+  chooseLibraryLayout(layout: LibraryLayout): Promise<void>;
   /** Whether closing the window keeps the app running in the Tray. On until the user turns it off. */
   closeToTray(): Promise<boolean>;
   /** Turns close-to-tray on or off, also after a restart. */
@@ -498,6 +504,8 @@ export const tauriOperations: Operations = {
   gameCollections: (gameId) => invoke<number[]>('game_collections', { gameId }),
   addGameToCollection: (collection, gameId) => invoke<void>('add_game_to_collection', { collection, gameId }),
   removeGameFromCollection: (collection, gameId) => invoke<void>('remove_game_from_collection', { collection, gameId }),
+  libraryLayout: () => invoke<LibraryLayout>('library_layout'),
+  chooseLibraryLayout: (layout) => invoke<void>('choose_library_layout', { layout }),
   closeToTray: () => invoke<boolean>('close_to_tray'),
   setCloseToTray: (on) => invoke<void>('set_close_to_tray', { on }),
   closeWindow: () => invoke<void>('close_window'),

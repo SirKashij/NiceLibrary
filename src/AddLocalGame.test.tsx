@@ -67,6 +67,8 @@ function fakeOperations({
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
     filterLibrary: async () => [...games],
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
