@@ -18,7 +18,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
     AddLocalGame, Clock, Core, CoverCache, CoverImageChoice, DataExport, DataImport, Downloader, ExecutablePicker,
-    ExportFilePicker, Language, LaunchOptions, LibraryLayout, LibrarySort, OpenError, Opener, Ports, ProcessList,
+    DataFilePicker, Language, LaunchOptions, LibraryLayout, LibrarySort, OpenError, Opener, Ports, ProcessList,
     Status, SteamLocator, Store, Theme, Tracking, Wakeup,
 };
 use serde_json::{Value, json};
@@ -441,7 +441,7 @@ impl App {
                 process_starter: Box::new(NothingStarted),
                 icon_extractor: Box::new(NoIcons),
                 image_picker: Box::new(images.clone()),
-                export_file_picker: Box::new(user.clone()),
+                data_file_picker: Box::new(user.clone()),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("cache").join("covers"))
@@ -580,7 +580,7 @@ impl UserChoosesFiles {
     }
 }
 
-impl ExportFilePicker for UserChoosesFiles {
+impl DataFilePicker for UserChoosesFiles {
     fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<PathBuf>, String> {
         self.saves.lock().unwrap().clone()
     }

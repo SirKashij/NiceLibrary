@@ -123,7 +123,7 @@ impl App {
                 executable_picker: Box::new(user.clone()),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
-                export_file_picker: Box::new(NoExportFile),
+                data_file_picker: Box::new(NoExportFile),
                 autostart: Box::new(NoAutostart),
                 processes: Box::new(NothingRuns),
                 process_starter: Box::new(NothingStarted),
@@ -276,7 +276,7 @@ fn a_failing_file_dialog_is_an_error() {
             executable_picker: Box::new(BrokenDialog),
             icon_extractor: Box::new(NoIconsNoImages),
             image_picker: Box::new(NoIconsNoImages),
-            export_file_picker: Box::new(NoExportFile),
+            data_file_picker: Box::new(NoExportFile),
             autostart: Box::new(NoAutostart),
             processes: Box::new(NothingRuns),
             process_starter: Box::new(NothingStarted),
@@ -519,7 +519,7 @@ impl nicelibrary_core::ProcessStarter for NothingStarted {
 /// No export or import is made here: the user cancels every file dialog.
 struct NoExportFile;
 
-impl nicelibrary_core::ExportFilePicker for NoExportFile {
+impl nicelibrary_core::DataFilePicker for NoExportFile {
     fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
     }

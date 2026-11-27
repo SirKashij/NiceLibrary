@@ -320,7 +320,7 @@ impl Computer {
                 executable_picker: Box::new(NoExecutableChosen),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
-                export_file_picker: Box::new(NoExportFile),
+                data_file_picker: Box::new(NoExportFile),
                 autostart: Box::new(NoAutostart),
                 processes: Box::new(NothingRuns),
                 process_starter: Box::new(NothingStarted),
@@ -812,7 +812,7 @@ fn an_automatic_sync_that_fails_in_the_app_reaches_the_interface_with_its_reason
             executable_picker: Box::new(NoExecutableChosen),
             icon_extractor: Box::new(NoIconsNoImages),
             image_picker: Box::new(NoIconsNoImages),
-            export_file_picker: Box::new(NoExportFile),
+            data_file_picker: Box::new(NoExportFile),
             autostart: Box::new(NoAutostart),
             processes: Box::new(NothingRuns),
             process_starter: Box::new(NothingStarted),
@@ -937,7 +937,7 @@ impl nicelibrary_core::ProcessStarter for NothingStarted {
 /// No export or import is made here: the user cancels every file dialog.
 struct NoExportFile;
 
-impl nicelibrary_core::ExportFilePicker for NoExportFile {
+impl nicelibrary_core::DataFilePicker for NoExportFile {
     fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
     }

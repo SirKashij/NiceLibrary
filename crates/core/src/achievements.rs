@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Error;
 use crate::store::Store;
-use crate::steam_web_api::WebApi;
+use crate::steam_web_api::{WebApi, steam_get};
 
 /// The Achievements of one Game, for its detail page.
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -179,11 +179,9 @@ struct PlayerEntry {
 /// The Achievements of the Steam Game `app_id` for the account `steam_id`;
 /// empty for a game without them.
 fn player_achievements(api: &dyn WebApi, key: &str, steam_id: &str, app_id: u32) -> Result<Vec<PlayerAchievement>, Stop> {
-    let url = format!(
-        "https://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v1/?key={key}&steamid={steam_id}&appid={app_id}&format=json"
-    );
-    // The reason is dropped: it may repeat the URL, and with it the key.
-    let answer = api.get(&url).map_err(|_| Stop)?;
+    let app_id = app_id.to_string();
+    let params = [("steamid", steam_id), ("appid", app_id.as_str()), ("format", "json")];
+    let answer = steam_get(api, "ISteamUserStats/GetPlayerAchievements/v1", Some(key), &params).map_err(|_| Stop)?;
     let answer: PlayerAnswer = match answer.status {
         // Steam answers a game without stats this way.
         200 | 400 => serde_json::from_slice(&answer.body).map_err(|_| Stop)?,
@@ -232,8 +230,9 @@ struct SchemaEntry {
 
 /// The definitions of the Achievements of the Steam Game `app_id`, in Steam's order.
 fn definitions(api: &dyn WebApi, key: &str, app_id: u32) -> Result<Vec<Definition>, Stop> {
-    let url = format!("https://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={key}&appid={app_id}&format=json");
-    let answer = api.get(&url).map_err(|_| Stop)?;
+    let app_id = app_id.to_string();
+    let params = [("appid", app_id.as_str()), ("format", "json")];
+    let answer = steam_get(api, "ISteamUserStats/GetSchemaForGame/v2", Some(key), &params).map_err(|_| Stop)?;
     if answer.status != 200 {
         return Err(Stop);
     }
@@ -277,10 +276,10 @@ struct RarityEntry {
 /// Steam refuses to tell it, no Rarity is known; when it does not answer,
 /// fetching stops for this Sync.
 fn rarities(api: &dyn WebApi, app_id: u32) -> Result<Vec<(String, f64)>, Stop> {
-    let url = format!(
-        "https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/?gameid={app_id}&format=json"
-    );
-    let answer = api.get(&url).map_err(|_| Stop)?;
+    let app_id = app_id.to_string();
+    let params = [("gameid", app_id.as_str()), ("format", "json")];
+    let answer =
+        steam_get(api, "ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2", None, &params).map_err(|_| Stop)?;
     match answer.status {
         200 => {}
         400..=499 => return Ok(Vec::new()),

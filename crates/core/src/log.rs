@@ -2,8 +2,9 @@
 //! this computer, for the user to attach to a bug report themselves.
 //!
 //! Nothing in the Log is ever sent anywhere. Before an entry is written, the
-//! Steam Web API key and full SteamIDs are taken out of it, and the files are
-//! rotated so that together they never exceed a fixed size.
+//! Steam Web API key, full SteamIDs and the name of the user's profile
+//! folder are taken out of it, and the files are rotated so that together
+//! they never exceed a fixed size.
 
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -29,6 +30,14 @@ const KEY_REDACTED: &str = "[key]";
 /// What stands in the Log in place of a full SteamID.
 const STEAM_ID_REDACTED: &str = "[SteamID]";
 
+/// What stands in the Log in place of the user's profile folder, such as
+/// `C:\Users\<name>` or `/home/<name>`.
+const PROFILE_REDACTED: &str = "%USERPROFILE%";
+
+/// The folders that hold one folder per user, named after the user, as a
+/// path writes them after the drive or the root. Matched regardless of case.
+const PROFILE_PARENTS: [&str; 2] = ["users", "home"];
+
 /// How serious a Log entry is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Level {
@@ -53,6 +62,8 @@ pub struct Log {
     folder: Option<PathBuf>,
     file_bytes: u64,
     files: usize,
+    /// The user's home folder, as the environment names it, taken out of every entry.
+    home: Option<String>,
     /// Held while an entry is written, so entries and rotations never interleave.
     writing: Mutex<()>,
 }
@@ -67,12 +78,12 @@ impl Log {
     /// The Log in `folder`, keeping at most `files` files (at least one) of
     /// at most `file_bytes` bytes each.
     pub fn with_limits(folder: PathBuf, file_bytes: u64, files: usize) -> Self {
-        Self { folder: Some(folder), file_bytes, files: files.max(1), writing: Mutex::new(()) }
+        Self { folder: Some(folder), file_bytes, files: files.max(1), home: home_folder(), writing: Mutex::new(()) }
     }
 
     /// No Log: entries go nowhere.
     pub(crate) fn none() -> Self {
-        Self { folder: None, file_bytes: FILE_BYTES, files: FILES, writing: Mutex::new(()) }
+        Self { folder: None, file_bytes: FILE_BYTES, files: FILES, home: None, writing: Mutex::new(()) }
     }
 
     /// The folder of the log files, created if it is not there yet.
@@ -82,14 +93,15 @@ impl Log {
         Ok(folder)
     }
 
-    /// Writes `message` at `at`, without the key or full SteamIDs. A Log
-    /// that cannot be written fails nothing: the entry is lost.
+    /// Writes `message` at `at`, without the key, full SteamIDs or the name
+    /// of the user's profile folder. A Log that cannot be written fails
+    /// nothing: the entry is lost.
     pub(crate) fn write(&self, at: SystemTime, level: Level, message: &str) {
         if self.folder.is_none() {
             return;
         }
         let line = cut_to_fit(
-            format!("{} {} {}", timestamp(seconds_since_epoch(at)), level.name(), redact(message)),
+            format!("{} {} {}", timestamp(seconds_since_epoch(at)), level.name(), redact(&redact_profiles(message, self.home.as_deref()))),
             self.file_bytes,
         );
         let _writing = self.writing.lock().unwrap_or_else(PoisonError::into_inner);
@@ -142,6 +154,86 @@ fn cut_to_fit(mut line: String, bytes: u64) -> String {
     }
     line.push('\n');
     line
+}
+
+/// The user's home folder as the environment names it, if it names one that
+/// is more than a drive or the root.
+fn home_folder() -> Option<String> {
+    ["USERPROFILE", "HOME"]
+        .into_iter()
+        .filter_map(|name| std::env::var(name).ok())
+        .map(|home| home.trim_end_matches(['\\', '/']).to_owned())
+        .find(|home| home.len() > 3)
+}
+
+/// `message` with the user's profile folder replaced: `home` wherever it
+/// stands, and every `<drive>:\Users\<name>`, `/home/<name>` and
+/// `/Users/<name>`, with either slash and in any case, so the user's name
+/// does not reach the Log. A name ends at the next slash, quote or colon.
+fn redact_profiles(message: &str, home: Option<&str>) -> String {
+    let mut message = match home {
+        Some(home) => replace_ignoring_case(message, home, PROFILE_REDACTED),
+        None => message.to_owned(),
+    };
+    for parent in PROFILE_PARENTS {
+        message = redact_user_folders(&message, parent);
+    }
+    message
+}
+
+/// `text` with every `needle`, in any ASCII case, replaced by `with`.
+fn replace_ignoring_case(text: &str, needle: &str, with: &str) -> String {
+    let lower = text.to_ascii_lowercase();
+    let needle = needle.to_ascii_lowercase();
+    let mut replaced = String::with_capacity(text.len());
+    let mut done = 0;
+    while let Some(found) = lower[done..].find(&needle) {
+        replaced.push_str(&text[done..done + found]);
+        replaced.push_str(with);
+        done += found + needle.len();
+    }
+    replaced.push_str(&text[done..]);
+    replaced
+}
+
+/// `message` with every user folder under the folder `parent` replaced,
+/// such as `C:\Users\Kevin` for `users`, but not `C:\Program Files\Users\x`:
+/// `parent` must follow a drive or start a path.
+fn redact_user_folders(message: &str, parent: &str) -> String {
+    let lower = message.to_ascii_lowercase();
+    let is_slash = |b: u8| b == b'\\' || b == b'/';
+    let mut redacted = String::with_capacity(message.len());
+    let mut done = 0;
+    let mut from = 0;
+    while let Some(found) = lower[from..].find(parent) {
+        let start = from + found;
+        let end = start + parent.len();
+        from = end;
+        let bytes = lower.as_bytes();
+        // The slash before `parent`, and before it a drive (`C:`) or the start of a path.
+        let Some(slash) = start.checked_sub(1).filter(|&slash| is_slash(bytes[slash])) else {
+            continue;
+        };
+        let after_drive = slash >= 2 && bytes[slash - 1] == b':' && bytes[slash - 2].is_ascii_alphabetic();
+        let starts_path = slash == 0 || !(bytes[slash - 1].is_ascii_alphanumeric() || matches!(bytes[slash - 1], b'.' | b'_' | b'-'));
+        if !(after_drive || starts_path) || !bytes.get(end).copied().is_some_and(is_slash) {
+            continue;
+        }
+        let name = end + 1;
+        let name_end = message[name..]
+            .find(|c: char| matches!(c, '\\' | '/' | '"' | '\'' | ':' | '\n' | '\r'))
+            .map_or(message.len(), |at| name + at);
+        if name_end == name {
+            continue;
+        }
+        let prefix = if after_drive { slash - 2 } else { slash };
+        redacted.push_str(&message[done..prefix]);
+        redacted.push_str(PROFILE_REDACTED);
+        done = name_end;
+        from = name_end;
+    }
+    redacted.push_str(&message[done..]);
+    redacted
 }
 
 /// `message` with every Steam Web API key (32 hexadecimal digits) and every

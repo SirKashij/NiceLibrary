@@ -12,7 +12,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 use crate::Error;
-use crate::steam_web_api::WebApi;
+use crate::steam_web_api::{WebApi, steam_get};
 use crate::store::Store;
 
 /// What is stored of the Steam App List.
@@ -145,14 +145,14 @@ struct AppListEntry {
 
 /// The page of games after the app id `after`, or from the start.
 fn page(api: &dyn WebApi, key: &str, after: Option<u32>) -> Result<Page, SteamAppListFetch> {
-    let mut url = format!(
-        "https://api.steampowered.com/IStoreService/GetAppList/v1/?key={key}&include_games=true&max_results={PAGE_SIZE}"
-    );
-    if let Some(after) = after {
-        url.push_str(&format!("&last_appid={after}"));
+    let page_size = PAGE_SIZE.to_string();
+    let after = after.map(|after| after.to_string());
+    let mut params = vec![("include_games", "true"), ("max_results", page_size.as_str())];
+    if let Some(after) = &after {
+        params.push(("last_appid", after));
     }
-    // The reason is dropped: it may repeat the URL, and with it the key.
-    let answer = api.get(&url).map_err(|_| SteamAppListFetch::SteamUnreachable)?;
+    let answer = steam_get(api, "IStoreService/GetAppList/v1", Some(key), &params)
+        .map_err(|_| SteamAppListFetch::SteamUnreachable)?;
     match answer.status {
         401 | 403 => return Err(SteamAppListFetch::KeyRejected),
         200 => {}

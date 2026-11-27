@@ -280,7 +280,7 @@ impl App {
                 process_starter: Box::new(NothingStarted),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
-                export_file_picker: Box::new(NoExportFile),
+                data_file_picker: Box::new(NoExportFile),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -682,7 +682,7 @@ fn games_played_as_long_as_each_other_are_most_played_in_title_order() {
 /// No export or import is made here: the user cancels every file dialog.
 struct NoExportFile;
 
-impl nicelibrary_core::ExportFilePicker for NoExportFile {
+impl nicelibrary_core::DataFilePicker for NoExportFile {
     fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
     }

@@ -74,6 +74,26 @@ pub(crate) fn steam_launch_url(app_id: u32) -> String {
     format!("steam://rungameid/{app_id}")
 }
 
+/// The error of a Launch of the Game `title` that failed for `reason`; every
+/// Launch, of a Steam Game or a Local Game, fails with this text.
+fn not_launched(title: &str, reason: impl fmt::Display) -> Error {
+    Error::new(format!("{title} could not be launched: {reason}"))
+}
+
+/// Launches the Installed Steam Game `title`, the app `app_id`, through
+/// Steam by opening its `steam://rungameid/` URL. `steam_found` tells
+/// whether Steam is on this computer at all.
+pub(crate) fn launch_steam_game(opener: &dyn Opener, steam_found: bool, title: &str, app_id: u32) -> Result<Launch, Error> {
+    if !steam_found {
+        return Ok(Launch::SteamNotFound);
+    }
+    match opener.open_url(&steam_launch_url(app_id)) {
+        Ok(()) => Ok(Launch::Launched),
+        Err(OpenError::NoProgram) => Ok(Launch::SteamNotFound),
+        Err(error) => Err(not_launched(title, error)),
+    }
+}
+
 /// Launches the Local Game `game` by starting its executable with its Launch
 /// Arguments, in its Working Directory or else in the executable's folder. A
 /// relative Working Directory is read from the executable's folder. Nothing
@@ -93,7 +113,7 @@ pub(crate) fn launch_local_game(starter: &dyn ProcessStarter, game: &StoredLocal
     }
     starter
         .start(executable, &split_arguments(&game.launch_options.arguments), &working_directory)
-        .map_err(|reason| Error::new(format!("{} could not be launched: {reason}", game.title)))?;
+        .map_err(|reason| not_launched(&game.title, reason))?;
     Ok(Launch::Launched)
 }
 

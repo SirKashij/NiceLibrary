@@ -155,7 +155,7 @@ impl App {
                 executable_picker: Box::new(NoExecutableChosen),
                 icon_extractor: Box::new(icons.clone()),
                 image_picker: Box::new(user.clone()),
-                export_file_picker: Box::new(NoExportFile),
+                data_file_picker: Box::new(NoExportFile),
                 processes: Box::new(NothingRuns),
                 process_starter: Box::new(NothingStarted),
             },
@@ -624,7 +624,7 @@ fn a_local_game_without_a_cover_has_no_hue() {
 /// No export or import is made here: the user cancels every file dialog.
 struct NoExportFile;
 
-impl nicelibrary_core::ExportFilePicker for NoExportFile {
+impl nicelibrary_core::DataFilePicker for NoExportFile {
     fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
     }

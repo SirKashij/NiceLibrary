@@ -37,7 +37,7 @@ pub(crate) const VERSION: u32 = 1;
 /// Contract of both: `Ok(None)` when the user cancels; blocks until they
 /// have decided; `Err` when no dialog can be shown, described for a log or a
 /// developer. Neither reads nor writes the file.
-pub trait ExportFilePicker: Send + Sync {
+pub trait DataFilePicker: Send + Sync {
     /// Offers `suggested_name` as the file name and answers `Ok(Some(path))`
     /// with the absolute path of the file the user chose, which may exist
     /// already (the user agreed to replace it).

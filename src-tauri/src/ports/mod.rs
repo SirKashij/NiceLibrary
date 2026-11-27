@@ -26,7 +26,7 @@ mod steam_windows;
 pub use autostart_windows::WindowsAutostart;
 pub use clock::SystemClock;
 #[cfg(windows)]
-pub use file_dialog_windows::{WindowsExecutablePicker, WindowsExportFilePicker, WindowsImagePicker};
+pub use file_dialog_windows::{WindowsExecutablePicker, WindowsDataFilePicker, WindowsImagePicker};
 pub use http::{HttpDownloader, HttpWebApi};
 #[cfg(windows)]
 pub use icon_windows::WindowsIconExtractor;
@@ -42,7 +42,7 @@ pub use secrets_windows::WindowsSecretStore;
 pub use steam_windows::{Hive, RegistryValue, WindowsSteamLocator};
 
 use nicelibrary_core::{
-    Autostart, ExecutablePicker, ExportFilePicker, IconExtractor, ImagePicker, Opener, Ports, ProcessList, ProcessStarter, SecretStore,
+    Autostart, ExecutablePicker, DataFilePicker, IconExtractor, ImagePicker, Opener, Ports, ProcessList, ProcessStarter, SecretStore,
     SteamLocator,
 };
 
@@ -61,7 +61,7 @@ pub fn real_ports() -> Ports {
         process_starter: process_starter(),
         icon_extractor: icon_extractor(),
         image_picker: image_picker(),
-        export_file_picker: export_file_picker(),
+        data_file_picker: data_file_picker(),
     }
 }
 
@@ -254,16 +254,16 @@ fn processes() -> Box<dyn ProcessList> {
 }
 
 #[cfg(windows)]
-fn export_file_picker() -> Box<dyn ExportFilePicker> {
-    Box::new(WindowsExportFilePicker)
+fn data_file_picker() -> Box<dyn DataFilePicker> {
+    Box::new(WindowsDataFilePicker)
 }
 
 #[cfg(not(windows))]
-fn export_file_picker() -> Box<dyn ExportFilePicker> {
+fn data_file_picker() -> Box<dyn DataFilePicker> {
     /// Exporting and importing on Linux and macOS is not part of version 1.
     struct NoFileDialog;
 
-    impl ExportFilePicker for NoFileDialog {
+    impl DataFilePicker for NoFileDialog {
         fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
             Err("choosing where to save is not supported on this system".into())
         }

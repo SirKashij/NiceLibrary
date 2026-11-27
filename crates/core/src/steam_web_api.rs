@@ -29,6 +29,36 @@ pub trait WebApi: Send + Sync {
     fn get(&self, url: &str) -> Result<WebAnswer, String>;
 }
 
+/// The Steam Web API gave no answer: no network, a timeout, a failed TLS
+/// handshake. It carries no reason on purpose, since the port's reason may
+/// repeat the URL and with it the key.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Unanswered;
+
+/// Asks the Steam Web API `method`, such as `IPlayerService/GetOwnedGames/v1`,
+/// with `key`, when one is needed, and the query `params` in their order.
+/// Every request to the Steam Web API is built here, so the URL, and with it
+/// the key, never reaches an error text: a request that is not answered is
+/// only [`Unanswered`].
+pub(crate) fn steam_get(
+    api: &dyn WebApi,
+    method: &str,
+    key: Option<&str>,
+    params: &[(&str, &str)],
+) -> Result<WebAnswer, Unanswered> {
+    let mut url = format!("https://api.steampowered.com/{method}/?");
+    let key = key.map(|key| ("key", key));
+    for (index, (name, value)) in key.iter().chain(params).enumerate() {
+        if index > 0 {
+            url.push('&');
+        }
+        url.push_str(name);
+        url.push('=');
+        url.push_str(value);
+    }
+    api.get(&url).map_err(|_| Unanswered)
+}
+
 /// A web server's answer to a request.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WebAnswer {
@@ -68,9 +98,7 @@ pub(crate) fn key_in(text: &str) -> Option<String> {
 /// Whether Steam accepts `key`, asked with the smallest request that needs a
 /// key: the first entry of Steam's app list.
 pub(crate) fn check_key(api: &dyn WebApi, key: &str) -> SteamWebApiKeyCheck {
-    let url = format!("https://api.steampowered.com/IStoreService/GetAppList/v1/?key={key}&max_results=1");
-    // The reason is dropped: it may repeat the URL, and with it the key.
-    let Ok(answer) = api.get(&url) else {
+    let Ok(answer) = steam_get(api, "IStoreService/GetAppList/v1", Some(key), &[("max_results", "1")]) else {
         return SteamWebApiKeyCheck::SteamUnreachable;
     };
     match answer.status {

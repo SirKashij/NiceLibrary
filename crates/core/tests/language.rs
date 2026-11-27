@@ -120,7 +120,7 @@ fn start(profile: &Path) -> Core {
             process_starter: Box::new(Nothing),
             icon_extractor: Box::new(Nothing),
             image_picker: Box::new(Nothing),
-            export_file_picker: Box::new(NoExportFile),
+            data_file_picker: Box::new(NoExportFile),
         },
         Store::open(&profile.join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.join("covers")),
@@ -174,7 +174,7 @@ fn the_language_reaches_the_interface_and_comes_back_in_the_shape_the_interface_
 /// No export or import is made here: the user cancels every file dialog.
 struct NoExportFile;
 
-impl nicelibrary_core::ExportFilePicker for NoExportFile {
+impl nicelibrary_core::DataFilePicker for NoExportFile {
     fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
     }

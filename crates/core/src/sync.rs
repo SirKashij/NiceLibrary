@@ -6,7 +6,7 @@ use std::time::Duration;
 use serde::{Deserialize, Serialize};
 
 use crate::Error;
-use crate::steam_web_api::WebApi;
+use crate::steam_web_api::{WebApi, steam_get};
 
 /// How a Sync went, when nothing failed in the app itself. Every outcome but
 /// `Synced` leaves the stored data as it was.
@@ -89,11 +89,9 @@ struct OwnedGameEntry {
 /// Playtime and Last Played, asked with `key`. Free games count once played.
 /// `Err` is the outcome of a Sync that failed this way.
 pub(crate) fn owned_games(api: &dyn WebApi, key: &str, steam_id: &str) -> Result<Vec<OwnedGame>, SyncOutcome> {
-    let url = format!(
-        "https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={key}&steamid={steam_id}&include_appinfo=1&include_played_free_games=1&format=json"
-    );
-    // The reason is dropped: it may repeat the URL, and with it the key.
-    let answer = api.get(&url).map_err(|_| SyncOutcome::SteamUnreachable)?;
+    let params = [("steamid", steam_id), ("include_appinfo", "1"), ("include_played_free_games", "1"), ("format", "json")];
+    let answer = steam_get(api, "IPlayerService/GetOwnedGames/v1", Some(key), &params)
+        .map_err(|_| SyncOutcome::SteamUnreachable)?;
     match answer.status {
         401 | 403 => return Err(SyncOutcome::KeyRejected),
         200 => {}

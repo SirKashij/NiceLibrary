@@ -805,10 +805,10 @@ mod autostart {
     }
 }
 
-/// `ExecutablePicker`, `ImagePicker` and `ExportFilePicker` (crates/core):
+/// `ExecutablePicker`, `ImagePicker` and `DataFilePicker` (crates/core):
 /// `Some` with the absolute path of the file the user chose, `None` when
 /// they cancel; blocks until they decide. The "Save as" dialog of
-/// `ExportFilePicker` offers the suggested name and adds `.json` to a name
+/// `DataFilePicker` offers the suggested name and adds `.json` to a name
 /// typed without an extension; its "Open" dialog answers the file to import.
 ///
 /// The tests play the user: they find the dialog this process opens, type a
@@ -822,8 +822,8 @@ mod executable_picker {
     use std::thread::JoinHandle;
     use std::time::{Duration, Instant};
 
-    use nicelibrary_core::{ExecutablePicker, ExportFilePicker, ImagePicker};
-    use nicelibrary_lib::ports::{WindowsExecutablePicker, WindowsExportFilePicker, WindowsImagePicker};
+    use nicelibrary_core::{ExecutablePicker, DataFilePicker, ImagePicker};
+    use nicelibrary_lib::ports::{WindowsExecutablePicker, WindowsDataFilePicker, WindowsImagePicker};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, WPARAM};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         BM_CLICK, EnumChildWindows, EnumWindows, GetClassNameW, GetDlgCtrlID, GetDlgItem, GetWindowThreadProcessId,
@@ -1042,7 +1042,7 @@ mod executable_picker {
     }
 
     fn open_save_dialog() -> JoinHandle<Result<Option<PathBuf>, String>> {
-        std::thread::spawn(|| WindowsExportFilePicker.choose_export_file("NiceLibrary-2027-01-15.json"))
+        std::thread::spawn(|| WindowsDataFilePicker.choose_export_file("NiceLibrary-2027-01-15.json"))
     }
 
     /// The id of the file name box in Windows' "Save as" dialog (`edt1`):
@@ -1144,7 +1144,7 @@ mod executable_picker {
     }
 
     fn open_import_dialog() -> JoinHandle<Result<Option<PathBuf>, String>> {
-        std::thread::spawn(|| WindowsExportFilePicker.choose_import_file())
+        std::thread::spawn(|| WindowsDataFilePicker.choose_import_file())
     }
 
     #[test]

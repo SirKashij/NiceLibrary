@@ -56,7 +56,7 @@ pub use collections::{Collection, CollectionNaming};
 pub use cover_hue::CoverHue;
 pub use covers::{Cover, CoverCache, Downloader};
 pub use executables_in_folder::{FolderSuggestions, SuggestedExecutable};
-pub use export::{DataExport, ExportFilePicker};
+pub use export::{DataExport, DataFilePicker};
 pub use import::DataImport;
 pub use language::Language;
 pub use launch::{Install, Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
@@ -179,7 +179,7 @@ pub struct Ports {
     pub process_starter: Box<dyn ProcessStarter>,
     pub icon_extractor: Box<dyn IconExtractor>,
     pub image_picker: Box<dyn ImagePicker>,
-    pub export_file_picker: Box<dyn ExportFilePicker>,
+    pub data_file_picker: Box<dyn DataFilePicker>,
 }
 
 /// The application core. Each public method is one operation.
@@ -480,29 +480,18 @@ impl Core {
     }
 
     fn launch_game(&self, game_id: &str) -> Result<Launch, Error> {
+        let not_in_library = || Error::new(format!("no such game in the library: {game_id}"));
         if let Some(id) = local_game_id(game_id) {
-            return match self.store.local_game(id)? {
-                Some(game) => launch::launch_local_game(self.ports.process_starter.as_ref(), &game),
-                None => Err(Error::new(format!("no such game in the library: {game_id}"))),
-            };
+            let game = self.store.local_game(id)?.ok_or_else(not_in_library)?;
+            return launch::launch_local_game(self.ports.process_starter.as_ref(), &game);
         }
-        let Some(game) = self.stored_library()?.into_iter().find(|game| game.id == game_id) else {
-            return Err(Error::new(format!("no such game in the library: {game_id}")));
-        };
+        let game = self.stored_library()?.into_iter().find(|game| game.id == game_id).ok_or_else(not_in_library)?;
         if !game.installed {
             return Err(Error::new(format!("not installed: {}", game.title)));
         }
-        let Some(app_id) = steam_app_id(&game.id) else {
-            return Err(Error::new(format!("no such game in the library: {game_id}")));
-        };
-        if self.ports.steam_locator.steam_folder().is_none() {
-            return Ok(Launch::SteamNotFound);
-        }
-        match self.ports.opener.open_url(&launch::steam_launch_url(app_id)) {
-            Ok(()) => Ok(Launch::Launched),
-            Err(OpenError::NoProgram) => Ok(Launch::SteamNotFound),
-            Err(error) => Err(Error::new(format!("{} could not be launched: {error}", game.title))),
-        }
+        let app_id = steam_app_id(&game.id).ok_or_else(not_in_library)?;
+        let steam_found = self.ports.steam_locator.steam_folder().is_some();
+        launch::launch_steam_game(self.ports.opener.as_ref(), steam_found, &game.title, app_id)
     }
 
     /// Starts the installation of the Steam Game `game_id`, which is owned
@@ -1641,7 +1630,7 @@ impl Core {
         let now = clock::seconds_since_epoch(self.ports.clock.now());
         let chosen = self
             .ports
-            .export_file_picker
+            .data_file_picker
             .choose_export_file(&export::suggested_name(now))
             .map_err(|reason| Error::new(format!("file dialog: {reason}")))?;
         let Some(file) = chosen else {
@@ -1667,7 +1656,7 @@ impl Core {
     fn read_import(&self) -> Result<DataImport, Error> {
         let chosen = self
             .ports
-            .export_file_picker
+            .data_file_picker
             .choose_import_file()
             .map_err(|reason| Error::new(format!("file dialog: {reason}")))?;
         let Some(file) = chosen else {

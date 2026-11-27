@@ -153,6 +153,7 @@ struct App {
     secrets: Secrets,
     network: Network,
     opener: RecordingOpener,
+    import_file: ImportFile,
     profile: TempDir,
     _steam: TempDir,
 }
@@ -168,6 +169,7 @@ impl App {
         let secrets = Secrets::default();
         let network = Network::default();
         let opener = RecordingOpener::default();
+        let import_file = ImportFile::default();
         let core = Core::new(
             Ports {
                 steam_locator: Box::new(SteamAt(steam.path().to_owned())),
@@ -179,7 +181,7 @@ impl App {
                 executable_picker: Box::new(NoExecutableChosen),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
-                export_file_picker: Box::new(NoExportFile),
+                data_file_picker: Box::new(import_file.clone()),
                 autostart: Box::new(NoAutostart),
                 processes: Box::new(NothingRuns),
                 process_starter: Box::new(NothingStarted),
@@ -188,7 +190,7 @@ impl App {
             CoverCache::new(profile.path().join("covers")),
         )
         .with_log(log(profile.path().join("logs")));
-        Self { core, secrets, network, opener, profile, _steam: steam }
+        Self { core, secrets, network, opener, import_file, profile, _steam: steam }
     }
 
     fn logs(&self) -> PathBuf {
@@ -327,6 +329,43 @@ fn the_log_never_holds_the_steam_web_api_key_or_a_full_steam_id() {
     // What failed is still told, with the secret and the SteamID left out.
     assert!(log.contains("ERROR steam_web_api_key_stored: secret store: the store refused [key] for [SteamID]"), "{log}");
     assert!(log.contains("no such game in the library: steam:[SteamID]"), "{log}");
+}
+
+/// Imports the file at `path`, which is not there, so the import fails and
+/// writes why to the Log; answers the Log.
+fn log_of_failed_import_from(path: &str) -> String {
+    let app = App::start();
+    *app.import_file.0.lock().unwrap() = Some(PathBuf::from(path));
+
+    assert!(app.core.import_data().is_err());
+
+    app.log()
+}
+
+#[test]
+fn the_log_never_holds_the_name_of_the_users_profile_folder() {
+    let windows = log_of_failed_import_from(r"C:\Users\Kevin\Documents\NiceLibrary backup.json");
+    let other_drive = log_of_failed_import_from("d:/users/kevin/NiceLibrary backup.json");
+    let linux = log_of_failed_import_from("/home/kevin/NiceLibrary backup.json");
+
+    // What failed is still told, with the profile folder in place of its name.
+    assert!(windows.contains(r"ERROR import_data: cannot read %USERPROFILE%\Documents\NiceLibrary backup.json"), "{windows}");
+    assert!(other_drive.contains("cannot read %USERPROFILE%/NiceLibrary backup.json"), "{other_drive}");
+    assert!(linux.contains("cannot read %USERPROFILE%/NiceLibrary backup.json"), "{linux}");
+    for log in [windows, other_drive, linux] {
+        assert!(!log.to_lowercase().contains("kevin"), "{log}");
+    }
+}
+
+#[test]
+fn the_log_never_holds_the_users_home_folder_wherever_it_is() {
+    let home = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")).expect("a home folder is set");
+    let file = Path::new(&home).join("NiceLibrary backup.json");
+
+    let log = log_of_failed_import_from(file.to_str().unwrap());
+
+    assert!(log.contains("cannot read %USERPROFILE%"), "{log}");
+    assert!(!log.contains(&home), "{log}");
 }
 
 #[test]
@@ -473,15 +512,16 @@ impl nicelibrary_core::ImagePicker for NoIconsNoImages {
     }
 }
 
-/// No export or import is made here: the user cancels every file dialog.
-struct NoExportFile;
+/// No export is made here; an import reads the file the user chose, if any.
+#[derive(Clone, Default)]
+struct ImportFile(Arc<Mutex<Option<PathBuf>>>);
 
-impl nicelibrary_core::ExportFilePicker for NoExportFile {
+impl nicelibrary_core::DataFilePicker for ImportFile {
     fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
     }
 
     fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
-        Ok(None)
+        Ok(self.0.lock().unwrap().clone())
     }
 }
