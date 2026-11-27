@@ -76,7 +76,7 @@ _Avoid_: State
 A Game the person has marked to find it quickly.
 
 **Hidden Game**:
-A Game the person has removed from the normal Library view without deleting it.
+A Game the person has removed from the normal Library view without deleting it. It is left out of the search results, Favorites and Collections too, and stays hidden through Syncs and restarts until the person unhides it.
 _Avoid_: Ignored, archived
 
 **Collection**:

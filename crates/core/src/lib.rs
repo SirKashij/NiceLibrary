@@ -218,14 +218,25 @@ impl Core {
         self.logged("open_log_folder", opened)
     }
 
-    /// All Games in the Library, as last stored, ordered by title. Answers
-    /// from the store alone, so a start shows the Library at once.
+    /// All Games in the Library, as last stored, ordered by title; a Hidden
+    /// Game is not among them. Answers from the store alone, so a start
+    /// shows the Library at once.
     pub fn library(&self) -> Result<Vec<Game>, Error> {
         self.logged("library", self.stored_library())
     }
 
-    /// [`Self::library`], without writing to the Log.
+    /// [`Self::library`], without writing to the Log. Every view built on
+    /// the Library (the filtered Library, a Game's detail page, setting its
+    /// Status, its Launch) leaves the Hidden Games out through it.
     fn stored_library(&self) -> Result<Vec<Game>, Error> {
+        let hidden = self.store.hidden_game_ids()?;
+        let mut games = self.every_game()?;
+        games.retain(|game| !hidden.contains(&game.id));
+        Ok(games)
+    }
+
+    /// Every Game of both Sources, Hidden Games too, ordered by title.
+    fn every_game(&self) -> Result<Vec<Game>, Error> {
         // Until the user chooses, the account read last: it holds the Games.
         let account = self.chosen_steam_account_or(|| self.store.last_read_steam_account())?;
         let mut games = match account {
@@ -962,6 +973,42 @@ impl Core {
         let index = Arc::new(steam_app_list::TitleIndex::new(self.store.searchable_steam_titles()?));
         *held = Some(Arc::clone(&index));
         Ok(index)
+    }
+
+    /// The Hidden Games, ordered by title like [`Self::library`]. A Hidden
+    /// Game stays hidden through Syncs and restarts until it is unhidden.
+    pub fn hidden_games(&self) -> Result<Vec<Game>, Error> {
+        let games = self.store.hidden_game_ids().and_then(|hidden| {
+            let mut games = self.every_game()?;
+            games.retain(|game| hidden.contains(&game.id));
+            Ok(games)
+        });
+        self.logged("hidden_games", games)
+    }
+
+    /// Hides the Game `game_id`: it leaves the Library and every view built
+    /// on it without being deleted. Fails when there is no such Game.
+    pub fn hide_game(&self, game_id: &str) -> Result<(), Error> {
+        let hidden = self.every_game().and_then(|games| {
+            if !games.iter().any(|game| game.id == game_id) {
+                return Err(Error::new(format!("no such game in the library: {game_id}")));
+            }
+            self.store.hide_game(game_id)
+        });
+        if hidden.is_ok() {
+            self.note("hide_game: hidden");
+        }
+        self.logged("hide_game", hidden)
+    }
+
+    /// Brings the Hidden Game `game_id` back into the Library; unhiding a
+    /// Game that is not hidden changes nothing.
+    pub fn unhide_game(&self, game_id: &str) -> Result<(), Error> {
+        let unhidden = self.store.unhide_game(game_id);
+        if unhidden.is_ok() {
+            self.note("unhide_game: unhidden");
+        }
+        self.logged("unhide_game", unhidden)
     }
 }
 
