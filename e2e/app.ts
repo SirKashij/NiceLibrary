@@ -6,6 +6,7 @@ import { existsSync, statSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { afterAll, beforeAll } from 'vitest';
 import { messages, type Lang, type MessageKey } from '../src/i18n';
+import { appProcess } from './windows';
 
 const root = resolve(import.meta.dirname, '..');
 // Keep in step with the version installed in .github/workflows/ci.yml.
@@ -28,6 +29,8 @@ export interface App {
   messages(): Promise<Record<MessageKey, string>>;
   /** Runs a script in the app's window and returns its result. */
   execute<T>(script: string, ...args: unknown[]): Promise<T>;
+  /** The process id of the app under test (Windows only). */
+  processId(): number;
 }
 
 /** A WebDriver command the driver answered with an error. */
@@ -95,6 +98,11 @@ export function useApp(): App {
   return {
     execute,
 
+    processId() {
+      if (!session || driver?.pid === undefined) throw new Error('The app did not start; see the error of the beforeAll hook.');
+      return appProcess(driver.pid);
+    },
+
     text(selector) {
       return poll(async () => textOf(await find(selector)), notInPage);
     },
@@ -121,7 +129,7 @@ export function useApp(): App {
  * The app binary under test: $NICELIBRARY_APP, or else the most recently
  * built of the release and debug binaries.
  */
-function appPath(): string {
+export function appPath(): string {
   const fromEnv = process.env.NICELIBRARY_APP;
   if (fromEnv) {
     if (!existsSync(fromEnv)) throw new Error(`NICELIBRARY_APP points to ${fromEnv}, which does not exist.`);

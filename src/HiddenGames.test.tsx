@@ -47,6 +47,14 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     unhideGame: async (gameId) => {
       hidden.delete(gameId);
     },
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
     filterLibrary: async () => shown(),
     game: async (gameId) => shown().find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
