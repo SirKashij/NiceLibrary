@@ -200,6 +200,16 @@ fn a_local_game_is_installed_belongs_to_the_local_source_and_has_not_been_played
 }
 
 #[test]
+fn a_local_game_is_found_for_its_detail_page() {
+    let app = App::start();
+
+    let AddLocalGame::Added { game } = app.add(&app.put("Games/Celeste/Celeste.exe")) else { panic!() };
+
+    assert_eq!(app.core.game(&game.id).unwrap(), Some(game));
+    assert_eq!(app.core.game("local:999").unwrap(), None);
+}
+
+#[test]
 fn the_user_may_correct_the_proposed_title() {
     let app = App::start();
     let path = app.put("Games/HK/hollow_knight.exe");

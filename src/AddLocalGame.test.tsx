@@ -40,6 +40,7 @@ function fakeOperations({
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
     filterLibrary: async () => [...games],
+    game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: choice,
     addLocalGame: async (executable, title) => {
       added.push({ executable, title });
@@ -84,6 +85,22 @@ describe('Adding a Local Game', () => {
     const [celeste] = within(await screen.findByRole('list', { name: 'Games' })).getAllByRole('listitem');
     expect(within(celeste).getByRole('button', { name: 'Play Celeste' })).toBeInTheDocument();
     expect(within(celeste).queryByText('Not installed')).not.toBeInTheDocument();
+  });
+
+  it('opens the detail page of a Local Game', async () => {
+    const user = userEvent.setup();
+    const { operations } = fakeOperations();
+    render(<App operations={operations} lang="en" />);
+
+    await user.click(await screen.findByRole('button', { name: 'Add a game' }));
+    await user.click(await screen.findByRole('button', { name: 'Add to library' }));
+    const library = await screen.findByRole('list', { name: 'Games' });
+    await user.click(within(library).getByRole('button', { name: 'Details for Celeste' }));
+
+    const detail = (await screen.findByRole('heading', { level: 1, name: 'Celeste' })).closest('section')!;
+    expect(within(detail).getByText('Local')).toBeInTheDocument();
+    expect(within(detail).getByRole('button', { name: 'Play Celeste' })).toBeInTheDocument();
+    expect(within(detail).queryByText('Celeste is no longer in your library.')).not.toBeInTheDocument();
   });
 
   it('adds nothing when the user cancels the file dialog', async () => {
