@@ -222,6 +222,30 @@ fn a_sync_is_written_to_the_log_as_a_notable_event() {
 }
 
 #[test]
+fn creating_a_collection_and_fetching_the_steam_app_list_are_written_as_notable_events() {
+    let app = App::start();
+    app.secrets.write("key", KEY).unwrap();
+
+    app.core.create_collection("Backlog").unwrap();
+    app.core.create_collection("  ").unwrap();
+    app.core.fetch_steam_app_list().unwrap();
+
+    let log = app.log();
+    assert!(log.contains("INFO create_collection: named"), "{log}");
+    assert!(log.contains("INFO create_collection: emptyName"), "{log}");
+    assert!(log.contains("INFO fetch_steam_app_list: keyRejected"), "{log}");
+}
+
+#[test]
+fn setting_the_status_of_a_game_that_is_not_in_the_library_writes_why_to_the_log() {
+    let app = App::start();
+
+    assert!(app.core.set_status("steam:999", nicelibrary_core::Status::Playing).is_err());
+
+    assert_eq!(app.log(), "2026-11-25T12:00:00Z ERROR set_status: no such game in the library: steam:999\n");
+}
+
+#[test]
 fn the_log_never_holds_the_steam_web_api_key_or_a_full_steam_id() {
     let app = App::start();
     app.secrets.write("key", KEY).unwrap();

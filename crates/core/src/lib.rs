@@ -246,13 +246,16 @@ impl Core {
     /// The order the user chose for the Library; recently played until they
     /// choose.
     pub fn library_sort(&self) -> Result<LibrarySort, Error> {
-        Ok(self.store.library_sort()?.and_then(|name| LibrarySort::from_stored_name(&name)).unwrap_or_default())
+        let sort = self.store.library_sort().map(|stored| {
+            stored.and_then(|name| LibrarySort::from_stored_name(&name)).unwrap_or_default()
+        });
+        self.logged("library_sort", sort)
     }
 
     /// Makes `sort` the order of the Library, from now on and after every
     /// restart.
     pub fn choose_library_sort(&self, sort: LibrarySort) -> Result<(), Error> {
-        self.store.choose_library_sort(sort.stored_name())
+        self.logged("choose_library_sort", self.store.choose_library_sort(sort.stored_name()))
     }
 
     /// The Game `game_id` as the Library shows it, for its detail page;
@@ -268,12 +271,17 @@ impl Core {
     /// it. Nothing else changes it, no Sync either. A Game that is not in
     /// the Library is refused.
     pub fn set_status(&self, game_id: &str, status: Status) -> Result<Game, Error> {
+        self.logged("set_status", self.record_status(game_id, status))
+    }
+
+    fn record_status(&self, game_id: &str, status: Status) -> Result<Game, Error> {
         let not_in_library = || Error::new(format!("no such game in the library: {game_id}"));
-        if self.game(game_id)?.is_none() {
+        let in_library = |library: Vec<Game>| library.into_iter().find(|game| game.id == game_id);
+        if in_library(self.stored_library()?).is_none() {
             return Err(not_in_library());
         }
         self.store.set_status(game_id, status)?;
-        self.game(game_id)?.ok_or_else(not_in_library)
+        in_library(self.stored_library()?).ok_or_else(not_in_library)
     }
 
     /// Reads which Steam Games are Installed from Steam's library folders,
@@ -576,7 +584,13 @@ impl Core {
     /// Every Collection with how many Games of the Library are in it,
     /// ordered by name whatever its case.
     pub fn collections(&self) -> Result<Vec<Collection>, Error> {
-        let library: std::collections::HashSet<String> = self.library()?.into_iter().map(|game| game.id).collect();
+        self.logged("collections", self.stored_collections())
+    }
+
+    /// [`Self::collections`], without writing to the Log.
+    fn stored_collections(&self) -> Result<Vec<Collection>, Error> {
+        let library: std::collections::HashSet<String> =
+            self.stored_library()?.into_iter().map(|game| game.id).collect();
         let members = self.store.collection_games()?;
         let mut collections: Vec<Collection> = self
             .store
@@ -595,50 +609,56 @@ impl Core {
     /// empty name, or one another Collection has in any case, is refused and
     /// creates nothing.
     pub fn create_collection(&self, name: &str) -> Result<CollectionNaming, Error> {
-        match collections::name_in(name) {
+        let naming = match collections::name_in(name) {
             Some(name) => self.store.name_collection(None, name),
             None => Ok(CollectionNaming::EmptyName),
-        }
+        };
+        self.logged_outcome("create_collection", naming)
     }
 
     /// Renames the Collection `id` to `name`, without the spaces around it,
     /// under the same rules as [`Self::create_collection`]. Fails when there
     /// is no such Collection.
     pub fn rename_collection(&self, id: i64, name: &str) -> Result<CollectionNaming, Error> {
-        match collections::name_in(name) {
+        let naming = match collections::name_in(name) {
             Some(name) => self.store.name_collection(Some(id), name),
             None => Ok(CollectionNaming::EmptyName),
-        }
+        };
+        self.logged_outcome("rename_collection", naming)
     }
 
     /// Deletes the Collection `id`. Its Games stay in the Library. Deleting
     /// a Collection that is gone already changes nothing.
     pub fn delete_collection(&self, id: i64) -> Result<(), Error> {
-        self.store.delete_collection(id)
+        let deleted = self.store.delete_collection(id);
+        if deleted.is_ok() {
+            self.note("delete_collection: deleted");
+        }
+        self.logged("delete_collection", deleted)
     }
 
     /// Whether closing the window keeps the app running in the Tray, so
     /// tracking goes on. On until the user turns it off.
     pub fn close_to_tray(&self) -> Result<bool, Error> {
-        window::close_to_tray(&self.store)
+        self.logged("close_to_tray", window::close_to_tray(&self.store))
     }
 
     /// Turns close-to-tray on or off, from now on and after every restart.
     pub fn set_close_to_tray(&self, on: bool) -> Result<(), Error> {
-        window::set_close_to_tray(&self.store, on)
+        self.logged("set_close_to_tray", window::set_close_to_tray(&self.store, on))
     }
 
     /// What closing the window does: with close-to-tray on the app keeps
     /// running in the Tray, and the very first time the window explains this
     /// instead; with close-to-tray off the app quits.
     pub fn close_window(&self) -> Result<WindowClose, Error> {
-        window::close_window(&self.store)
+        self.logged_outcome("close_window", window::close_window(&self.store))
     }
 
     /// What is stored of the Steam App List: how many titles, and when it
     /// was last fetched to its end.
     pub fn steam_app_list(&self) -> Result<SteamAppList, Error> {
-        self.store.steam_app_list()
+        self.logged("steam_app_list", self.store.steam_app_list())
     }
 
     /// Fetches the Steam App List with the stored Steam Web API key, page by
@@ -649,7 +669,7 @@ impl Core {
     /// another runs begins once that one ends.
     pub fn fetch_steam_app_list(&self) -> Result<SteamAppListFetch, Error> {
         let _fetching = self.wait_until_no_steam_app_list_fetch_runs();
-        self.fetch_steam_app_list_now()
+        self.logged_outcome("fetch_steam_app_list", self.fetch_steam_app_list_now())
     }
 
     fn wait_until_no_steam_app_list_fetch_runs(&self) -> MutexGuard<'_, ()> {
@@ -700,20 +720,20 @@ impl Core {
         &self,
         report: &mut impl FnMut(AutomaticSteamAppListFetch) -> ControlFlow<()>,
     ) -> ControlFlow<()> {
-        match self.steam_web_api_key_stored() {
+        match self.logged("automatic_steam_app_list_fetch", self.key_stored()) {
             Ok(false) => return report(AutomaticSteamAppListFetch::Skipped),
             Ok(true) => {}
             Err(reason) => return report(AutomaticSteamAppListFetch::Failed { reason }),
         }
         let _fetching = self.wait_until_no_steam_app_list_fetch_runs();
         let now = clock::seconds_since_epoch(self.ports.clock.now());
-        match self.store.steam_app_list() {
+        match self.logged("automatic_steam_app_list_fetch", self.store.steam_app_list()) {
             Ok(list) if !steam_app_list::due(&list, now) => return report(AutomaticSteamAppListFetch::Skipped),
             Ok(_) => {}
             Err(reason) => return report(AutomaticSteamAppListFetch::Failed { reason }),
         }
         report(AutomaticSteamAppListFetch::Started)?;
-        report(match self.fetch_steam_app_list_now() {
+        report(match self.logged_outcome("automatic_steam_app_list_fetch", self.fetch_steam_app_list_now()) {
             Ok(outcome) => AutomaticSteamAppListFetch::Finished(outcome),
             Err(reason) => AutomaticSteamAppListFetch::Failed { reason },
         })
@@ -729,8 +749,10 @@ impl Core {
         if search.is_empty() {
             return Ok(Vec::new());
         }
-        let app_ids = self.steam_title_index()?.find(&search, steam_app_list::LOOKUP_LIMIT);
-        self.store.steam_titles(&app_ids)
+        let titles = self
+            .steam_title_index()
+            .and_then(|index| self.store.steam_titles(&index.find(&search, steam_app_list::LOOKUP_LIMIT)));
+        self.logged("find_steam_titles", titles)
     }
 
     /// The names lookups search, loaded from the store unless already held.
