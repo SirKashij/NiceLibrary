@@ -54,6 +54,11 @@ function fakeOperations(
     lastSync: async () => null,
     theme: async () => 'system',
     chooseTheme: async () => {},
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
     onAutomaticSync: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
@@ -62,6 +67,9 @@ function fakeOperations(
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
     filterLibrary: async () => games,
     game: async (gameId) => {
       calls.game.push(gameId);

@@ -7,7 +7,10 @@ import { AddLocalGameButton } from './library/AddLocalGame';
 import type { Collection, Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { ThemeSettings } from './settings/ThemeSettings';
 import { ThemeProvider } from './theme';
+import { SteamAppListSettings } from './settings/SteamAppListSettings';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
+import { WindowSettings } from './settings/WindowSettings';
+import { Tray } from './Tray';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -92,6 +95,7 @@ function Shell({ operations }: { operations: Operations }) {
           <SettingsView operations={operations} onAccountChosen={() => setAccountChoices((n) => n + 1)} />
         )}
       </main>
+      <Tray operations={operations} />
     </div>
   );
 }
@@ -435,6 +439,8 @@ function SettingsView({ operations, onAccountChosen }: { operations: Operations;
       <SteamSettings operations={operations} onAccountChosen={onAccountChosen} />
       <SteamWebApiKeySettings operations={operations} />
       <ThemeSettings />
+      <WindowSettings operations={operations} />
+      <SteamAppListSettings operations={operations} />
     </Page>
   );
 }

@@ -80,6 +80,14 @@ function fakeOperations({
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
     gameCollections: async (gameId) =>
       collections.filter((c) => members.some(([of, game]) => of === c.id && game === gameId)).map((c) => c.id),
     addGameToCollection: async (collection, gameId) => {
