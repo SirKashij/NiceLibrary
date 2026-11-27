@@ -173,12 +173,14 @@ const MIGRATIONS: &[&str] = &[
          local_game INTEGER PRIMARY KEY REFERENCES local_games (id) ON DELETE CASCADE,
          minutes    INTEGER NOT NULL
      );",
+    // 18: The setting of the Steam Account read last moves from `steam_account` to `last_read_steam_account`.
+    "UPDATE settings SET key = 'last_read_steam_account' WHERE key = 'steam_account';",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
 /// Steam's folders or by a Sync. The Library shows it while the user has
 /// chosen no Steam Account.
-const LAST_READ_STEAM_ACCOUNT: &str = "steam_account";
+const LAST_READ_STEAM_ACCOUNT: &str = "last_read_steam_account";
 
 /// The setting that names the Steam Account the user chose.
 const CHOSEN_STEAM_ACCOUNT: &str = "chosen_steam_account";
