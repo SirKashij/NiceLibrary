@@ -93,6 +93,21 @@ export type AddLocalGame =
   | { outcome: 'alreadyAdded'; /** The title the Game has in the Library. */ title: string }
   | { outcome: 'noTitle' }
   | { outcome: 'notFound' };
+
+/** The theme the user chose; `system` follows the operating system's dark or light setting. Mirrors `Theme` in crates/core. */
+export type Theme = 'system' | 'dark' | 'light';
+
+/** A named group of Games the user created. Mirrors `Collection` in crates/core. */
+export interface Collection {
+  id: number;
+  name: string;
+  /** How many Games of the Library are in it. */
+  gameCount: number;
+}
+
+/** How naming a Collection went, when nothing failed. Every outcome but `named` changed nothing. Mirrors `CollectionNaming` in crates/core. */
+export type CollectionNaming = { outcome: 'named'; id: number } | { outcome: 'emptyName' } | { outcome: 'nameTaken' };
+
 /** What the Library is narrowed to; every part that is set must match. Mirrors `LibraryFilter` in crates/core. */
 export interface LibraryFilter {
   /** Text the title must contain, ignoring case; empty matches every title. */
@@ -171,10 +186,43 @@ export interface Operations {
    * user confirmed or corrected. The same executable is never added twice.
    */
   addLocalGame(executable: string, title: string): Promise<AddLocalGame>;
+  /** The theme the user chose; `system` until they choose. */
+  theme(): Promise<Theme>;
+  /** Makes a theme the theme of the interface, also after a restart. */
+  chooseTheme(theme: Theme): Promise<void>;
+  /** Every Collection with how many Games of the Library are in it, ordered by name. */
+  collections(): Promise<Collection[]>;
+  /**
+   * Creates a Collection; the name is saved without the spaces around it.
+   * An empty name, or one another Collection has in any case, is refused
+   * and creates nothing.
+   */
+  createCollection(name: string): Promise<CollectionNaming>;
+  /** Renames a Collection under the same rules as `createCollection`. Rejects when there is no such Collection. */
+  renameCollection(id: number, name: string): Promise<CollectionNaming>;
+  /** Deletes a Collection. Its Games stay in the Library. */
+  deleteCollection(id: number): Promise<void>;
   /** The Games in the stored Library that match the filter, ordered by title like `library`. */
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /** Whether closing the window keeps the app running in the Tray. On until the user turns it off. */
+  closeToTray(): Promise<boolean>;
+  /** Turns close-to-tray on or off, also after a restart. */
+  setCloseToTray(on: boolean): Promise<void>;
+  /**
+   * Closes the window as its close button does: with close-to-tray on the
+   * window hides and the app keeps running in the Tray, otherwise it quits.
+   */
+  closeWindow(): Promise<void>;
+  /**
+   * Hears the first close of the window with close-to-tray on. The window
+   * then stays open to explain the Tray, and `closeWindow` closes it once
+   * the user has read that. Answers the function that stops listening.
+   */
+  onTrayNotice(listener: () => void): () => void;
+  /** Gives the Tray icon its tooltip and menu, in the interface language. */
+  showTrayMenu(texts: TrayMenuTexts): Promise<void>;
   /** How a Local Game is launched; `null` for anything but a Local Game in the Library. */
   launchOptions(gameId: string): Promise<LaunchOptions | null>;
   /**
@@ -183,6 +231,15 @@ export interface Operations {
    * Rejects for anything but a Local Game in the Library.
    */
   setLaunchOptions(gameId: string, options: LaunchOptions): Promise<void>;
+}
+
+/** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
+export interface TrayMenuTexts {
+  tooltip: string;
+  /** The menu entry that opens the window. */
+  open: string;
+  /** The menu entry that quits the app. */
+  quit: string;
 }
 
 export const tauriOperations: Operations = {
@@ -209,8 +266,25 @@ export const tauriOperations: Operations = {
   },
   chooseLocalGameExecutable: () => invoke<ExecutableChoice>('choose_local_game_executable'),
   addLocalGame: (executable, title) => invoke<AddLocalGame>('add_local_game', { executable, title }),
+  theme: () => invoke<Theme>('theme'),
+  chooseTheme: (theme) => invoke<void>('choose_theme', { theme }),
+  collections: () => invoke<Collection[]>('collections'),
+  createCollection: (name) => invoke<CollectionNaming>('create_collection', { name }),
+  renameCollection: (id, name) => invoke<CollectionNaming>('rename_collection', { id, name }),
+  deleteCollection: (id) => invoke<void>('delete_collection', { id }),
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  closeToTray: () => invoke<boolean>('close_to_tray'),
+  setCloseToTray: (on) => invoke<void>('set_close_to_tray', { on }),
+  closeWindow: () => invoke<void>('close_window'),
+  onTrayNotice: (listener) => {
+    // TRAY_NOTICE_EVENT in src-tauri/src/tray.rs.
+    const listening = listen('tray-notice', () => listener());
+    return () => {
+      void listening.then((stop) => stop());
+    };
+  },
+  showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
   launchOptions: (gameId) => invoke<LaunchOptions | null>('launch_options', { gameId }),
   setLaunchOptions: (gameId, options) => invoke<void>('set_launch_options', { gameId, options }),
 };

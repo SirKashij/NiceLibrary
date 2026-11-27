@@ -2,16 +2,19 @@
 //! application core and adds nothing of its own.
 
 pub mod ports;
+mod tray;
 
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSync, Core, CoverCache, Error, ExecutableChoice, Game, Launch, LaunchOptions, LibraryFilter,
-    SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome,
+    AddLocalGame, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error, ExecutableChoice, Game, Launch,
+    LaunchOptions, LibraryFilter, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome,
+    Theme,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
-use tauri::{App, Emitter, Manager, WebviewWindowBuilder};
+use tauri::{App, AppHandle, Emitter, Manager, WebviewWindowBuilder, WindowEvent};
+use tray::TrayMenuTexts;
 
 #[tauri::command]
 fn library(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
@@ -100,6 +103,58 @@ fn add_local_game(core: tauri::State<'_, Core>, executable: String, title: Strin
 }
 
 #[tauri::command]
+fn theme(core: tauri::State<'_, Core>) -> Result<Theme, Error> {
+    core.theme()
+}
+
+#[tauri::command]
+fn choose_theme(core: tauri::State<'_, Core>, theme: Theme) -> Result<(), Error> {
+    core.choose_theme(theme)
+}
+
+#[tauri::command]
+fn collections(core: tauri::State<'_, Core>) -> Result<Vec<Collection>, Error> {
+    core.collections()
+}
+
+#[tauri::command]
+fn create_collection(core: tauri::State<'_, Core>, name: String) -> Result<CollectionNaming, Error> {
+    core.create_collection(&name)
+}
+
+#[tauri::command]
+fn rename_collection(core: tauri::State<'_, Core>, id: i64, name: String) -> Result<CollectionNaming, Error> {
+    core.rename_collection(id, &name)
+}
+
+#[tauri::command]
+fn delete_collection(core: tauri::State<'_, Core>, id: i64) -> Result<(), Error> {
+    core.delete_collection(id)
+}
+
+#[tauri::command]
+fn close_to_tray(core: tauri::State<'_, Core>) -> Result<bool, Error> {
+    core.close_to_tray()
+}
+
+#[tauri::command]
+fn set_close_to_tray(core: tauri::State<'_, Core>, on: bool) -> Result<(), Error> {
+    core.set_close_to_tray(on)
+}
+
+/// Closes the window as its close button does (see [`Core::close_window`]).
+#[tauri::command]
+fn close_window(app: AppHandle) {
+    tray::close_main_window(&app);
+}
+
+/// The Tray's texts come from the interface, which owns every text.
+#[tauri::command]
+fn show_tray_menu(app: AppHandle, texts: TrayMenuTexts) -> Result<(), String> {
+    tray::show_menu(&app, &texts).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn launch_options(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<LaunchOptions>, Error> {
     core.launch_options(&game_id)
 }
@@ -140,6 +195,16 @@ const COVERS: &str = "covers";
 
 pub fn run() {
     tauri::Builder::default()
+        // First, so a second start hands over and ends before it opens anything.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| tray::show_main_window(app)))
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == tray::MAIN_WINDOW
+            {
+                api.prevent_close();
+                tray::close_main_window(window.app_handle());
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             library,
             read_installed_games,
@@ -153,10 +218,20 @@ pub fn run() {
             open_steam_web_api_key_page,
             sync,
             last_sync,
+            theme,
+            choose_theme,
+            collections,
+            create_collection,
+            rename_collection,
+            delete_collection,
             filter_library,
             game,
             choose_local_game_executable,
             add_local_game,
+            close_to_tray,
+            set_close_to_tray,
+            close_window,
+            show_tray_menu,
             launch_options,
             set_launch_options
         ])
@@ -173,6 +248,7 @@ pub fn run() {
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
             app.manage(Core::new(ports::real_ports(), store, covers));
             start_automatic_syncs(app)?;
+            tray::create(app.handle())?;
             create_main_window(app)
         })
         .run(tauri::generate_context!())
