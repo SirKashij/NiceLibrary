@@ -32,8 +32,20 @@ A Game whose files are present on this computer and can be launched right now. A
 The folder Steam installed an Installed Steam Game into, `steamapps/common/<folder>` in one of Steam's library folders. Any process whose executable lies in it is that Game running.
 
 **Steam Account**:
-The Steam identity whose Library is read. One installation of the app works with exactly one Steam Account.
+The Steam identity whose Library is read: the one the person chose in the settings, by picking a Steam Login or by entering its SteamID, else the most recently used Steam Login. The app works with exactly one Steam Account at a time, and it need not be one of the Steam Logins. The German interface calls it "Konto für deine Bibliothek".
 _Avoid_: User, profile
+
+**SteamID**:
+The 17-digit number by which Steam identifies an account. The person can name their Steam Account by its SteamID.
+_Avoid_: Steam ID, user ID, account ID
+
+**Steam Installation**:
+The Steam program on this computer, whose own files the app reads: which Steam Games are Installed and where, its Steam Logins, and the Fallback Playtime.
+_Avoid_: Steam client, Steam folder
+
+**Steam Login**:
+An account that has logged in to Steam on this computer and that Steam remembers, with the name it shows. One of them is the most recently used. The person picks their Steam Account from them, but the Steam Account need not be one of them. The interface calls them "Steam accounts on this computer", in German "Steam-Konten auf diesem Computer".
+_Avoid_: Steam Account (for these), login (for the act of signing in), local account
 
 ### Tracking
 
