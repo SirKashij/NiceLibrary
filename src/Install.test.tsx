@@ -56,6 +56,7 @@ function fakeOperations(games: Game[], install: (game: Game) => Promise<InstallO
     },
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     onSession: () => () => {},
     launchOptions: async () => null,
     setLaunchOptions: async () => {},

@@ -84,6 +84,7 @@ function fakeOperations(games: Game[], achievements: Record<string, GameAchievem
     unhideGame: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),

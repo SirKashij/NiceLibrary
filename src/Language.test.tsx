@@ -64,6 +64,7 @@ function fakeOperations({
     deleteCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },

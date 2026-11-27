@@ -39,6 +39,7 @@ function fakeOperations({
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     filterLibrary: async () => [],

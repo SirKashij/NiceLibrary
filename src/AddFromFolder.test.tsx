@@ -10,7 +10,7 @@ const HADES = 'C:\\Games\\Hades\\x64\\Hades.exe';
 const PORTAL = 'C:\\Games\\Portal 2\\portal2.exe';
 
 function localGame(id: number, title: string): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed' };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false };
 }
 
 /** The folder the user chooses: Celeste and Hades are new, Portal 2 is in the Library already. */
@@ -86,6 +86,34 @@ function fakeOperations({
       games.push(game);
       return { outcome: 'added', game };
     },
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
+    language: async () => 'system',
+    chooseLanguage: async () => {},
+    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
+    coverImageChosen: async () => false,
+    removeCoverImage: async () => {},
+    onSession: () => () => {},
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
+    hiddenGames: async () => [],
+    hideGame: async () => {},
+    unhideGame: async () => {},
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
+    coverHue: async () => null,
+    install: async () => ({ outcome: 'started' }),
   };
   return { operations, added };
 }

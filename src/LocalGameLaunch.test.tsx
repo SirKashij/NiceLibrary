@@ -81,6 +81,7 @@ function fakeOperations({
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),

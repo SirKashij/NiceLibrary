@@ -46,6 +46,7 @@ function fakeOperations(initial: Game[]) {
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     theme: async () => 'system',
     chooseTheme: async () => {},
     collections: async () => [],

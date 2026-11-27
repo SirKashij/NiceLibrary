@@ -65,6 +65,7 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     game: async (gameId) => library().find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     markFavorite: async (gameId, favorite) => {
       marks.push([gameId, favorite]);
       if (marking === 'fails') throw new Error('database: disk I/O error');

@@ -71,6 +71,7 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     game: async (gameId) => shown().find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     librarySort: async () => 'name',
