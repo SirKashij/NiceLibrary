@@ -51,6 +51,7 @@ const SURFACES = ['--color-bg', '--color-surface', '--color-surface-raised'];
 const PAIRS: { what: string; fg: string; bg: string[]; min: number }[] = [
   { what: 'text', fg: '--color-text', bg: SURFACES, min: 4.5 },
   { what: 'muted text, disabled buttons, placeholders', fg: '--color-text-muted', bg: SURFACES, min: 4.5 },
+  { what: 'a complete Progress', fg: '--color-complete', bg: SURFACES, min: 4.5 },
   { what: 'text on the accent (Play)', fg: '--color-accent-ink', bg: ['--color-accent'], min: 4.5 },
   { what: 'borders of buttons and fields', fg: '--color-control-border', bg: SURFACES, min: 3 },
   { what: 'focus ring, radio buttons, current navigation', fg: '--color-accent', bg: SURFACES, min: 3 },

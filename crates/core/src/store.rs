@@ -20,6 +20,7 @@ use crate::language::Language;
 use crate::library_layout::LibraryLayout;
 use crate::local_games::StoredLocalGame;
 use crate::sessions::Played;
+use crate::statistics::Recorded;
 use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
 use crate::theme::Theme;
@@ -133,6 +134,8 @@ const MIGRATIONS: &[&str] = &[
     "CREATE TABLE favorites (
          game_id TEXT PRIMARY KEY
      );",
+    // 12: The Manual Progress of a Local Game, in percent; NULL while the user has set none.
+    "ALTER TABLE local_games ADD COLUMN manual_progress INTEGER;",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
@@ -427,6 +430,15 @@ impl Store {
         Ok(changed > 0)
     }
 
+    /// Stores `manual_progress` as the Manual Progress of the Local Game
+    /// `id`, or clears it with `None`. Answers whether there is such a Game.
+    pub(crate) fn set_manual_progress(&self, id: i64, manual_progress: Option<u8>) -> Result<bool, Error> {
+        let changed = self
+            .connection()
+            .execute("UPDATE local_games SET manual_progress = ?1 WHERE id = ?2", params![manual_progress, id])?;
+        Ok(changed > 0)
+    }
+
     /// Adds the Local Game `title` with its `executable` and answers its id.
     pub(crate) fn add_local_game(&self, title: &str, executable: &str) -> Result<i64, Error> {
         let connection = self.connection();
@@ -575,11 +587,32 @@ impl Store {
             .collect::<Result<_, _>>()?;
         Ok(played)
     }
+
+    /// The Sessions of Local Games that ended after `since`, in seconds
+    /// since the Unix epoch, for the Playtime per week.
+    pub(crate) fn sessions_ended_after(&self, since: u64) -> Result<Vec<Recorded>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(
+            "SELECT local_game, started_at, ended_at FROM local_game_sessions WHERE ended_at > ?1 ORDER BY started_at",
+        )?;
+        let sessions = statement
+            .query_map([seconds_column(since)?], |row| {
+                let started_at: i64 = row.get(1)?;
+                let ended_at: i64 = row.get(2)?;
+                Ok(Recorded {
+                    game_id: crate::sessions::game_id(row.get(0)?),
+                    started_at: u64::try_from(started_at).unwrap_or(0),
+                    ended_at: u64::try_from(ended_at).unwrap_or(0),
+                })
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(sessions)
+    }
 }
 
 /// The columns [`stored_local_game`] reads, from every Local Game.
 const SELECT_LOCAL_GAMES: &str =
-    "SELECT id, title, executable, launch_arguments, working_directory FROM local_games";
+    "SELECT id, title, executable, launch_arguments, working_directory, manual_progress FROM local_games";
 
 fn stored_local_game(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredLocalGame> {
     Ok(StoredLocalGame {
@@ -587,6 +620,7 @@ fn stored_local_game(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredLocalGam
         title: row.get(1)?,
         executable: row.get(2)?,
         launch_options: LaunchOptions { arguments: row.get(3)?, working_directory: row.get(4)? },
+        manual_progress: row.get(5)?,
     })
 }
 

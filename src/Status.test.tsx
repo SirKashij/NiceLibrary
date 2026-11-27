@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LibraryFilter, Operations, Status } from './operations';
 
 function steamGame(appId: number, title: string, installed: boolean, status: Status = 'unplayed'): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status, favorite: false };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, progress: null, status, favorite: false };
 }
 
 /**
@@ -59,6 +59,10 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     openLogFolder: async () => {},

@@ -60,7 +60,7 @@ _Avoid_: Hidden achievement (clashes with Hidden Game)
 The share of all players worldwide who have unlocked an Achievement, in percent.
 
 **Progress**:
-How far a Game has been completed, in percent. For a Steam Game it is the share of unlocked Achievements; for a Local Game it is a Manual Progress value or nothing.
+How far a Game has been completed, in percent. For a Steam Game it is the share of unlocked Achievements, rounded down, so only a Game with every Achievement unlocked is complete at 100 %; a Steam Game without Achievements has no Progress rather than 0 %. For a Local Game it is a Manual Progress value or nothing.
 _Avoid_: Completion, story progress
 
 **Manual Progress**:
@@ -69,6 +69,14 @@ A percentage the person sets by hand on a Local Game.
 **Status**:
 The person's own judgement of where they stand with a Game: Unplayed, Playing, Completed or Dropped. It is set by hand and is independent of Progress.
 _Avoid_: State
+
+**Statistics**:
+Figures over the Library that the core works out: total Playtime, unlocked Achievements of all and their share, the number of Games at 100 % Progress, the number of Games per Status, the Weekly Playtime and the five most played Games by Playtime. Hidden Games count in none of them.
+
+**Weekly Playtime**:
+How long recorded Sessions ran in each of the last eight weeks, each week being the seven days up to a moment, so the latest ends now. A Session across the end of a week counts in both with its share. It counts only Sessions the app recorded, never Steam's Playtime figure or a Playtime Adjustment, since those do not say when a Game was played.
+_Avoid_: Weekly stats, activity
+_Avoid_: Stats, analytics
 
 ### Organising
 
@@ -84,7 +92,7 @@ A named group of Games created by the person. A Game can be in several Collectio
 _Avoid_: Category, tag, folder, list
 
 **Detail Page**:
-The page of one Game, opened from the Library: its large Cover, Source, whether it is Installed, its Status, Playtime, Last Played, its Launch and its Achievements. Going back returns to the Library as it was left.
+The page of one Game, opened from the Library: its large Cover, Source, whether it is Installed, its Status, Playtime, Last Played, Progress, its Launch and its Achievements. Going back returns to the Library as it was left.
 _Avoid_: Game page, info screen, dialog
 
 **Sort Order**:

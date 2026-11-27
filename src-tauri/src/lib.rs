@@ -9,8 +9,9 @@ use std::ops::ControlFlow;
 use nicelibrary_core::{
     About, AboutPage, AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
     CoverImageChoice, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Language, Launch, LaunchOptions,
-    LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
-    SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
+    LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, ManualProgress, Statistics, Status, SteamAccountChoice,
+    SteamAppList, SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking,
+    started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -247,6 +248,15 @@ async fn fetch_steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppLi
     core.fetch_steam_app_list()
 }
 
+#[tauri::command]
+fn set_manual_progress(
+    core: tauri::State<'_, Core>,
+    game_id: String,
+    percent: Option<i64>,
+) -> Result<ManualProgress, Error> {
+    core.set_manual_progress(&game_id, percent)
+}
+
 /// Async, so the window stays responsive while the file dialog is open.
 #[tauri::command]
 async fn choose_cover_image(core: tauri::State<'_, Core>, game_id: String) -> Result<CoverImageChoice, Error> {
@@ -292,6 +302,11 @@ fn hide_game(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Error>
 #[tauri::command]
 fn unhide_game(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Error> {
     core.unhide_game(&game_id)
+}
+
+#[tauri::command]
+fn statistics(core: tauri::State<'_, Core>) -> Result<Statistics, Error> {
+    core.statistics()
 }
 
 #[tauri::command]
@@ -422,6 +437,7 @@ pub fn run() {
             set_close_to_tray,
             close_window,
             show_tray_menu,
+            set_manual_progress,
             choose_cover_image,
             cover_image_chosen,
             remove_cover_image,
@@ -439,6 +455,7 @@ pub fn run() {
             choose_executable_for,
             edit_local_game,
             remove_local_game,
+            statistics,
             mark_favorite,
             favorite_count,
             about,

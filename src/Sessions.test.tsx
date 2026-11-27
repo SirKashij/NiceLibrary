@@ -8,7 +8,7 @@ import type { Game, Operations, SessionEvent } from './operations';
 const THIS_MORNING = 1_795_776_300;
 
 function localGame(id: number, title: string, details: Partial<Game> = {}): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false, ...details };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, progress: null, status: 'unplayed', favorite: false, ...details };
 }
 
 const CELESTE = localGame(1, 'Celeste');
@@ -42,6 +42,10 @@ function fakeOperations(initial: Game[]) {
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     launchOptions: async () => null,
     setLaunchOptions: async () => {},
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),

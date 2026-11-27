@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Achievement, Game, GameAchievements, Operations } from './operations';
 
 function game(id: string, title: string, details: Partial<Game> = {}): Game {
-  return { id, title, source: 'steam', installed: true, playtimeMinutes: 1_260, lastPlayed: null, status: 'unplayed', favorite: false, ...details };
+  return { id, title, source: 'steam', installed: true, playtimeMinutes: 1_260, lastPlayed: null, progress: null, status: 'unplayed', favorite: false, ...details };
 }
 
 /** 2026-11-20 20:15:00 UTC, in seconds since the Unix epoch. */
@@ -67,6 +67,10 @@ function fakeOperations(games: Game[], achievements: Record<string, GameAchievem
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     launchOptions: async () => null,
     setLaunchOptions: async () => {},
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     achievements: async (gameId) => {
       asked.push(gameId);
       const answer = achievements[gameId];

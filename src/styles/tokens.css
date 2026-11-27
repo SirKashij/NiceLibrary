@@ -19,6 +19,8 @@
   --color-accent-ink: var(--color-bg);
   /* Behind a dialog: the window dimmed. */
   --color-backdrop: rgb(0 0 0 / 0.6);
+  /* A complete Progress, 100 %: the colour of having completed a Game (ADR-0007). */
+  --color-complete: #7fc99a;
 
   /* Type */
   --font-display: 'Bricolage Grotesque Variable', sans-serif;
@@ -72,6 +74,13 @@
   /* Library as a list: the small Cover of a row and the width of its fact columns. */
   --list-cover-width: 40px;
   --list-fact-width: 120px;
+
+  /* Statistics charts: thin neutral bars, rounded only at the data end; the Covers keep the colour (ADR-0007). */
+  --chart-height: 160px;
+  --chart-bar-width: 24px;
+  --chart-bar-thin: 4px;
+  --radius-bar: 4px;
+  --chart-title-width: 24ch;
 }
 
 /* The light theme: the same roles on warm paper surfaces. */
@@ -88,4 +97,5 @@
   --color-accent: var(--color-text);
   --color-accent-ink: var(--color-bg);
   --color-backdrop: rgb(26 27 28 / 0.4);
+  --color-complete: #256a3f;
 }

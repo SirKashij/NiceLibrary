@@ -17,9 +17,11 @@ mod launch;
 mod local_covers;
 mod local_games;
 mod library_filter;
+mod progress;
 mod library_layout;
 mod log;
 mod sessions;
+mod statistics;
 mod status;
 mod steam;
 mod steam_app_list;
@@ -48,8 +50,10 @@ pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
 pub use local_games::{AddLocalGame, EditLocalGame, ExecutableChoice, ExecutablePicker, LocalGame};
+pub use progress::ManualProgress;
 pub use log::Log;
 pub use sessions::{ProcessList, Tracking};
+pub use statistics::{GamesByStatus, PlayedWeek, Statistics};
 pub use status::Status;
 pub use library_layout::LibraryLayout;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
@@ -85,6 +89,11 @@ pub struct Game {
     /// Last Played, in seconds since the Unix epoch; `None` for never or
     /// not known.
     pub last_played: Option<u64>,
+    /// Progress in percent, from 0 to 100, as its Source works it out (see
+    /// `progress`): for a Local Game its Manual Progress, for a Steam Game
+    /// the share of its unlocked Achievements. `None` when the Game has none,
+    /// such as a Steam Game without Achievements.
+    pub progress: Option<u8>,
     /// The person's own judgement of where they stand with the Game;
     /// Unplayed until they set it. No Sync changes it.
     pub status: Status,
@@ -93,8 +102,8 @@ pub struct Game {
 }
 
 impl Game {
-    /// The Steam Game with Steam's app id `app_id`, without Playtime and
-    /// Last Played.
+    /// The Steam Game with Steam's app id `app_id`, without Playtime, Last
+    /// Played and Progress.
     pub(crate) fn steam(app_id: u32, title: String, installed: bool) -> Self {
         Self {
             id: format!("steam:{app_id}"),
@@ -103,6 +112,7 @@ impl Game {
             installed,
             playtime_minutes: None,
             last_played: None,
+            progress: None,
             status: Status::Unplayed,
             favorite: false,
         }
@@ -251,16 +261,24 @@ impl Core {
 
     /// Every Game of both Sources, Hidden Games too, ordered by title.
     fn every_game(&self) -> Result<Vec<Game>, Error> {
-        // Until the user chooses, the account read last: it holds the Games.
-        let account = self.chosen_steam_account_or(|| self.store.last_read_steam_account())?;
-        let mut games = match account {
-            Some(account) => self.store.steam_games(&account)?,
+        let mut games = match self.library_steam_account()? {
+            Some(account) => {
+                let mut games = self.store.steam_games(&account)?;
+                let achievements = self.store.achievement_counts(&account)?;
+                for game in &mut games {
+                    game.progress = steam_app_id(&game.id)
+                        .and_then(|app_id| achievements.get(&app_id))
+                        .and_then(|&(unlocked, total)| progress::of_steam_game(unlocked, total));
+                }
+                games
+            }
             None => Vec::new(),
         };
         let played = self.store.local_games_played()?;
         games.extend(self.store.local_games()?.into_iter().map(|game| {
-            let unplayed = Game::local(game.id, game.title);
-            match played.get(&game.id) {
+            let id = game.id;
+            let unplayed = Game::from_stored_local(game);
+            match played.get(&id) {
                 Some(played) => played.into_game(unplayed),
                 None => unplayed,
             }
@@ -272,6 +290,12 @@ impl Core {
         favorites::mark(&mut games, &self.store.favorites()?);
         games.sort_by(library_filter::by_title);
         Ok(games)
+    }
+
+    /// The Steam Account whose Steam Games the Library holds: the chosen
+    /// one, and until the user chooses, the account read last.
+    fn library_steam_account(&self) -> Result<Option<String>, Error> {
+        self.chosen_steam_account_or(|| self.store.last_read_steam_account())
     }
 
     /// The Games in the Library that match `filter`, as last stored, in the
@@ -782,6 +806,31 @@ impl Core {
         }
     }
 
+    /// Sets the Manual Progress of the Local Game `game_id` to `percent`, a
+    /// whole number from 0 to 100, or clears it with `None`; it is then the
+    /// Game's Progress. Anything outside 0 to 100, and any Game that is not a
+    /// Local Game, is refused and changes nothing. Fails when there is no
+    /// such Local Game.
+    pub fn set_manual_progress(&self, game_id: &str, percent: Option<i64>) -> Result<ManualProgress, Error> {
+        let Some(id) = local_game_id(game_id) else {
+            return Ok(ManualProgress::NotALocalGame);
+        };
+        let manual_progress = match percent {
+            Some(percent) => match progress::percent_in(percent) {
+                Some(percent) => Some(percent),
+                None => return Ok(ManualProgress::OutOfRange),
+            },
+            None => None,
+        };
+        if !self.store.set_manual_progress(id, manual_progress)? {
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
+        }
+        match self.game(game_id)? {
+            Some(game) => Ok(ManualProgress::Set { game }),
+            None => Err(Error::new(format!("no such game in the library: {game_id}"))),
+        }
+    }
+
     /// Opens the Steam page where the user creates their Steam Web API key,
     /// in the browser.
     pub fn open_steam_web_api_key_page(&self) -> Result<(), Error> {
@@ -1233,6 +1282,29 @@ impl Core {
             self.note("unhide_game: unhidden");
         }
         self.logged("unhide_game", unhidden)
+    }
+
+    /// The Statistics of the Library as it shows: total Playtime, unlocked
+    /// Achievements of all and their share, Games at 100 % Progress, and
+    /// Games per Status, the Playtime of each of the last eight weeks from
+    /// the recorded Sessions, and the five most played Games. Hidden Games
+    /// count in none of them.
+    pub fn statistics(&self) -> Result<Statistics, Error> {
+        let statistics = self.stored_library().and_then(|games| {
+            let achievements = match self.library_steam_account()? {
+                Some(account) => self.store.achievement_counts(&account)?,
+                None => Default::default(),
+            };
+            let now = clock::seconds_since_epoch(self.ports.clock.now());
+            let sessions = self.store.sessions_ended_after(statistics::first_week_start(now))?;
+            Ok(statistics::of(
+                &games,
+                |game| steam_app_id(&game.id).and_then(|app_id| achievements.get(&app_id).copied()),
+                &sessions,
+                now,
+            ))
+        });
+        self.logged("statistics", statistics)
     }
 
     /// Marks the Game `game_id` as a Favorite, or with `favorite` false

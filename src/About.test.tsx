@@ -79,6 +79,10 @@ function fakeOperations({
     language: async () => 'system',
     chooseLanguage: async () => {},
     about,
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     openAboutPage: async (page) => {
       calls.opened.push(page);
       return openPage();

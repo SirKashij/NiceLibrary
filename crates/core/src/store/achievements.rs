@@ -1,6 +1,6 @@
 //! The stored Achievements of Steam Games, and the Web API calls counted per day.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use rusqlite::{OptionalExtension, params};
 
@@ -121,6 +121,24 @@ impl Store {
         transaction.execute("DELETE FROM steam_web_api_calls WHERE day < ?1", [day])?;
         transaction.commit()?;
         Ok(())
+    }
+
+    /// For each Steam Game whose Achievements were fetched for `account`, by
+    /// its app id: how many of its Achievements are unlocked, and how many it
+    /// has. A Game Steam has no Achievements for has none of all.
+    pub(crate) fn achievement_counts(&self, account: &str) -> Result<HashMap<u32, (u32, u32)>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(
+            "SELECT f.app_id, COALESCE(SUM(a.unlocked), 0), COUNT(a.api_name)
+             FROM steam_achievement_fetches f
+             LEFT JOIN steam_achievements a ON a.steam_account = f.steam_account AND a.app_id = f.app_id
+             WHERE f.steam_account = ?1
+             GROUP BY f.app_id",
+        )?;
+        let counts = statement
+            .query_map([account], |row| Ok((row.get(0)?, (row.get(1)?, row.get(2)?))))?
+            .collect::<Result<_, _>>()?;
+        Ok(counts)
     }
 
     /// The Achievements of the Steam Game `app_id` for `account`, unlocked

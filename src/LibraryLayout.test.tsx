@@ -5,9 +5,9 @@ import { App } from './App';
 import type { Game, LibraryLayout, Operations } from './operations';
 
 const LIBRARY: Game[] = [
-  { id: 'steam:1145360', title: 'Hades', source: 'steam', installed: true, playtimeMinutes: 600, lastPlayed: 1_700_000_000, status: 'playing', favorite: true },
-  { id: 'steam:220', title: 'Half-Life 2', source: 'steam', installed: false, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false },
-  { id: 'local:1', title: 'Portal 2', source: 'local', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false },
+  { id: 'steam:1145360', title: 'Hades', source: 'steam', installed: true, playtimeMinutes: 600, lastPlayed: 1_700_000_000, status: 'playing', favorite: true, progress: null },
+  { id: 'steam:220', title: 'Half-Life 2', source: 'steam', installed: false, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false, progress: null },
+  { id: 'local:1', title: 'Portal 2', source: 'local', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false, progress: null },
 ];
 
 /** A promise that never settles: the operation is still running. */
@@ -100,6 +100,10 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     openAboutPage: async () => {},
     language: async () => 'system',
     chooseLanguage: async () => {},
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
   };
   return { operations, chosen, launched, marks, failWhenChoosing: () => (failChoosing = true) };
 }
