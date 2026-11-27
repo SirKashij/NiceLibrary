@@ -41,6 +41,11 @@ function fakeOperations({ stored = false } = {}) {
     },
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
     onAutomaticSync: () => () => {},
   };
   return { operations, calls };

@@ -77,4 +77,17 @@ export const de: Record<MessageKey, string> = {
   'key.dataTitle': 'Was NiceLibrary speichert',
   'key.data':
     'NiceLibrary speichert diese Steam-Daten nur auf diesem Computer: deine SteamID, die Spiele, die du besitzt, ihre Spielzeit und wann du sie zuletzt gespielt hast, deine Trophäen mit Freischaltdatum, Name, Beschreibung, Symbol und Seltenheit sowie die Cover der Spiele. Dein Schlüssel liegt in der Windows-Anmeldeinformationsverwaltung und geht an niemanden außer Steam.',
+  'settings.window': 'Fenster',
+  'window.closeToTray': 'Beim Schließen des Fensters im Infobereich weiterlaufen',
+  'window.closeToTrayOn':
+    'Das geschlossene Fenster verschwindet, und NiceLibrary erfasst im Infobereich der Taskleiste weiter deine Spielzeit. Beenden kannst du es über das Menü des Symbols.',
+  'window.closeToTrayOff': 'Wenn du das Fenster schließt, wird NiceLibrary beendet und erfasst deine Spielzeit nicht mehr.',
+  'window.loadFailed': 'Die Fenstereinstellung konnte nicht geladen werden.',
+  'window.saveFailed': 'Die Fenstereinstellung konnte nicht gespeichert werden.',
+  'tray.open': 'NiceLibrary öffnen',
+  'tray.quit': 'Beenden',
+  'tray.noticeTitle': 'NiceLibrary läuft weiter',
+  'tray.notice':
+    'Wenn du das Fenster schließt, läuft NiceLibrary im Infobereich der Taskleiste weiter und erfasst weiter deine Spielzeit. Ein Klick auf das Symbol dort öffnet es wieder, über sein Menü beendest du es. Ändern kannst du das in den Einstellungen unter Fenster.',
+  'tray.ok': 'OK',
 };

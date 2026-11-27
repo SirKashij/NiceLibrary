@@ -75,6 +75,11 @@ function fakeOperations({
       return outcome;
     },
     lastSync: async () => last,
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

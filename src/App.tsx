@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
+import { WindowSettings } from './settings/WindowSettings';
+import { Tray } from './Tray';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -55,6 +57,7 @@ function Shell({ operations }: { operations: Operations }) {
           <SettingsView operations={operations} onAccountChosen={() => setAccountChoices((n) => n + 1)} />
         )}
       </main>
+      <Tray operations={operations} />
     </div>
   );
 }
@@ -294,6 +297,7 @@ function SettingsView({ operations, onAccountChosen }: { operations: Operations;
     <Page title="nav.settings">
       <SteamSettings operations={operations} onAccountChosen={onAccountChosen} />
       <SteamWebApiKeySettings operations={operations} />
+      <WindowSettings operations={operations} />
     </Page>
   );
 }

@@ -24,6 +24,11 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
     onAutomaticSync: () => () => {},
     launch: (game) => {
       requested.push(game.id);

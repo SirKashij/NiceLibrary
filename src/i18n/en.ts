@@ -75,6 +75,19 @@ export const en = {
   'key.dataTitle': 'What NiceLibrary stores',
   'key.data':
     'NiceLibrary keeps this Steam data only on this computer: your SteamID, the games you own, their playtime and when you last played them, your achievements with their unlock dates, names, descriptions, icons and rarity, and the games’ covers. Your key is kept in the Windows Credential Manager and is sent to no one but Steam.',
+  'settings.window': 'Window',
+  'window.closeToTray': 'Keep running in the tray when the window is closed',
+  'window.closeToTrayOn':
+    'Closing the window hides it, and NiceLibrary keeps tracking your playtime in the tray. Quit it from the tray icon’s menu.',
+  'window.closeToTrayOff': 'Closing the window quits NiceLibrary, and your playtime is no longer tracked.',
+  'window.loadFailed': 'The window setting could not be loaded.',
+  'window.saveFailed': 'The window setting could not be saved.',
+  'tray.open': 'Open NiceLibrary',
+  'tray.quit': 'Quit',
+  'tray.noticeTitle': 'NiceLibrary keeps running',
+  'tray.notice':
+    'When you close the window, NiceLibrary keeps running in the tray so it can go on tracking your playtime. Click its tray icon to open it again, or quit it from the icon’s menu. You can change this in the Settings under Window.',
+  'tray.ok': 'OK',
 } as const;
 
 export type MessageKey = keyof typeof en;

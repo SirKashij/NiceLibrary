@@ -19,7 +19,7 @@ CI runs all of them on Windows for every pull request.
 
 ### End-to-end tests
 
-The end-to-end tests in `e2e/` start the built app and check what no lower test can see: that the window opens and the interface reaches the core through the real Tauri commands. They are slow, so keep them few and leave everything else to the tests above.
+The end-to-end tests in `e2e/` start the built app and check what no lower test can see: that the window opens, the interface reaches the core through the real Tauri commands, closing the window keeps the app running in the Tray and quitting from the Tray ends it. They are slow, so keep them few and leave everything else to the tests above.
 
 One-time setup:
 
@@ -38,6 +38,10 @@ npm run test:e2e
 ```
 
 The tests use the most recently built of `target/release/nicelibrary.exe` and `target/debug/nicelibrary.exe`. Set `NICELIBRARY_APP` to test another binary.
+
+The app runs only once per user: a second start brings the running one forward and ends. Quit NiceLibrary from its Tray menu before you run the end-to-end tests, or the app under test ends at once and no session starts.
+
+`e2e/tray.e2e.ts` closes the window, starts the app a second time and quits it from the Tray menu. It does so with window messages (`e2e/windows.ps1`) and picks the menu entry with the keyboard, so do not use mouse or keyboard while it runs. Closing the window for the first time marks the Tray notice as shown in your database, so the app does not show you the notice afterwards. With close-to-tray turned off in your settings, the closing test is skipped.
 
 ### When the end-to-end tests fail
 

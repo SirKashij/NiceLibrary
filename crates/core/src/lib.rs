@@ -12,6 +12,7 @@ mod steam;
 mod steam_web_api;
 mod store;
 mod sync;
+mod window;
 
 use std::fmt;
 use std::ops::ControlFlow;
@@ -26,6 +27,7 @@ pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocato
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
 pub use sync::{AutomaticSync, SyncOutcome};
+pub use window::WindowClose;
 
 /// The origin a Game is read from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -341,6 +343,24 @@ impl Core {
             .opener
             .open_url(steam_web_api::KEY_PAGE)
             .map_err(|error| Error::new(format!("{} could not be opened: {error}", steam_web_api::KEY_PAGE)))
+    }
+
+    /// Whether closing the window keeps the app running in the Tray, so
+    /// tracking goes on. On until the user turns it off.
+    pub fn close_to_tray(&self) -> Result<bool, Error> {
+        window::close_to_tray(&self.store)
+    }
+
+    /// Turns close-to-tray on or off, from now on and after every restart.
+    pub fn set_close_to_tray(&self, on: bool) -> Result<(), Error> {
+        window::set_close_to_tray(&self.store, on)
+    }
+
+    /// What closing the window does: with close-to-tray on the app keeps
+    /// running in the Tray, and the very first time the window explains this
+    /// instead; with close-to-tray off the app quits.
+    pub fn close_window(&self) -> Result<WindowClose, Error> {
+        window::close_window(&self.store)
     }
 }
 

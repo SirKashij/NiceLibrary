@@ -2,6 +2,7 @@
 //! application core and adds nothing of its own.
 
 pub mod ports;
+mod tray;
 
 use std::ops::ControlFlow;
 
@@ -11,7 +12,8 @@ use nicelibrary_core::{
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
-use tauri::{App, Emitter, Manager, WebviewWindowBuilder};
+use tauri::{App, AppHandle, Emitter, Manager, WebviewWindowBuilder, WindowEvent};
+use tray::TrayMenuTexts;
 
 #[tauri::command]
 fn library(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
@@ -78,6 +80,28 @@ async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(),
     core.open_steam_web_api_key_page()
 }
 
+#[tauri::command]
+fn close_to_tray(core: tauri::State<'_, Core>) -> Result<bool, Error> {
+    core.close_to_tray()
+}
+
+#[tauri::command]
+fn set_close_to_tray(core: tauri::State<'_, Core>, on: bool) -> Result<(), Error> {
+    core.set_close_to_tray(on)
+}
+
+/// Closes the window as its close button does (see [`Core::close_window`]).
+#[tauri::command]
+fn close_window(app: AppHandle) {
+    tray::close_main_window(&app);
+}
+
+/// The Tray's texts come from the interface, which owns every text.
+#[tauri::command]
+fn show_tray_menu(app: AppHandle, texts: TrayMenuTexts) -> Result<(), String> {
+    tray::show_menu(&app, &texts).map_err(|error| error.to_string())
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -109,6 +133,16 @@ const COVERS: &str = "covers";
 
 pub fn run() {
     tauri::Builder::default()
+        // First, so a second start hands over and ends before it opens anything.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| tray::show_main_window(app)))
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == tray::MAIN_WINDOW
+            {
+                api.prevent_close();
+                tray::close_main_window(window.app_handle());
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             library,
             read_installed_games,
@@ -121,7 +155,11 @@ pub fn run() {
             remove_steam_web_api_key,
             open_steam_web_api_key_page,
             sync,
-            last_sync
+            last_sync,
+            close_to_tray,
+            set_close_to_tray,
+            close_window,
+            show_tray_menu
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
@@ -136,6 +174,7 @@ pub fn run() {
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
             app.manage(Core::new(ports::real_ports(), store, covers));
             start_automatic_syncs(app)?;
+            tray::create(app.handle())?;
             create_main_window(app)
         })
         .run(tauri::generate_context!())
