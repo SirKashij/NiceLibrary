@@ -32,7 +32,7 @@ impl Steam {
         self.0.path()
     }
 
-    /// Writes `loginusers.vdf` with these accounts; the first one logged in
+    /// Writes `loginusers.vdf` with these Steam Logins; the first one logged in
     /// most recently.
     fn logged_in(&self, steam_ids: &[&str]) {
         let mut text = String::from("\"users\"\n{\n");

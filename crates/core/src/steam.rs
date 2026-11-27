@@ -1,4 +1,4 @@
-//! Steam Source, local files: the Steam installation, its Steam Accounts and
+//! Steam Source, local files: the Steam Installation, its Steam Logins and
 //! the apps installed in its library folders.
 
 use std::collections::{BTreeMap, HashSet};
@@ -37,24 +37,24 @@ pub enum SteamInstallation {
     #[serde(rename_all = "camelCase")]
     Found {
         path: String,
-        /// The Steam Accounts that have logged in here, the most recently
-        /// used one first. Empty when no account has logged in yet, or when
-        /// `accounts_unreadable` is set.
-        accounts: Vec<SteamAccount>,
-        /// Whether Steam's list of accounts exists but could not be read, so
-        /// it is unknown which accounts have logged in here.
-        accounts_unreadable: bool,
+        /// Its Steam Logins, the most recently used one first. Empty when no
+        /// account has logged in yet, or when `logins_unreadable` is set.
+        logins: Vec<SteamLogin>,
+        /// Whether Steam's list of Steam Logins exists but could not be read,
+        /// so it is unknown which accounts have logged in here.
+        logins_unreadable: bool,
     },
 }
 
-/// A Steam Account that has logged in on this computer.
+/// A Steam Login: an account that has logged in to Steam on this computer
+/// and that Steam remembers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SteamAccount {
+pub struct SteamLogin {
     /// The SteamID64, as text because it exceeds JavaScript's safe integers.
     pub steam_id: String,
     pub display_name: String,
-    /// Whether this is the account that logged in most recently.
+    /// Whether this is the most recently used Steam Login.
     pub most_recent: bool,
 }
 
@@ -76,7 +76,7 @@ pub(crate) fn personal_steam_id(text: &str) -> Option<&str> {
     /// Universe 1 (public), account type 1 (individual), instance 1.
     const PERSONAL: u64 = 0x0110_0001;
     let text = text.trim();
-    // Exactly as Steam writes it, so it matches the accounts in loginusers.vdf.
+    // Exactly as Steam writes it, so it matches the Steam Logins in loginusers.vdf.
     if text.len() != 17 || !text.bytes().all(|b| b.is_ascii_digit()) {
         return None;
     }
@@ -88,22 +88,22 @@ pub(crate) fn read_installation(locator: &dyn SteamLocator) -> SteamInstallation
     match locator.steam_folder() {
         None => SteamInstallation::NotFound,
         Some(folder) => {
-            let accounts = read_accounts(&folder);
+            let logins = read_logins(&folder);
             SteamInstallation::Found {
                 path: folder.display().to_string(),
-                accounts_unreadable: accounts.is_none(),
-                accounts: accounts.unwrap_or_default(),
+                logins_unreadable: logins.is_none(),
+                logins: logins.unwrap_or_default(),
             }
         }
     }
 }
 
-/// The accounts in `config/loginusers.vdf`; an empty list if the file is
+/// The Steam Logins in `config/loginusers.vdf`; an empty list if the file is
 /// missing, because then no account has logged in yet.
 ///
 /// `None` when the file exists but cannot be read or parsed, or has no
 /// `users` block: then it is unknown which accounts have logged in.
-fn read_accounts(folder: &Path) -> Option<Vec<SteamAccount>> {
+fn read_logins(folder: &Path) -> Option<Vec<SteamLogin>> {
     let bytes = match fs::read(folder.join("config").join("loginusers.vdf")) {
         Ok(bytes) => bytes,
         Err(error) if error.kind() == ErrorKind::NotFound => return Some(Vec::new()),
@@ -112,7 +112,7 @@ fn read_accounts(folder: &Path) -> Option<Vec<SteamAccount>> {
     let doc = keyvalues::parse(&String::from_utf8_lossy(&bytes)).ok()?;
     let users = doc.block("users")?;
 
-    let logins: Vec<(&str, &keyvalues::Block)> = users
+    let entries: Vec<(&str, &keyvalues::Block)> = users
         .entries()
         .filter_map(|(steam_id, value)| match value {
             keyvalues::Value::Block(user) => Some((steam_id, user)),
@@ -122,8 +122,8 @@ fn read_accounts(folder: &Path) -> Option<Vec<SteamAccount>> {
 
     // Steam flags the last login with "MostRecent"; after a logout no account
     // may carry the flag, and then the latest login time decides.
-    let flagged = logins.iter().position(|(_, user)| user.string("MostRecent") == Some("1"));
-    let latest = logins
+    let flagged = entries.iter().position(|(_, user)| user.string("MostRecent") == Some("1"));
+    let latest = entries
         .iter()
         .enumerate()
         .filter_map(|(index, (_, user))| Some((user.string("Timestamp")?.parse::<u64>().ok()?, index)))
@@ -131,10 +131,10 @@ fn read_accounts(folder: &Path) -> Option<Vec<SteamAccount>> {
         .map(|(_, index)| index);
     let most_recent = flagged.or(latest);
 
-    let mut accounts: Vec<SteamAccount> = logins
+    let mut logins: Vec<SteamLogin> = entries
         .iter()
         .enumerate()
-        .map(|(index, (steam_id, user))| SteamAccount {
+        .map(|(index, (steam_id, user))| SteamLogin {
             steam_id: (*steam_id).to_owned(),
             display_name: [user.string("PersonaName"), user.string("AccountName")]
                 .into_iter()
@@ -145,18 +145,18 @@ fn read_accounts(folder: &Path) -> Option<Vec<SteamAccount>> {
             most_recent: Some(index) == most_recent,
         })
         .collect();
-    accounts.sort_by_key(|a| !a.most_recent);
-    Some(accounts)
+    logins.sort_by_key(|login| !login.most_recent);
+    Some(logins)
 }
 
-/// The Steam Account the app works with until the user chooses one: the one
-/// that logged in most recently, else the first one listed. `None` also when
-/// the list of accounts cannot be read; the caller then falls back to the
-/// account chosen earlier.
-pub(crate) fn current_account(folder: &Path) -> Option<SteamAccount> {
-    let accounts = read_accounts(folder).unwrap_or_default();
-    let index = accounts.iter().position(|a| a.most_recent).unwrap_or(0);
-    accounts.into_iter().nth(index)
+/// The most recently used Steam Login, else the first one listed: the Steam
+/// Account the app works with until the user chooses one. `None` also when
+/// the list of Steam Logins cannot be read; the caller then falls back to the
+/// Steam Account chosen earlier.
+pub(crate) fn most_recent_login(folder: &Path) -> Option<SteamLogin> {
+    let logins = read_logins(folder).unwrap_or_default();
+    let index = logins.iter().position(|login| login.most_recent).unwrap_or(0);
+    logins.into_iter().nth(index)
 }
 
 /// The apps that are fully installed in any of Steam's library folders, each

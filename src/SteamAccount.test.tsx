@@ -8,26 +8,26 @@ import { baseOperations } from './test/operations';
 const PLAYER_ONE = '76561197960287930';
 const PLAYER_TWO = '76561197960287931';
 
-const TWO_ACCOUNTS: SteamInstallation = {
+const TWO_LOGINS: SteamInstallation = {
   state: 'found',
   path: 'C:\\Steam',
-  accounts: [
+  logins: [
     { steamId: PLAYER_TWO, displayName: 'Player Two', mostRecent: true },
     { steamId: PLAYER_ONE, displayName: 'Player One', mostRecent: false },
   ],
-  accountsUnreadable: false,
+  loginsUnreadable: false,
 };
 
-const ONE_ACCOUNT: SteamInstallation = {
+const ONE_LOGIN: SteamInstallation = {
   state: 'found',
   path: 'C:\\Steam',
-  accounts: [{ steamId: PLAYER_ONE, displayName: 'Player One', mostRecent: true }],
-  accountsUnreadable: false,
+  logins: [{ steamId: PLAYER_ONE, displayName: 'Player One', mostRecent: true }],
+  loginsUnreadable: false,
 };
 
 /**
  * Fake operations that remember the chosen Steam Account like the core does:
- * until a choice, the most recently used account; only 17-digit IDs starting
+ * until a choice, the most recently used Steam Login; only 17-digit IDs starting
  * with 7656119 count as a SteamID. Each account has its own last Sync
  * (`lastSyncs`) and its own Library (`libraries`).
  */
@@ -38,7 +38,7 @@ function fakeOperations(
 ) {
   const chosen: string[] = [];
   let account: string | null =
-    steam.state === 'found' ? (steam.accounts.find((a) => a.mostRecent) ?? steam.accounts[0])?.steamId ?? null : null;
+    steam.state === 'found' ? (steam.logins.find((login) => login.mostRecent) ?? steam.logins[0])?.steamId ?? null : null;
   const operations: Operations = {
     ...baseOperations(),
     library: async () => (account && libraries[account]) || [],
@@ -67,8 +67,8 @@ async function openSettings(operations: Operations, lang: 'de' | 'en' = 'en') {
 }
 
 describe('Choosing the Steam Account', () => {
-  it('preselects the most recently used of several accounts, and the user chooses another', async () => {
-    const { operations, chosen } = fakeOperations(TWO_ACCOUNTS);
+  it('preselects the most recently used of several Steam Logins, and the user chooses another', async () => {
+    const { operations, chosen } = fakeOperations(TWO_LOGINS);
     const { user, steam } = await openSettings(operations);
 
     const choice = await within(steam).findByRole('radiogroup', { name: 'Account for your library' });
@@ -82,15 +82,15 @@ describe('Choosing the Steam Account', () => {
     expect(within(choice).getByRole('radio', { name: 'Player Two' })).not.toBeChecked();
   });
 
-  it('preselects the only account', async () => {
-    const { operations } = fakeOperations(ONE_ACCOUNT);
+  it('preselects the only Steam Login', async () => {
+    const { operations } = fakeOperations(ONE_LOGIN);
     const { steam } = await openSettings(operations);
 
     expect(await within(steam).findByRole('radio', { name: 'Player One' })).toBeChecked();
   });
 
   it('shows the chosen account after the settings are opened again', async () => {
-    const { operations } = fakeOperations(TWO_ACCOUNTS);
+    const { operations } = fakeOperations(TWO_LOGINS);
     const { user, steam } = await openSettings(operations);
     await user.click(await within(steam).findByRole('radio', { name: 'Player One' }));
 
@@ -102,7 +102,7 @@ describe('Choosing the Steam Account', () => {
   });
 
   it('keeps the previous account and says so when the choice cannot be saved', async () => {
-    const { operations } = fakeOperations(TWO_ACCOUNTS, () => Promise.reject(new Error('database: disk full')));
+    const { operations } = fakeOperations(TWO_LOGINS, () => Promise.reject(new Error('database: disk full')));
     const { user, steam } = await openSettings(operations);
 
     await user.click(await within(steam).findByRole('radio', { name: 'Player One' }));
@@ -112,8 +112,8 @@ describe('Choosing the Steam Account', () => {
     expect(within(steam).getByRole('radio', { name: 'Player One' })).not.toBeChecked();
   });
 
-  it('names a SteamID in use that is none of the accounts on this computer', async () => {
-    const { operations } = fakeOperations(TWO_ACCOUNTS);
+  it('names a SteamID in use that is none of the Steam Logins', async () => {
+    const { operations } = fakeOperations(TWO_LOGINS);
     operations.steamAccount = async () => '76561197960265729';
     const { steam } = await openSettings(operations);
 
@@ -125,15 +125,15 @@ describe('Choosing the Steam Account', () => {
   });
 
   it('says so when the account in use cannot be loaded', async () => {
-    const { operations } = fakeOperations(TWO_ACCOUNTS);
+    const { operations } = fakeOperations(TWO_LOGINS);
     operations.steamAccount = () => Promise.reject(new Error('database: locked'));
     const { steam } = await openSettings(operations);
 
     expect(await within(steam).findByRole('alert')).toHaveTextContent('The Steam account in use could not be loaded.');
   });
 
-  it('reaches the accounts with the keyboard', async () => {
-    const { operations, chosen } = fakeOperations(TWO_ACCOUNTS);
+  it('reaches the Steam Logins with the keyboard', async () => {
+    const { operations, chosen } = fakeOperations(TWO_LOGINS);
     const { user, steam } = await openSettings(operations);
     const selected = await within(steam).findByRole('radio', { name: 'Player Two' });
     await within(steam).findByRole('radio', { name: 'Player Two', checked: true });
@@ -146,7 +146,7 @@ describe('Choosing the Steam Account', () => {
   });
 
   it('speaks German', async () => {
-    const { operations } = fakeOperations(TWO_ACCOUNTS);
+    const { operations } = fakeOperations(TWO_LOGINS);
     const { steam } = await openSettings(operations, 'de');
 
     expect(await within(steam).findByRole('radiogroup', { name: 'Konto für deine Bibliothek' })).toBeInTheDocument();
@@ -165,7 +165,7 @@ function syncRegion() {
 
 describe('After choosing another Steam Account', () => {
   it("shows that account's last Sync in the sidebar", async () => {
-    const { operations } = fakeOperations(TWO_ACCOUNTS, undefined, { lastSyncs: { [PLAYER_ONE]: LAST_WEEK } });
+    const { operations } = fakeOperations(TWO_LOGINS, undefined, { lastSyncs: { [PLAYER_ONE]: LAST_WEEK } });
     const { user, steam } = await openSettings(operations);
     await within(syncRegion()).findByText('Not synced yet');
 
@@ -175,7 +175,7 @@ describe('After choosing another Steam Account', () => {
   });
 
   it('says in the sidebar when that account has not been synced yet', async () => {
-    const { operations } = fakeOperations(TWO_ACCOUNTS, undefined, { lastSyncs: { [PLAYER_TWO]: LAST_WEEK } });
+    const { operations } = fakeOperations(TWO_LOGINS, undefined, { lastSyncs: { [PLAYER_TWO]: LAST_WEEK } });
     const { user, steam } = await openSettings(operations);
     await within(syncRegion()).findByText('Last synced Nov 20, 2026, 8:15 PM');
 
@@ -185,7 +185,7 @@ describe('After choosing another Steam Account', () => {
   });
 
   it('shows no answer of a Sync made for the account before', async () => {
-    const { operations } = fakeOperations(TWO_ACCOUNTS);
+    const { operations } = fakeOperations(TWO_LOGINS);
     let answer!: (outcome: SyncOutcome) => void;
     operations.sync = () => new Promise((resolve) => (answer = resolve));
     const { user, steam } = await openSettings(operations);
@@ -199,7 +199,7 @@ describe('After choosing another Steam Account', () => {
   });
 
   it('shows no answer of an automatic Sync that started for the account before', async () => {
-    const { operations } = fakeOperations(TWO_ACCOUNTS);
+    const { operations } = fakeOperations(TWO_LOGINS);
     const listeners = new Set<(event: AutomaticSync) => void>();
     const hear = (event: AutomaticSync) => act(() => listeners.forEach((listener) => listener(event)));
     operations.onAutomaticSync = (listener) => {
@@ -217,7 +217,7 @@ describe('After choosing another Steam Account', () => {
   });
 
   it("shows that account's Games in the Library", async () => {
-    const { operations } = fakeOperations(TWO_ACCOUNTS, undefined, {
+    const { operations } = fakeOperations(TWO_LOGINS, undefined, {
       libraries: { [PLAYER_ONE]: [portal2], [PLAYER_TWO]: [halfLife] },
     });
     const { user, steam } = await openSettings(operations);
@@ -243,24 +243,24 @@ describe('Entering a SteamID by hand', () => {
     expect(within(steam).queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('is offered when no account has logged in to Steam', async () => {
-    const { operations } = fakeOperations({ state: 'found', path: 'C:\\Steam', accounts: [], accountsUnreadable: false });
+  it('is offered when there is no Steam Login', async () => {
+    const { operations } = fakeOperations({ state: 'found', path: 'C:\\Steam', logins: [], loginsUnreadable: false });
     const { steam } = await openSettings(operations);
 
     expect(await within(steam).findByRole('textbox', { name: 'SteamID' })).toBeInTheDocument();
     expect(within(steam).queryByRole('radiogroup')).not.toBeInTheDocument();
   });
 
-  it('is offered when the list of Steam Accounts cannot be read', async () => {
-    const { operations } = fakeOperations({ state: 'found', path: 'C:\\Steam', accounts: [], accountsUnreadable: true });
+  it('is offered when the list of Steam Logins cannot be read', async () => {
+    const { operations } = fakeOperations({ state: 'found', path: 'C:\\Steam', logins: [], loginsUnreadable: true });
     const { steam } = await openSettings(operations);
 
     expect(await within(steam).findByRole('textbox', { name: 'SteamID' })).toBeInTheDocument();
     expect(within(steam).queryByRole('radiogroup')).not.toBeInTheDocument();
   });
 
-  it('is not offered when accounts have logged in to Steam', async () => {
-    const { operations } = fakeOperations(TWO_ACCOUNTS);
+  it('is not offered when there are Steam Logins', async () => {
+    const { operations } = fakeOperations(TWO_LOGINS);
     const { steam } = await openSettings(operations);
 
     await within(steam).findByRole('radiogroup');

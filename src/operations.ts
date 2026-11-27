@@ -63,8 +63,8 @@ export type AutomaticSync =
   | ({ state: 'finished' } & SyncOutcome)
   | { state: 'failed'; reason: string };
 
-/** A Steam Account that has logged in on this computer. Mirrors `SteamAccount` in crates/core. */
-export interface SteamAccount {
+/** A Steam Login: an account that has logged in to Steam on this computer. Mirrors `SteamLogin` in crates/core. */
+export interface SteamLogin {
   /** SteamID64, as text because it exceeds JavaScript's safe integers. */
   steamId: string;
   displayName: string;
@@ -72,13 +72,13 @@ export interface SteamAccount {
 }
 
 /**
- * The Steam installation on this computer. `accountsUnreadable` means Steam's
- * list of accounts exists but could not be read; `accounts` is then empty.
+ * The Steam Installation on this computer. `loginsUnreadable` means Steam's
+ * list of Steam Logins exists but could not be read; `logins` is then empty.
  * Mirrors `SteamInstallation` in crates/core.
  */
 export type SteamInstallation =
   | { state: 'notFound' }
-  | { state: 'found'; path: string; accounts: SteamAccount[]; accountsUnreadable: boolean };
+  | { state: 'found'; path: string; logins: SteamLogin[]; loginsUnreadable: boolean };
 
 /** How choosing the Steam Account went, when nothing failed. Mirrors `SteamAccountChoice` in crates/core. */
 export type SteamAccountChoice = { outcome: 'chosen' } | { outcome: 'invalidSteamId' };
@@ -291,7 +291,7 @@ export interface Operations {
   library(): Promise<Game[]>;
   /** Reads which Steam Games are Installed, stores it and answers the Library. */
   readInstalledGames(): Promise<Game[]>;
-  /** The Steam installation and its Steam Accounts, the most recently used first. */
+  /** The Steam Installation and its Steam Logins, the most recently used first. */
   steamInstallation(): Promise<SteamInstallation>;
   /**
    * The SteamID of the Steam Account the app works with: the one the user
@@ -300,7 +300,7 @@ export interface Operations {
   steamAccount(): Promise<string | null>;
   /**
    * Makes a SteamID the Steam Account the app works with, also after a
-   * restart: one of the accounts on this computer or one entered by hand.
+   * restart: one of the Steam Logins or one entered by hand.
    * Answers `invalidSteamId`, and changes nothing, for anything that is not one.
    */
   chooseSteamAccount(steamId: string): Promise<SteamAccountChoice>;

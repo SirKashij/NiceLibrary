@@ -12,7 +12,7 @@ import { AddFromFolderButton } from './library/AddFromFolder';
 import { HiddenGamesPage } from './library/HiddenGames';
 import { useSessionChanges } from './library/Sessions';
 import { LocalGameActions } from './library/LocalGameActions';
-import type { Collection, Game, Operations, SteamAccount, SyncOutcome } from './operations';
+import type { Collection, Game, Operations, SteamLogin, SyncOutcome } from './operations';
 import { ThemeSettings } from './settings/ThemeSettings';
 import { ThemeProvider } from './theme';
 import { GameList, LibraryLayoutSwitch, useLibraryLayout } from './library/LibraryLayout';
@@ -745,8 +745,8 @@ function SteamSettings({ operations, onAccountChosen }: { operations: Operations
     );
   };
 
-  const detected = steam.state === 'ready' && steam.value.state === 'found' ? steam.value.accounts : [];
-  // A SteamID in use that no radio button shows: entered by hand, or an account that left this computer.
+  const detected = steam.state === 'ready' && steam.value.state === 'found' ? steam.value.logins : [];
+  // A SteamID in use that no radio button shows: entered by hand, or a Steam Login that left this computer.
   const inUseElsewhere =
     account.state === 'ready' && account.value !== null && !detected.some((a) => a.steamId === account.value)
       ? account.value
@@ -767,10 +767,10 @@ function SteamSettings({ operations, onAccountChosen }: { operations: Operations
             <span>{t('steam.found')}</span>
             <span className="muted">{steam.value.path}</span>
           </div>
-          {steam.value.accountsUnreadable ? (
+          {steam.value.loginsUnreadable ? (
             <p className="note">{t('steam.accountsUnreadable')}</p>
           ) : (
-            steam.value.accounts.length === 0 && <p className="note">{t('steam.noAccounts')}</p>
+            steam.value.logins.length === 0 && <p className="note">{t('steam.noAccounts')}</p>
           )}
         </>
       )}
@@ -782,7 +782,7 @@ function SteamSettings({ operations, onAccountChosen }: { operations: Operations
       {steam.state === 'ready' && account.state === 'ready' && (
         <>
           {detected.length > 0 ? (
-            <AccountChoice accounts={detected} chosen={account.value} onChoose={choose} />
+            <AccountChoice logins={detected} chosen={account.value} onChoose={choose} />
           ) : (
             <SteamIdForm chosen={account.value} onChoose={choose} />
           )}
@@ -802,13 +802,13 @@ function SteamSettings({ operations, onAccountChosen }: { operations: Operations
   );
 }
 
-/** The Steam Accounts on this computer, one of them the account the Library shows. */
+/** The Steam Logins to choose the Steam Account from. */
 function AccountChoice({
-  accounts,
+  logins,
   chosen,
   onChoose,
 }: {
-  accounts: SteamAccount[];
+  logins: SteamLogin[];
   chosen: string | null;
   onChoose: (steamId: string) => void;
 }) {
@@ -819,19 +819,19 @@ function AccountChoice({
         {t('steam.chooseAccount')}
       </p>
       <ul className="accounts" aria-label={t('steam.accounts')}>
-        {accounts.map((account) => (
-          <li key={account.steamId} className="settings-row">
+        {logins.map((login) => (
+          <li key={login.steamId} className="settings-row">
             <label>
               <input
                 type="radio"
                 name="steam-account"
-                value={account.steamId}
-                checked={account.steamId === chosen}
-                onChange={() => onChoose(account.steamId)}
+                value={login.steamId}
+                checked={login.steamId === chosen}
+                onChange={() => onChoose(login.steamId)}
               />
-              {account.displayName}
+              {login.displayName}
             </label>
-            {account.mostRecent && <span className="muted">{t('steam.mostRecent')}</span>}
+            {login.mostRecent && <span className="muted">{t('steam.mostRecent')}</span>}
           </li>
         ))}
       </ul>
@@ -839,7 +839,7 @@ function AccountChoice({
   );
 }
 
-/** Entering a SteamID by hand, for when no Steam Account is found on this computer. */
+/** Entering a SteamID by hand, for when there is no Steam Login on this computer. */
 function SteamIdForm({ chosen, onChoose }: { chosen: string | null; onChoose: (steamId: string) => void }) {
   const t = useT();
   const [draft, setDraft] = useState(chosen ?? '');
