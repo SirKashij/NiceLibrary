@@ -359,3 +359,52 @@ fn mark_as_written_by_a_newer_version(database: &Path) {
     let connection = rusqlite::Connection::open(database).unwrap();
     connection.pragma_update(None, "user_version", 9999).unwrap();
 }
+
+#[test]
+fn the_steam_account_last_read_by_an_earlier_version_is_kept_under_its_new_name() {
+    let profile = Profile::new();
+    write_a_schema_1_database(&profile.database(), Some(PLAYER_ONE));
+
+    let core = profile.start(None);
+
+    assert_eq!(core.library().unwrap(), vec![installed(620, "Portal 2")], "the last-read Steam Account is still known");
+    assert_eq!(settings_keys(&profile.database()), ["last_read_steam_account"]);
+}
+
+#[test]
+fn a_database_of_an_earlier_version_without_a_last_read_steam_account_opens() {
+    let profile = Profile::new();
+    write_a_schema_1_database(&profile.database(), None);
+
+    let core = profile.start(None);
+
+    assert!(core.library().unwrap().is_empty());
+    assert!(settings_keys(&profile.database()).is_empty());
+}
+
+/// Stands in for a database the first version of the app wrote: schema 1,
+/// with one Installed Steam Game of Player One, and, when given, the Steam
+/// Account read last under the setting's first name, `steam_account`.
+fn write_a_schema_1_database(database: &Path, last_read: Option<&str>) {
+    let connection = rusqlite::Connection::open(database).unwrap();
+    connection
+        .execute_batch(&format!(
+            "CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+             CREATE TABLE steam_games (
+                 steam_account TEXT NOT NULL, app_id INTEGER NOT NULL, title TEXT NOT NULL,
+                 installed INTEGER NOT NULL, PRIMARY KEY (steam_account, app_id));
+             INSERT INTO steam_games VALUES ('{PLAYER_ONE}', 620, 'Portal 2', 1);
+             PRAGMA user_version = 1;"
+        ))
+        .unwrap();
+    if let Some(account) = last_read {
+        connection.execute("INSERT INTO settings VALUES ('steam_account', ?1)", [account]).unwrap();
+    }
+}
+
+/// The keys of all settings in the database, in order.
+fn settings_keys(database: &Path) -> Vec<String> {
+    let connection = rusqlite::Connection::open(database).unwrap();
+    let mut statement = connection.prepare("SELECT key FROM settings ORDER BY key").unwrap();
+    statement.query_map([], |row| row.get(0)).unwrap().map(Result::unwrap).collect()
+}
