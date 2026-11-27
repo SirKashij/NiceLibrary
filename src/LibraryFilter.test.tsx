@@ -11,14 +11,14 @@ function steamGame(appId: number, title: string, installed: boolean): Game {
 const LIBRARY = [steamGame(1145360, 'Hades', true), steamGame(220, 'Half-Life 2', false), steamGame(620, 'Portal 2', true)];
 
 /**
- * Fake operations over LIBRARY. `filterLibrary` records each filter it is
+ * Fake operations over `library`. `filterLibrary` records each filter it is
  * asked for and answers like the core does.
  */
-function fakeOperations() {
+function fakeOperations(library: Game[] = LIBRARY) {
   const asked: LibraryFilter[] = [];
   const operations: Operations = {
-    library: async () => LIBRARY,
-    readInstalledGames: async () => LIBRARY,
+    library: async () => library,
+    readInstalledGames: async () => library,
     steamInstallation: async () => ({ state: 'notFound' }),
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
@@ -64,7 +64,7 @@ function fakeOperations() {
     unhideGame: async () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);
-      return LIBRARY.filter(
+      return library.filter(
         (game) =>
           (filter.source === null || game.source === filter.source) &&
           (!filter.installedOnly || game.installed) &&
@@ -73,7 +73,7 @@ function fakeOperations() {
     },
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
-    game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
+    game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     coverHue: async () => null,
@@ -226,5 +226,55 @@ describe('Filtering the Library', () => {
 
     expect(await screen.findByText('Keine Spiele passen zu diesen Filtern.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Filter zurücksetzen' })).toBeInTheDocument();
+  });
+});
+
+describe('Searching the Library by title', () => {
+  const hollowKnight: Game = { ...steamGame(0, 'Hollow Knight', true), id: 'local:1', source: 'local' };
+  const BOTH_SOURCES = [...LIBRARY, hollowKnight];
+
+  it('asks the core with each typed letter and shows the Games of both Sources it answers', async () => {
+    const user = userEvent.setup();
+    const { operations, asked } = fakeOperations(BOTH_SOURCES);
+    render(<App operations={operations} lang="en" />);
+    await shownTitles(4);
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search the library' }), 'O');
+
+    expect(asked.at(-1)).toEqual({ search: 'O', source: null, installedOnly: false, status: null, sort: 'name', favoritesOnly: false });
+    expect(await shownTitles(2)).toEqual(['Portal 2', 'Hollow Knight']);
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search the library' }), 'L');
+
+    expect(asked.map((filter) => filter.search)).toEqual(['O', 'OL']);
+    expect(await shownTitles(1)).toEqual(['Hollow Knight']);
+  });
+
+  it('shows what the core answers instead of filtering in the interface', async () => {
+    const user = userEvent.setup();
+    const { operations } = fakeOperations();
+    // A core that answers Portal 2 to any search, matching or not.
+    operations.filterLibrary = async () => [LIBRARY[2]];
+    render(<App operations={operations} lang="en" />);
+    await shownTitles(3);
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search the library' }), 'hades');
+
+    expect(await shownTitles(1)).toEqual(['Portal 2']);
+  });
+
+  it('shows the full Library again once the search is cleared', async () => {
+    const user = userEvent.setup();
+    const { operations } = fakeOperations(BOTH_SOURCES);
+    render(<App operations={operations} lang="en" />);
+    await shownTitles(4);
+    const searchbox = screen.getByRole('searchbox', { name: 'Search the library' });
+
+    await user.type(searchbox, 'hades');
+    expect(await shownTitles(1)).toEqual(['Hades']);
+    await user.clear(searchbox);
+
+    expect(await shownTitles(4)).toEqual(['Hades', 'Half-Life 2', 'Portal 2', 'Hollow Knight']);
+    expect(searchbox).toHaveValue('');
   });
 });

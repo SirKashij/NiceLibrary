@@ -201,6 +201,42 @@ fn the_filters_combine_with_each_other_and_with_the_search() {
     assert!(titles(&core, filter("half", None, true)).is_empty());
 }
 
+/// Adds a Local Game called `title` whose executable lies in the profile folder.
+fn add_local_game(computer: &Computer, core: &Core, title: &str) {
+    let executable = computer.profile.path().join(format!("{title}.exe"));
+    fs::write(&executable, b"MZ").unwrap();
+    let added = core.add_local_game(&executable.display().to_string(), title).unwrap();
+    assert!(matches!(added, nicelibrary_core::AddLocalGame::Added { .. }), "got {added:?}");
+}
+
+/// A filter that only searches for `search`.
+fn search(search: &str) -> LibraryFilter {
+    LibraryFilter { search: search.into(), ..Default::default() }
+}
+
+#[test]
+fn the_search_ignores_case_and_finds_games_of_both_sources() {
+    let computer = Computer::new();
+    let core = computer.start();
+    add_local_game(&computer, &core, "Hollow Knight");
+
+    // "o" is in Portal 2 (Steam) and Hollow Knight (Local), in any case.
+    assert_eq!(titles(&core, search("O")), ["Hollow Knight", "Portal 2"]);
+    assert_eq!(titles(&core, search("hOLLOW")), ["Hollow Knight"]);
+    assert_eq!(titles(&core, search("PORTAL")), ["Portal 2"]);
+    assert!(titles(&core, search("celeste")).is_empty());
+}
+
+#[test]
+fn a_cleared_search_answers_the_whole_library_again() {
+    let computer = Computer::new();
+    let core = computer.start();
+    add_local_game(&computer, &core, "Hollow Knight");
+    assert_eq!(titles(&core, search("hades")), ["Hades"]);
+
+    assert_eq!(titles(&core, search("")), ["Hades", "Half-Life 2", "Hollow Knight", "Portal 2"]);
+}
+
 #[test]
 fn a_filter_arrives_from_the_interface_in_the_shape_the_interface_sends() {
     let sent = serde_json::json!({ "search": "ha", "source": "local", "installedOnly": true });
