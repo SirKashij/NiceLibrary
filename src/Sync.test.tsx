@@ -80,6 +80,7 @@ function fakeOperations({
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
   };
   return { operations, calls, automaticSync, listeners };
 }

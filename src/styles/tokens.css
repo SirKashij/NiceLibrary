@@ -53,4 +53,7 @@
   --cover-min-width: 158px;
   --cover-aspect: 2 / 3;
   --filter-not-installed: grayscale(1);
+
+  /* Game detail page: the large Cover. */
+  --detail-cover-width: 300px;
 }

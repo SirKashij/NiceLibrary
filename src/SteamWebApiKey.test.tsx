@@ -43,6 +43,7 @@ function fakeOperations({ stored = false } = {}) {
     lastSync: async () => null,
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
+    game: async () => null,
   };
   return { operations, calls };
 }

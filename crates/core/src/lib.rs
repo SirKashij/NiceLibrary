@@ -148,6 +148,13 @@ impl Core {
         Ok(games)
     }
 
+    /// The Game `game_id` as the Library shows it, for its detail page;
+    /// `None` when it is not in the Library, for instance after a Sync
+    /// took it out.
+    pub fn game(&self, game_id: &str) -> Result<Option<Game>, Error> {
+        Ok(self.library()?.into_iter().find(|game| game.id == game_id))
+    }
+
     /// Reads which Steam Games are Installed from Steam's library folders,
     /// stores that for the Steam Account the user chose, or until they choose
     /// for the most recently used one, and answers the Library.

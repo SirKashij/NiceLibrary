@@ -77,6 +77,11 @@ fn filter_library(core: tauri::State<'_, Core>, filter: LibraryFilter) -> Result
     core.filter_library(&filter)
 }
 
+#[tauri::command]
+fn game(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<Game>, Error> {
+    core.game(&game_id)
+}
+
 /// Async, so a slow start of the browser does not block the window.
 #[tauri::command]
 async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(), Error> {
@@ -127,7 +132,8 @@ pub fn run() {
             open_steam_web_api_key_page,
             sync,
             last_sync,
-            filter_library
+            filter_library,
+            game
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

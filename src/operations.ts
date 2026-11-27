@@ -126,6 +126,8 @@ export interface Operations {
   onAutomaticSync(listener: (event: AutomaticSync) => void): () => void;
   /** The Games in the stored Library that match the filter, ordered by title like `library`. */
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
+  /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
+  game(gameId: string): Promise<Game | null>;
 }
 
 export const tauriOperations: Operations = {
@@ -151,4 +153,5 @@ export const tauriOperations: Operations = {
     };
   },
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
+  game: (gameId) => invoke<Game | null>('game', { gameId }),
 };
