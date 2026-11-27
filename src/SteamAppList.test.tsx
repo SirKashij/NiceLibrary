@@ -52,6 +52,8 @@ function fakeOperations({
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    filterLibrary: async () => [],
+    game: async () => null,
     steamAppList: async () => list,
     fetchSteamAppList: () => {
       calls.fetches += 1;

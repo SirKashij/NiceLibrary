@@ -21,10 +21,12 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
+    game: async () => null,
     launch: async () => ({ outcome: 'launched' }),
   };
 }

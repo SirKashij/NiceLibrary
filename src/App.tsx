@@ -1,7 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { SteamAppListSettings } from './settings/SteamAppListSettings';
+import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -180,7 +182,10 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     };
   }, [operations, syncs]);
 
-  const games = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
+  const library = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
+  const [filter, setFilter] = useState(NO_FILTER);
+  const filtered = useFilteredLibrary(operations, filter, library);
+  const games = filtered.state === 'ready' ? filtered.games : undefined;
   const failure: MessageKey | undefined =
     fromSteam.state !== 'failed'
       ? undefined
@@ -203,21 +208,77 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     );
   };
 
+  const launchNotice = launchProblem && (
+    <p className="note" role="alert">
+      {t(launchProblem.message, { title: launchProblem.title })}
+    </p>
+  );
+
+  // The Game whose detail page is open. The Library stays mounted behind it,
+  // so going back finds it as it was.
+  const [opened, setOpened] = useState<Game>();
+  const libraryView = useRef<HTMLDivElement>(null);
+  // Where the Library was scrolled to and what had the focus when a Game was opened.
+  const left = useRef<{ scrollTop: number; focus: Element | null }>(undefined);
+  const open = (game: Game) => {
+    left.current = { scrollTop: libraryView.current?.closest('main')?.scrollTop ?? 0, focus: document.activeElement };
+    setLaunchProblem(undefined);
+    setOpened(game);
+  };
+  const back = () => {
+    setLaunchProblem(undefined);
+    setOpened(undefined);
+  };
+  useLayoutEffect(() => {
+    const main = libraryView.current?.closest('main');
+    if (!main) return;
+    if (opened) {
+      main.scrollTop = 0;
+    } else if (left.current) {
+      if (left.current.focus instanceof HTMLElement) left.current.focus.focus({ preventScroll: true });
+      main.scrollTop = left.current.scrollTop;
+      left.current = undefined;
+    }
+  }, [opened]);
+
   return (
-    <Page title="nav.library">
-      {failure && (
-        <p className="note" role="alert">
-          {t(failure)}
-        </p>
+    <>
+      <div ref={libraryView} hidden={opened !== undefined}>
+        <Page title="nav.library">
+          <LibraryToolbar filter={filter} onChange={setFilter} />
+          {filtered.state === 'failed' && (
+            <p className="note" role="alert">
+              {t('filter.failed')}
+            </p>
+          )}
+          {failure && (
+            <p className="note" role="alert">
+              {t(failure)}
+            </p>
+          )}
+          {!opened && launchNotice}
+          {!isFiltering(filter) && fromSteam.state === 'ready' && games?.length === 0 && (
+            <p className="note">{t('library.empty')}</p>
+          )}
+          {isFiltering(filter) && games?.length === 0 && <NoMatch onReset={() => setFilter(NO_FILTER)} />}
+          {games && games.length > 0 && (
+            <CoverGrid games={games} coverUrl={operations.coverUrl} onPlay={launch} onOpen={open} />
+          )}
+        </Page>
+      </div>
+      {opened && (
+        <GameDetail
+          key={opened.id}
+          operations={operations}
+          game={opened}
+          syncs={syncs}
+          cover={(game) => <Cover key={game.id} title={game.title} src={operations.coverUrl(game)} />}
+          notice={launchNotice}
+          onPlay={launch}
+          onBack={back}
+        />
       )}
-      {launchProblem && (
-        <p className="note" role="alert">
-          {t(launchProblem.message, { title: launchProblem.title })}
-        </p>
-      )}
-      {fromSteam.state === 'ready' && games?.length === 0 && <p className="note">{t('library.empty')}</p>}
-      {games && games.length > 0 && <CoverGrid games={games} coverUrl={operations.coverUrl} onPlay={launch} />}
-    </Page>
+    </>
   );
 }
 
@@ -225,10 +286,13 @@ function CoverGrid({
   games,
   coverUrl,
   onPlay,
+  onOpen,
 }: {
   games: Game[];
   coverUrl: Operations['coverUrl'];
   onPlay: (game: Game) => void;
+  /** Opens the Game's detail page. */
+  onOpen: (game: Game) => void;
 }) {
   const t = useT();
   return (
@@ -236,7 +300,14 @@ function CoverGrid({
       {games.map((game) => (
         <li key={game.id} className="game" data-installed={game.installed}>
           <div className="cover-frame">
-            <Cover title={game.title} src={coverUrl(game)} />
+            <button
+              type="button"
+              className="open-game"
+              aria-label={t('library.openGame', { title: game.title })}
+              onClick={() => onOpen(game)}
+            >
+              <Cover title={game.title} src={coverUrl(game)} />
+            </button>
             {game.installed && (
               <button
                 type="button"

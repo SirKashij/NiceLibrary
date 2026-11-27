@@ -1,0 +1,12 @@
+# Keeps the actions in .github/workflows up to date. Security updates for the
+# Rust and npm dependencies are switched on in the repository settings and
+# need no entry here.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
