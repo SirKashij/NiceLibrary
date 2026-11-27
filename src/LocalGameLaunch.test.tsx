@@ -92,6 +92,7 @@ function fakeOperations({
       throw new Error('this test shows no Statistics');
     },
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
@@ -125,6 +126,8 @@ function fakeOperations({
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
+    coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
   };

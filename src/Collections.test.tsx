@@ -55,6 +55,7 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     showTrayMenu: async () => {},
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: () => () => {},
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
@@ -87,6 +88,7 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     chooseLanguage: async () => {},
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');
@@ -109,6 +111,7 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    coverHue: async () => null,
   };
   return { operations, calls };
 }

@@ -68,6 +68,7 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     chooseLanguage: async () => {},
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');
@@ -75,6 +76,7 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     openLogFolder: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');
@@ -115,6 +117,7 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    coverHue: async () => null,
   };
   return { operations, asked, chosen };
 }

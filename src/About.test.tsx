@@ -44,6 +44,7 @@ function fakeOperations({
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     filterLibrary: async () => [],
@@ -81,6 +82,7 @@ function fakeOperations({
     removeGameFromCollection: async () => {},
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
+    coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
     about,
@@ -92,6 +94,7 @@ function fakeOperations({
       calls.opened.push(page);
       return openPage();
     },
+    install: async () => ({ outcome: 'started' }),
   };
   return { operations, calls };
 }

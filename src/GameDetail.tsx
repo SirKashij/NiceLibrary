@@ -1,10 +1,12 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Achievements } from './Achievements';
+import { useCoverTint } from './coverTint';
 import { useFormat, useT, type MessageKey } from './i18n';
 import { FavoriteToggle } from './Favorites';
 import { LaunchOptionsForm } from './LaunchOptions';
 import { ManualProgressForm } from './ManualProgress';
 import { ProgressValue } from './library/Progress';
+import { GameActionButton } from './library/GameAction';
 import { HideGameButton } from './library/HiddenGames';
 import { PlaytimeAdjustment } from './library/PlaytimeAdjustment';
 import { StatusChoice } from './library/Status';
@@ -22,7 +24,8 @@ const SOURCES: Record<Source, MessageKey> = {
  * one, its Collections and the main action, for a Local Game its Launch
  * Options and Manual Progress, its Achievements, marking it as a Favorite,
  * and the way back to the Library. Shows the Game as opened at once and as
- * the core answers it then, again after each change.
+ * the core answers it then, again after each change. Takes its Tint from the
+ * Game's Cover, or stays neutral (see src/coverTint.ts).
  */
 export function GameDetail({
   operations,
@@ -32,6 +35,7 @@ export function GameDetail({
   collections,
   notice,
   onPlay,
+  onInstall,
   onChanged,
   onFavorite,
   onBack,
@@ -49,9 +53,11 @@ export function GameDetail({
   cover: (game: Game) => ReactNode;
   /** Which Collections the Game is in, shown while it is in the Library. */
   collections?: ReactNode;
-  /** Why the last Launch did not start, if it did not. */
+  /** Why the last Launch or Install did not work, if it did not. */
   notice?: ReactNode;
   onPlay: (game: Game) => void;
+  /** Starts the installation of a Steam Game that is not Installed. */
+  onInstall: (game: Game) => void;
   /** Hears that the Game's Status, Manual Progress or Playtime Adjustment was set, which changes the Library and its order. */
   onChanged: (game: Game) => void;
   /** Marks the Game as a Favorite, or unmarks it. */
@@ -95,6 +101,14 @@ export function GameDetail({
     };
   }, [operations, opened.id, syncs]);
 
+  // A Local Game's Cover changes when the user chooses an image or goes back to the icon; its Tint follows.
+  const [coverChanges, setCoverChanges] = useState(0);
+  const tint = useCoverTint(operations, opened.id, coverChanges);
+  // The Tint replaces the theme's background and accent for everything on the page.
+  const tinted = tint
+    ? ({ '--color-bg': tint.background, '--color-accent': tint.accent, '--color-accent-ink': tint.accentInk } as CSSProperties)
+    : undefined;
+
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
 
@@ -104,7 +118,13 @@ export function GameDetail({
     game?.lastPlayed != null ? format.date(game.lastPlayed) : minutes === null ? t('game.notKnown') : t('game.never');
 
   return (
-    <section className="page game-detail" aria-labelledby={headingId} data-installed={game?.installed ?? false}>
+    <section
+      className="page game-detail"
+      aria-labelledby={headingId}
+      data-installed={game?.installed ?? false}
+      data-tint={tint ? 'cover' : 'neutral'}
+      style={tinted}
+    >
       <button type="button" className="back" onClick={onBack}>
         {t('game.back')}
       </button>
@@ -113,7 +133,14 @@ export function GameDetail({
         <div className="game-detail-cover">
           {cover(game ?? opened)}
           {game?.source === 'local' && (
-            <LocalGameCoverChoice operations={operations} game={game} onCoverChanged={onCoverChanged} />
+            <LocalGameCoverChoice
+              operations={operations}
+              game={game}
+              onCoverChanged={(changed) => {
+                setCoverChanges((n) => n + 1);
+                onCoverChanged(changed);
+              }}
+            />
           )}
           {game && <FavoriteToggle game={game} onToggle={onFavorite} />}
         </div>
@@ -125,16 +152,7 @@ export function GameDetail({
             <p className="note">{t('game.gone', { title: opened.title })}</p>
           ) : (
             <>
-              {game.installed && (
-                <button
-                  type="button"
-                  className="button play-main"
-                  aria-label={t('library.playGame', { title: game.title })}
-                  onClick={() => onPlay(game)}
-                >
-                  {t('library.play')}
-                </button>
-              )}
+              <GameActionButton game={game} className="button play-main" onPlay={onPlay} onInstall={onInstall} />
               <dl className="game-facts" aria-label={t('game.facts', { title: game.title })}>
                 <div>
                   <dt>{t('game.source')}</dt>

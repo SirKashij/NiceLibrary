@@ -46,6 +46,7 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     setStartWithWindows: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
@@ -72,11 +73,13 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     },
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
+    coverHue: async () => null,
     launch: (game) => {
       requested.push(game.id);
       return launch(game);
     },
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     launchOptions: async () => null,
     setLaunchOptions: async () => {},

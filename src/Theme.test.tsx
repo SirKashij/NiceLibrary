@@ -37,6 +37,7 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     showTrayMenu: async () => {},
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: () => () => {},
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
@@ -56,6 +57,7 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     chooseLibraryLayout: async () => {},
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    coverHue: async () => null,
     game: async () => null,
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
@@ -74,6 +76,7 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');

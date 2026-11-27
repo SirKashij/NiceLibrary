@@ -98,6 +98,9 @@ export interface LaunchOptions {
   workingDirectory: string | null;
 }
 
+/** How starting the installation of a Steam Game went, when nothing failed. Mirrors `Install` in crates/core. */
+export type InstallOutcome = { outcome: 'started' } | { outcome: 'steamNotFound' };
+
 /** How storing the Steam Web API key went, when nothing failed. Mirrors `SteamWebApiKeyCheck` in crates/core. */
 export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' } | { outcome: 'steamUnreachable' };
 
@@ -132,6 +135,22 @@ export type EditLocalGame =
   | { outcome: 'alreadyAdded'; /** The title of the Local Game the executable belongs to. */ title: string }
   | { outcome: 'noTitle' }
   | { outcome: 'notFound' };
+
+/**
+ * What came of asking the user for a folder of Games, when nothing failed.
+ * Mirrors `FolderSuggestions` in crates/core.
+ */
+export type FolderSuggestions =
+  | { outcome: 'cancelled' }
+  | { outcome: 'suggested'; folder: string; executables: SuggestedExecutable[] };
+
+/** An executable found in a folder of Games. Mirrors `SuggestedExecutable` in crates/core. */
+export interface SuggestedExecutable {
+  executable: string;
+  /** The title the app proposes; for an executable already in the Library, the title it has there. */
+  title: string;
+  alreadyAdded: boolean;
+}
 
 /** The theme the user chose; `system` follows the operating system's dark or light setting. Mirrors `Theme` in crates/core. */
 export type Theme = 'system' | 'dark' | 'light';
@@ -497,6 +516,31 @@ export interface Operations {
    * Answers where it was written, or that the user cancelled.
    */
   exportData(): Promise<DataExport>;
+  /**
+   * The dominant hue of the Game's Cover, from which its Detail Page takes
+   * its Tint; `null` when it has no Cover or one without colour to speak of.
+   */
+  coverHue(gameId: string): Promise<CoverHue | null>;
+  /**
+   * Starts the installation of a Steam Game that is owned but not Installed:
+   * Steam shows its install dialog for it. Rejects when that could not be done.
+   */
+  install(game: Game): Promise<InstallOutcome>;
+  /**
+   * Asks the user to choose a folder of Games in the operating system's
+   * folder dialog and suggests the executables in it, each with a proposed
+   * title. Adds nothing; the ticked ones are added with `addLocalGame`.
+   * Rejects when no dialog can be shown.
+   */
+  suggestExecutablesInFolder(): Promise<FolderSuggestions>;
+}
+
+/** The hue most of a Cover's colourful pixels share. Mirrors `CoverHue` in crates/core. */
+export interface CoverHue {
+  /** Degrees on the colour wheel, from 0 (red) up to 360. */
+  hue: number;
+  /** How vivid the Cover's pixels of that hue are, from 0 (grey) to 1. */
+  saturation: number;
 }
 
 /** How choosing an image as a Local Game's Cover went. Every outcome but `chosen` changed nothing. Mirrors `CoverImageChoice` in crates/core. */
@@ -631,6 +675,9 @@ export const tauriOperations: Operations = {
   about: () => invoke<About>('about'),
   openAboutPage: (page) => invoke<void>('open_about_page', { page }),
   exportData: () => invoke<DataExport>('export_data'),
+  coverHue: (gameId) => invoke<CoverHue | null>('cover_hue', { gameId }),
+  install: (game) => invoke<InstallOutcome>('install', { gameId: game.id }),
+  suggestExecutablesInFolder: () => invoke<FolderSuggestions>('suggest_executables_in_folder'),
 };
 
 /** Mirrors `Statistics` in crates/core: the totals over the Games in the Library. */

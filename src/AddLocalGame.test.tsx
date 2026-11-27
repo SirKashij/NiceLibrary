@@ -50,6 +50,7 @@ function fakeOperations({
     showTrayMenu: async () => {},
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: () => () => {},
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
@@ -80,10 +81,12 @@ function fakeOperations({
     chooseLibraryLayout: async () => {},
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    coverHue: async () => null,
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     chooseLocalGameExecutable: choice,
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async (executable, title) => {
       added.push({ executable, title });
       if (add) return add(executable, title);

@@ -83,6 +83,7 @@ function fakeOperations(
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     localGame: async (gameId): Promise<LocalGame | null> => {
       const game = games.find((game) => game.id === gameId && game.source === 'local');
       return game ? { id: game.id, title: game.title, executable: executables[game.id] } : null;
@@ -136,6 +137,8 @@ function fakeOperations(
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
+    coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
   };

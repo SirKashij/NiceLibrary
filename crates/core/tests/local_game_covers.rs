@@ -587,6 +587,40 @@ impl nicelibrary_core::ProcessList for NothingRuns {
     }
 }
 
+/// The distance between the hue of `game_id`'s Cover and `degrees` on the colour wheel.
+fn cover_hue_distance(app: &App, game_id: &str, degrees: f64) -> f64 {
+    let hue = app.core.cover_hue(game_id).unwrap().expect("a Cover hue").hue;
+    let d = (hue - degrees).rem_euclid(360.0);
+    d.min(360.0 - d)
+}
+
+#[test]
+fn the_detail_page_of_a_local_game_takes_its_tint_from_the_icon_cover() {
+    let app = App::start();
+    let game = app.add_game("Games/Celeste/Celeste.exe", Some(icon(256, RED)));
+
+    // RED is a hue of about 357 degrees; the neutral background does not count.
+    assert!(cover_hue_distance(&app, &game, 357.0) <= 8.0);
+}
+
+#[test]
+fn the_detail_page_of_a_local_game_takes_its_tint_from_a_chosen_image() {
+    let app = App::start();
+    let game = app.add_game("Games/Celeste/Celeste.exe", Some(icon(256, RED)));
+    app.choose_image(&game, &app.put("Pictures/celeste.png", &generated_png(60, 90, BLUE)));
+
+    // BLUE is a hue of about 230 degrees.
+    assert!(cover_hue_distance(&app, &game, 230.0) <= 8.0);
+}
+
+#[test]
+fn a_local_game_without_a_cover_has_no_hue() {
+    let app = App::start();
+    let game = app.add_game("Games/Celeste/Celeste.exe", None);
+
+    assert_eq!(app.core.cover_hue(&game).unwrap(), None);
+}
+
 /// No export is made here: the user cancels every "Save as" dialog.
 struct NoExportFile;
 

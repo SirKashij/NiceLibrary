@@ -77,6 +77,7 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     game: async (gameId) => shown().find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     librarySort: async () => 'name',
@@ -107,6 +108,8 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
+    coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
   };

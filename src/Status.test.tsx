@@ -59,6 +59,7 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     chooseLanguage: async () => {},
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');
@@ -66,7 +67,9 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     openLogFolder: async () => {},
+    coverHue: async () => null,
     collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),
     renameCollection: async () => ({ outcome: 'emptyName' }),

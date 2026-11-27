@@ -50,6 +50,7 @@ function fakeOperations({ closeToTray = true } = {}) {
     language: async () => 'system',
     chooseLanguage: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');
@@ -75,6 +76,7 @@ function fakeOperations({ closeToTray = true } = {}) {
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    coverHue: async () => null,
     filterLibrary: async () => [],
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
@@ -95,6 +97,7 @@ function fakeOperations({ closeToTray = true } = {}) {
     },
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     showTrayMenu: async (texts) => {
       calls.trayMenus.push(texts);
     },

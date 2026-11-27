@@ -9,7 +9,9 @@ mod achievements;
 mod autostart;
 mod clock;
 mod collections;
+mod cover_hue;
 mod covers;
+mod executables_in_folder;
 mod export;
 mod favorites;
 pub mod keyvalues;
@@ -46,10 +48,12 @@ pub use achievements::{Achievement, GameAchievements};
 pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
+pub use cover_hue::CoverHue;
 pub use covers::{Cover, CoverCache, Downloader};
+pub use executables_in_folder::{FolderSuggestions, SuggestedExecutable};
 pub use export::{DataExport, ExportFilePicker};
 pub use language::Language;
-pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
+pub use launch::{Install, Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
 pub use local_games::{AddLocalGame, EditLocalGame, ExecutableChoice, ExecutablePicker, LocalGame};
@@ -479,6 +483,34 @@ impl Core {
         }
     }
 
+    /// Starts the installation of the Steam Game `game_id`, which is owned
+    /// but not Installed, by opening its `steam://install/` URL: Steam shows
+    /// its install dialog and installs the Game. The next reading of the
+    /// Installed Games finds it once Steam is done.
+    pub fn install(&self, game_id: &str) -> Result<Install, Error> {
+        self.logged_outcome("install", self.install_game(game_id))
+    }
+
+    fn install_game(&self, game_id: &str) -> Result<Install, Error> {
+        let Some(game) = self.stored_library()?.into_iter().find(|game| game.id == game_id) else {
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
+        };
+        if game.installed {
+            return Err(Error::new(format!("already installed: {}", game.title)));
+        }
+        let Some(app_id) = steam_app_id(&game.id) else {
+            return Err(Error::new(format!("only Steam Games can be installed: {}", game.title)));
+        };
+        if self.ports.steam_locator.steam_folder().is_none() {
+            return Ok(Install::SteamNotFound);
+        }
+        match self.ports.opener.open_url(&launch::steam_install_url(app_id)) {
+            Ok(()) => Ok(Install::Started),
+            Err(OpenError::NoProgram) => Ok(Install::SteamNotFound),
+            Err(error) => Err(Error::new(format!("the installation of {} could not be started: {error}", game.title))),
+        }
+    }
+
     /// Syncs: fetches every Steam Game the Steam Account owns, Installed or
     /// not, with Steam's Playtime and Last Played, and merges it into the
     /// store. A Steam Game the account no longer owns leaves the Library
@@ -838,6 +870,30 @@ impl Core {
             Some(game) => Ok(ManualProgress::Set { game }),
             None => Err(Error::new(format!("no such game in the library: {game_id}"))),
         }
+    }
+
+    /// Asks the user to choose a folder of Games and suggests the executables
+    /// in it as Local Games, each with a proposed title; those already in the
+    /// Library are marked. Adds nothing: the user adds the ones they tick
+    /// with [`Self::add_local_game`].
+    pub fn suggest_executables_in_folder(&self) -> Result<FolderSuggestions, Error> {
+        self.logged_outcome("suggest_executables_in_folder", self.suggest_executables())
+    }
+
+    fn suggest_executables(&self) -> Result<FolderSuggestions, Error> {
+        let chosen = self
+            .ports
+            .executable_picker
+            .choose_folder()
+            .map_err(|reason| Error::new(format!("folder dialog: {reason}")))?;
+        let Some(folder) = chosen else {
+            return Ok(FolderSuggestions::Cancelled);
+        };
+        let Some(text) = folder.to_str() else {
+            return Err(Error::new(format!("not a path that can be stored: {}", folder.display())));
+        };
+        let executables = executables_in_folder::suggestions(&folder, &self.store.local_games()?);
+        Ok(FolderSuggestions::Suggested { folder: text.to_owned(), executables })
     }
 
     /// Opens the Steam page where the user creates their Steam Web API key,
@@ -1409,6 +1465,15 @@ impl Core {
         let contents = export::contents(&self.store, &self.covers, self.ports.autostart.as_ref(), now)?;
         export::write(&file, &contents)?;
         Ok(DataExport::Exported { file: file.display().to_string() })
+    }
+
+    /// The dominant hue of the Game `game_id`'s Cover, from which its Detail
+    /// Page takes its Tint; `None` when the Game has no Cover or a Cover
+    /// without colour to speak of. Reads the cached Cover, downloading it
+    /// first like [`Core::cover`] when it is not cached yet.
+    pub fn cover_hue(&self, game_id: &str) -> Result<Option<CoverHue>, Error> {
+        let hue = self.cover(game_id).map(|cover| cover.as_ref().and_then(cover_hue::dominant_hue));
+        self.logged("cover_hue", hue)
     }
 }
 

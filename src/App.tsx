@@ -8,9 +8,9 @@ import { useFormat, useT, type Lang, type MessageKey } from './i18n';
 import { LanguageProvider } from './language';
 import { LanguageSettings } from './settings/LanguageSettings';
 import { AddLocalGameButton } from './library/AddLocalGame';
+import { AddFromFolderButton } from './library/AddFromFolder';
 import { HiddenGamesPage } from './library/HiddenGames';
 import { useSessionChanges } from './library/Sessions';
-import { whyNotLaunched } from './launchProblem';
 import { LocalGameActions } from './library/LocalGameActions';
 import type { Collection, Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { ThemeSettings } from './settings/ThemeSettings';
@@ -26,6 +26,7 @@ import { ProgressBadge } from './library/Progress';
 import { ExportSettings } from './settings/ExportSettings';
 import { LogSettings } from './settings/LogSettings';
 import { StatisticsPage } from './statistics/StatisticsPage';
+import { GameActionButton, useGameAction } from './library/GameAction';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -334,30 +335,15 @@ function LibraryView({
         ? 'library.loadFailed'
         : 'library.readFailed';
 
-  // Why the last Launch did not start its Game, if it did not.
-  const [launchProblem, setLaunchProblem] = useState<{ message: MessageKey; title: string }>();
-  // Only the answer to the latest Launch counts; an earlier one may answer later.
-  const latestLaunch = useRef(0);
-  const launch = (game: Game) => {
-    const id = ++latestLaunch.current;
-    const report = (problem?: { message: MessageKey; title: string }) => {
-      if (id === latestLaunch.current) setLaunchProblem(problem);
-    };
-    operations.launch(game).then(
-      (outcome) => {
-        const message = whyNotLaunched(outcome);
-        report(message && { message, title: game.title });
-      },
-      () => report({ message: 'launch.failed', title: game.title }),
-    );
-  };
+  // Launch or Install, and why the last of them did not work, if it did not.
+  const action = useGameAction(operations);
 
   const favorite = useFavoriteMarking(operations, onFavoriteMarked);
   const launchNotice = (
     <>
-      {launchProblem && (
+      {action.problem && (
         <p className="note" role="alert">
-          {t(launchProblem.message, { title: launchProblem.title })}
+          {t(action.problem.message, { title: action.problem.title })}
         </p>
       )}
       {favorite.notice}
@@ -382,7 +368,7 @@ function LibraryView({
   const left = useRef<{ scrollTop: number; focus: Element | null }>(undefined);
   const leave = () => {
     left.current = { scrollTop: libraryView.current?.closest('main')?.scrollTop ?? 0, focus: document.activeElement };
-    setLaunchProblem(undefined);
+    action.clear();
     setHiddenLast(undefined);
     setRemoved(undefined);
   };
@@ -395,7 +381,7 @@ function LibraryView({
     setShowingHidden(true);
   };
   const back = () => {
-    setLaunchProblem(undefined);
+    action.clear();
     setOpened(undefined);
     setShowingHidden(false);
   };
@@ -432,6 +418,7 @@ function LibraryView({
         <Page title={favoritesOnly ? 'favorites.title' : 'nav.library'} heading={collection?.name}>
           <div className="library-actions">
             <AddLocalGameButton operations={operations} onAdded={changed} />
+            <AddFromFolderButton operations={operations} onAdded={changed} />
             <button type="button" className="button" onClick={showHidden}>
               {t('hidden.title')}
             </button>
@@ -481,7 +468,8 @@ function LibraryView({
             <CoverGrid
               games={games}
               coverUrl={coverUrl}
-              onPlay={launch}
+              onPlay={action.play}
+              onInstall={action.install}
               onOpen={open}
               onFavorite={favorite.toggle}
             />
@@ -490,7 +478,8 @@ function LibraryView({
             <GameList
               games={games}
               cover={(game) => <Cover title={game.title} src={coverUrl(game)} />}
-              onPlay={launch}
+              onPlay={action.play}
+              onInstall={action.install}
               onOpen={open}
               onFavorite={favorite.toggle}
             />
@@ -514,7 +503,8 @@ function LibraryView({
             />
           }
           notice={launchNotice}
-          onPlay={launch}
+          onPlay={action.play}
+          onInstall={action.install}
           onChanged={() => setGameChanges((count) => count + 1)}
           onFavorite={favorite.toggle}
           onBack={back}
@@ -555,12 +545,15 @@ function CoverGrid({
   games,
   coverUrl,
   onPlay,
+  onInstall,
   onOpen,
   onFavorite,
 }: {
   games: Game[];
   coverUrl: Operations['coverUrl'];
   onPlay: (game: Game) => void;
+  /** Starts the installation of a Steam Game that is not Installed. */
+  onInstall: (game: Game) => void;
   /** Opens the Game's detail page. */
   onOpen: (game: Game) => void;
   /** Marks the Game as a Favorite, or unmarks it. */
@@ -580,16 +573,7 @@ function CoverGrid({
             >
               <Cover title={game.title} src={coverUrl(game)} />
             </button>
-            {game.installed && (
-              <button
-                type="button"
-                className="play"
-                aria-label={t('library.playGame', { title: game.title })}
-                onClick={() => onPlay(game)}
-              >
-                {t('library.play')}
-              </button>
-            )}
+            <GameActionButton game={game} className="play" onPlay={onPlay} onInstall={onInstall} />
             <FavoriteToggle game={game} onToggle={onFavorite} />
           </div>
           <h2 className="game-title">{game.title}</h2>

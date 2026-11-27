@@ -8,10 +8,10 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     About, AboutPage, AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
-    CoverImageChoice, DataExport, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Language, Launch, LaunchOptions,
-    LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, ManualProgress, Statistics, Status, SteamAccountChoice,
-    SteamAppList, SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking,
-    started_with_windows,
+    CoverHue, CoverImageChoice, DataExport, EditLocalGame, Error, ExecutableChoice, FolderSuggestions, Game, GameAchievements,
+    Install, Language, Launch, LaunchOptions, LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, ManualProgress,
+    Statistics, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store,
+    SyncOutcome, Theme, Tracking, started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -33,6 +33,12 @@ async fn read_installed_games(core: tauri::State<'_, Core>) -> Result<Vec<Game>,
 #[tauri::command]
 async fn launch(core: tauri::State<'_, Core>, game_id: String) -> Result<Launch, Error> {
     core.launch(&game_id)
+}
+
+/// Async, like `launch`: it opens a `steam://` URL too.
+#[tauri::command]
+async fn install(core: tauri::State<'_, Core>, game_id: String) -> Result<Install, Error> {
+    core.install(&game_id)
 }
 
 #[tauri::command]
@@ -184,6 +190,12 @@ fn library_layout(core: tauri::State<'_, Core>) -> Result<LibraryLayout, Error> 
 #[tauri::command]
 fn choose_library_layout(core: tauri::State<'_, Core>, layout: LibraryLayout) -> Result<(), Error> {
     core.choose_library_layout(layout)
+}
+
+/// Async, so the window stays responsive while the folder dialog is open.
+#[tauri::command]
+async fn suggest_executables_in_folder(core: tauri::State<'_, Core>) -> Result<FolderSuggestions, Error> {
+    core.suggest_executables_in_folder()
 }
 
 #[tauri::command]
@@ -356,6 +368,12 @@ fn choose_language(core: tauri::State<'_, Core>, language: Language) -> Result<(
     core.choose_language(language)
 }
 
+/// Async: the Cover may have to be downloaded, and its image is decoded.
+#[tauri::command]
+async fn cover_hue(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<CoverHue>, Error> {
+    core.cover_hue(&game_id)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 /// Achievement icons come from `<game id>/achievements/<icon>` under the same scheme
@@ -478,6 +496,9 @@ pub fn run() {
             open_about_page,
             language,
             choose_language,
+            cover_hue,
+            install,
+            suggest_executables_in_folder,
             playtime_adjustment,
             set_playtime_adjustment,
             export_data

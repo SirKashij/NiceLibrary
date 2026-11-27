@@ -74,6 +74,7 @@ function fakeOperations({
     deleteCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },
@@ -104,6 +105,8 @@ function fakeOperations({
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
+    coverHue: async () => null,
     language: language ?? (async () => kept),
     chooseLanguage:
       chooseLanguage ??

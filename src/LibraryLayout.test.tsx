@@ -17,12 +17,13 @@ function pending<T>(): Promise<T> {
 
 /**
  * Fake operations over LIBRARY that start with `stored` as the stored Library
- * Layout. Records each Library Layout chosen, each Game launched and each
- * Favorite mark.
+ * Layout. Records each Library Layout chosen, each Game launched or
+ * installed and each Favorite mark.
  */
 function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverGrid')) {
   const chosen: LibraryLayout[] = [];
   const launched: string[] = [];
+  const installed: string[] = [];
   const marks: [string, boolean][] = [];
   let failChoosing = false;
   const operations: Operations = {
@@ -58,6 +59,7 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
@@ -103,6 +105,11 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     favoriteCount: async () => 0,
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async (game) => {
+      installed.push(game.id);
+      return { outcome: 'started' };
+    },
+    coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
@@ -110,7 +117,7 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
       throw new Error('this test shows no Statistics');
     },
   };
-  return { operations, chosen, launched, marks, failWhenChoosing: () => (failChoosing = true) };
+  return { operations, chosen, launched, installed, marks, failWhenChoosing: () => (failChoosing = true) };
 }
 
 /** The Library's Games as shown, once it shows all of LIBRARY. */
@@ -212,7 +219,7 @@ describe('The list', () => {
 
     expect(within(halfLife).getByText('Never played')).toBeInTheDocument();
     expect(within(halfLife).getByText('Never')).toBeInTheDocument();
-    expect(within(halfLife).getByText('Not installed')).toBeInTheDocument();
+    expect(within(halfLife).getByRole('button', { name: 'Install Half-Life 2' })).toBeInTheDocument();
     expect(within(halfLife).queryByRole('button', { name: /^Play/ })).not.toBeInTheDocument();
 
     expect(within(portal).getByText('Local')).toBeInTheDocument();
@@ -257,6 +264,20 @@ describe('The list', () => {
     expect(screen.getByRole('button', { name: 'Details for Portal 2' })).toHaveFocus();
   });
 
+  it('starts the installation of a Steam Game that is not Installed from its row', async () => {
+    const user = userEvent.setup();
+    const { operations, installed, launched } = fakeOperations(Promise.resolve('list'));
+    render(<App operations={operations} lang="en" />);
+    const [, halfLife] = await shownGames();
+
+    await user.click(within(halfLife).getByRole('button', { name: 'Install Half-Life 2' }));
+
+    expect(installed).toEqual(['steam:220']);
+    expect(launched).toEqual([]);
+    // Install does not open the detail page.
+    expect(screen.queryByRole('button', { name: 'Back to the library' })).not.toBeInTheDocument();
+  });
+
   it('is reached row by row with Tab, after the layout switch', async () => {
     const user = userEvent.setup();
     const { operations } = fakeOperations(Promise.resolve('list'));
@@ -265,7 +286,7 @@ describe('The list', () => {
 
     screen.getByRole('button', { name: 'List' }).focus();
     const reached: (string | null)[] = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 9; i++) {
       await user.tab();
       reached.push(document.activeElement?.getAttribute('aria-label') ?? null);
     }
@@ -275,6 +296,7 @@ describe('The list', () => {
       'Play Hades',
       'Details for Half-Life 2',
       'Favorite Half-Life 2',
+      'Install Half-Life 2',
       'Details for Portal 2',
       'Favorite Portal 2',
       'Play Portal 2',

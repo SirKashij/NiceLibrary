@@ -51,6 +51,7 @@ function fakeOperations(initial: Game[]) {
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     theme: async () => 'system',
     chooseTheme: async () => {},
     collections: async () => [],
@@ -97,6 +98,8 @@ function fakeOperations(initial: Game[]) {
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
+    coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
   };

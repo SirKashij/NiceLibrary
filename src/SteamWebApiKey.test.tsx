@@ -62,6 +62,7 @@ function fakeOperations({ stored = false } = {}) {
     setStartWithWindows: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
@@ -83,7 +84,9 @@ function fakeOperations({ stored = false } = {}) {
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    coverHue: async () => null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');

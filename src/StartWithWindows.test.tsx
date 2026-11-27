@@ -40,6 +40,7 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     hideGame: async () => {},
     unhideGame: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');
@@ -89,8 +90,10 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
+    install: async () => ({ outcome: 'started' }),
   };
   const removeOutsideTheApp = () => {
     entry = false;

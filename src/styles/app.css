@@ -143,6 +143,10 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .local-game-form { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); }
 .local-game-form > label { color: var(--color-text-muted); font-size: var(--text-size-label); }
 
+/* Adding Local Games from a folder: one row per suggested executable. */
+.suggested-executables { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.suggested-executable { display: grid; gap: var(--space-1); }
+
 /* The theme: following the system, dark or light. */
 .theme-choice { display: grid; gap: var(--space-1); }
 .theme-choice label { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; cursor: pointer; }
@@ -211,6 +215,14 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .game-row[data-installed='false'] .cover { filter: var(--filter-not-installed); }
 .game-row[data-installed='false'] .game-title { color: var(--color-text-muted); }
 
+/* The Tint (src/coverTint.ts) sets the page's own background and accent; the background fills the main area. */
+.game-detail[data-tint='cover'] {
+  margin: calc(-1 * var(--space-6)) calc(-1 * var(--space-7));
+  padding: var(--space-6) var(--space-7);
+  min-height: calc(100% + 2 * var(--space-6));
+  align-content: start;
+  background: var(--color-bg);
+}
 /* Close-to-tray setting and the Tray notice (src/settings/WindowSettings.tsx, src/Tray.tsx). */
 .checkbox-row { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
 input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
@@ -358,3 +370,6 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .about-facts { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .about-links { display: flex; gap: var(--space-2); }
 .about-section { display: grid; gap: var(--space-2); padding-top: var(--space-3); border-top: var(--hairline) solid var(--color-line); }
+/* The main action on a Game carries an icon: play for Launch, a download arrow for Install. */
+.play, .play-main { display: inline-flex; align-items: center; gap: var(--space-1); }
+.action-icon { flex: none; }

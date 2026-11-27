@@ -141,6 +141,10 @@ impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
     fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
         Ok(None)
     }
+
+    fn choose_folder(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
+    }
 }
 
 /// One running app with a Log in `profile/logs`.
@@ -243,6 +247,16 @@ fn creating_a_collection_and_fetching_the_steam_app_list_are_written_as_notable_
     assert!(log.contains("INFO create_collection: named"), "{log}");
     assert!(log.contains("INFO create_collection: emptyName"), "{log}");
     assert!(log.contains("INFO fetch_steam_app_list: keyRejected"), "{log}");
+}
+
+#[test]
+fn suggesting_the_executables_in_a_folder_is_written_as_a_notable_event() {
+    let app = App::start();
+
+    app.core.suggest_executables_in_folder().unwrap();
+
+    let log = app.log();
+    assert!(log.contains("INFO suggest_executables_in_folder: cancelled"), "{log}");
 }
 
 #[test]

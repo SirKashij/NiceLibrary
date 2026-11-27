@@ -70,6 +70,7 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     game: async (gameId) => library().find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     markFavorite: async (gameId, favorite) => {
       marks.push([gameId, favorite]);
       if (marking === 'fails') throw new Error('database: disk I/O error');
@@ -115,6 +116,8 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
+    coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
   };

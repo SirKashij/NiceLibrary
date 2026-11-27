@@ -1,8 +1,10 @@
-import { render, screen, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
 import { App } from './App';
-import type { Game, LaunchOutcome, Operations, SyncOutcome } from './operations';
+import type { CoverHue, Game, LaunchOutcome, Operations, SyncOutcome } from './operations';
 
 function steamGame(appId: number, title: string, details: Partial<Game> = {}): Game {
   return {
@@ -29,7 +31,11 @@ const PORTAL_2 = steamGame(620, 'Portal 2', { playtimeMinutes: 1_260, lastPlayed
  */
 function fakeOperations(
   initial: Game[],
-  options: { launch?: (game: Game) => Promise<LaunchOutcome>; sync?: () => Promise<SyncOutcome> } = {},
+  options: {
+    launch?: (game: Game) => Promise<LaunchOutcome>;
+    sync?: () => Promise<SyncOutcome>;
+    coverHue?: (gameId: string) => Promise<CoverHue | null>;
+  } = {},
 ) {
   let games = initial;
   const calls = { library: 0, launched: [] as string[], game: [] as string[] };
@@ -71,6 +77,7 @@ function fakeOperations(
     setStartWithWindows: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
@@ -95,11 +102,13 @@ function fakeOperations(
     chooseLibraryLayout: async () => {},
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    coverHue: options.coverHue ?? (async () => null),
     game: async (gameId) => {
       calls.game.push(gameId);
       return games.find((game) => game.id === gameId) ?? null;
     },
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');
@@ -305,5 +314,102 @@ describe('The main action on the detail page', () => {
     await user.click(within(page).getByRole('button', { name: 'Play Portal 2' }));
 
     expect(await within(page).findByRole('alert')).toHaveTextContent('Portal 2 could not be launched.');
+  });
+});
+
+describe('The Tint of the detail page', () => {
+  // The theme colours as the app has them: tokens.css on the page.
+  const tokens = document.createElement('style');
+  tokens.textContent = readFileSync(join(__dirname, 'styles', 'tokens.css'), 'utf8');
+  const showTokens = () => document.head.append(tokens);
+  afterEach(() => tokens.remove());
+
+  /** The colour `name` the page sets for its contents; empty when it keeps the theme's. */
+  const tinted = (page: HTMLElement, name: string) => page.style.getPropertyValue(name);
+
+  /** Hue in degrees and lightness of a six-digit hex colour. */
+  function hueAndLightness(hex: string) {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255);
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const d = max - min;
+    const hue = max === r ? (g - b) / d : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return { hue: Math.round((hue * 60 + 360) % 360), lightness: (max + min) / 2 };
+  }
+
+  it('takes its background and accent from the Cover hue', async () => {
+    showTokens();
+    const { operations } = fakeOperations([PORTAL_2], {
+      coverHue: async (gameId) => (gameId === 'steam:620' ? { hue: 200, saturation: 0.8 } : null),
+    });
+    render(<App operations={operations} lang="en" />);
+
+    await openFromGrid('Portal 2');
+
+    const page = await screen.findByRole('region', { name: 'Portal 2' });
+    await waitFor(() => expect(tinted(page, '--color-accent')).toMatch(/^#[0-9a-f]{6}$/));
+    expect(hueAndLightness(tinted(page, '--color-accent')).hue).toBeCloseTo(200, -1);
+    expect(hueAndLightness(tinted(page, '--color-bg')).hue).toBeCloseTo(200, -1);
+    // Labels on the accent, such as Play, are in the tinted background colour.
+    expect(tinted(page, '--color-accent-ink')).toBe(tinted(page, '--color-bg'));
+    expect(page).toHaveAttribute('data-tint', 'cover');
+  });
+
+  it('follows the theme: a light accent on dark, a dark accent on light', async () => {
+    showTokens();
+    const { operations } = fakeOperations([PORTAL_2], { coverHue: async () => ({ hue: 30, saturation: 0.9 }) });
+    render(<App operations={operations} lang="en" />);
+    await openFromGrid('Portal 2');
+    const page = await screen.findByRole('region', { name: 'Portal 2' });
+    await waitFor(() => expect(tinted(page, '--color-accent')).not.toBe(''));
+    const onDark = hueAndLightness(tinted(page, '--color-accent')).lightness;
+
+    act(() => {
+      document.documentElement.dataset.theme = 'light';
+    });
+
+    await waitFor(() => expect(hueAndLightness(tinted(page, '--color-accent')).lightness).toBeLessThan(0.5));
+    expect(onDark).toBeGreaterThan(0.5);
+    expect(hueAndLightness(tinted(page, '--color-bg')).lightness).toBeGreaterThan(0.5);
+    act(() => {
+      document.documentElement.dataset.theme = 'dark';
+    });
+  });
+
+  it('stays neutral for a Game without a Cover hue', async () => {
+    showTokens();
+    const { operations } = fakeOperations([PORTAL_2], { coverHue: async () => null });
+    render(<App operations={operations} lang="en" />);
+
+    await openFromGrid('Portal 2');
+
+    const page = await screen.findByRole('region', { name: 'Portal 2' });
+    expect(page).toHaveAttribute('data-tint', 'neutral');
+    expect(tinted(page, '--color-accent')).toBe('');
+  });
+
+  it('stays neutral when the Cover hue cannot be read', async () => {
+    showTokens();
+    const { operations } = fakeOperations([PORTAL_2], { coverHue: () => Promise.reject(new Error('cannot download')) });
+    render(<App operations={operations} lang="en" />);
+
+    await openFromGrid('Portal 2');
+
+    const page = await screen.findByRole('region', { name: 'Portal 2' });
+    expect(within(page).getByRole('button', { name: 'Play Portal 2' })).toBeInTheDocument();
+    expect(page).toHaveAttribute('data-tint', 'neutral');
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('stays neutral where the theme colours cannot be checked', async () => {
+    // No tokens.css on the page: no colour to check the contrast against.
+    const { operations } = fakeOperations([PORTAL_2], { coverHue: async () => ({ hue: 200, saturation: 0.8 }) });
+    render(<App operations={operations} lang="en" />);
+
+    await openFromGrid('Portal 2');
+
+    const page = await screen.findByRole('region', { name: 'Portal 2' });
+    await act(async () => {});
+    expect(page).toHaveAttribute('data-tint', 'neutral');
   });
 });

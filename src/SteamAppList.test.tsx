@@ -88,6 +88,7 @@ function fakeOperations({
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');
@@ -95,6 +96,7 @@ function fakeOperations({
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     openLogFolder: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');
@@ -105,6 +107,7 @@ function fakeOperations({
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    coverHue: async () => null,
     steamAppList: async () => list,
     fetchSteamAppList: () => {
       calls.fetches += 1;

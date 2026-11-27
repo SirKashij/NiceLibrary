@@ -35,6 +35,7 @@ function fakeOperations() {
     theme: async () => 'system',
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');
@@ -42,6 +43,7 @@ function fakeOperations() {
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),
     renameCollection: async () => ({ outcome: 'emptyName' }),
@@ -85,6 +87,7 @@ function fakeOperations() {
     openAboutPage: async () => {},
     language: async () => 'system',
     chooseLanguage: async () => {},
+    coverHue: async () => null,
   };
   return { operations, calls };
 }

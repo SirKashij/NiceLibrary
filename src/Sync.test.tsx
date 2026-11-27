@@ -97,6 +97,7 @@ function fakeOperations({
     setStartWithWindows: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -116,7 +117,9 @@ function fakeOperations({
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    coverHue: async () => null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     statistics: async () => {
       throw new Error('this test shows no Statistics');

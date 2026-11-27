@@ -3,6 +3,7 @@ import { useFormat, useT, type MessageKey } from '../i18n';
 import { FavoriteToggle } from '../Favorites';
 import type { Game, LibraryLayout, Operations, Source } from '../operations';
 import { STATUS_LABELS } from './Status';
+import { GameActionButton, installable } from './GameAction';
 
 /** The Library Layout the user sees and how they switch it. */
 export interface LibraryLayoutChoice {
@@ -93,12 +94,15 @@ export function GameList({
   games,
   cover,
   onPlay,
+  onInstall,
   onOpen,
   onFavorite,
 }: {
   games: Game[];
   cover: (game: Game) => ReactNode;
   onPlay: (game: Game) => void;
+  /** Starts the installation of a Steam Game that is not Installed. */
+  onInstall: (game: Game) => void;
   /** Opens the Game's detail page. */
   onOpen: (game: Game) => void;
   /** Marks the Game as a Favorite, or unmarks it. */
@@ -133,15 +137,8 @@ export function GameList({
             <Facts game={game} />
             <span className="game-row-action">
               <FavoriteToggle game={game} onToggle={onFavorite} />
-              {game.installed ? (
-                <button
-                  type="button"
-                  className="button play-row"
-                  aria-label={t('library.playGame', { title: game.title })}
-                  onClick={() => onPlay(game)}
-                >
-                  {t('library.play')}
-                </button>
+              {game.installed || installable(game) ? (
+                <GameActionButton game={game} className="button play-row" onPlay={onPlay} onInstall={onInstall} />
               ) : (
                 <span className="muted">{t('library.notInstalled')}</span>
               )}
