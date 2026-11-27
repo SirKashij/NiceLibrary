@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LibraryFilter, Operations } from './operations';
 
 function steamGame(appId: number, title: string, installed: boolean): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, progress: null, status: 'unplayed', favorite: false };
 }
 
 const LIBRARY = [steamGame(1145360, 'Hades', true), steamGame(220, 'Half-Life 2', false), steamGame(620, 'Portal 2', true)];
@@ -102,6 +102,10 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
   };
   return { operations, asked, marks };
 }

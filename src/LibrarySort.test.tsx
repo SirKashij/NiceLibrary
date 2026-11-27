@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LibraryFilter, LibrarySort, Operations } from './operations';
 
 function steamGame(appId: number, title: string, playtimeMinutes: number | null, lastPlayed: number | null): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed: true, playtimeMinutes, lastPlayed, status: 'unplayed', favorite: false };
+  return { id: `steam:${appId}`, title, source: 'steam', installed: true, playtimeMinutes, lastPlayed, progress: null, status: 'unplayed', favorite: false };
 }
 
 // Ordered by title, as `library` answers.
@@ -20,6 +20,8 @@ const ORDERED: Record<LibrarySort, string[]> = {
   recentlyPlayed: ['Hades', 'Portal 2', 'Half-Life 2'],
   name: ['Hades', 'Half-Life 2', 'Portal 2'],
   playtime: ['Portal 2', 'Hades', 'Half-Life 2'],
+  // None of them has Progress: by title.
+  progress: ['Hades', 'Half-Life 2', 'Portal 2'],
 };
 
 /**
@@ -62,6 +64,10 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     openLogFolder: async () => {},
@@ -118,7 +124,7 @@ describe('Sorting the Library', () => {
     expect(asked.at(-1)).toEqual({ search: '', source: null, installedOnly: false, status: null, sort: 'recentlyPlayed', favoritesOnly: false });
   });
 
-  it('offers recently played, name and Playtime', async () => {
+  it('offers recently played, name, Playtime and Progress', async () => {
     const { operations } = fakeOperations();
     render(<App operations={operations} lang="en" />);
 
@@ -127,6 +133,7 @@ describe('Sorting the Library', () => {
       'Recently played',
       'Name',
       'Playtime',
+      'Progress',
     ]);
   });
 
@@ -200,6 +207,7 @@ describe('Sorting the Library', () => {
       'Zuletzt gespielt',
       'Name',
       'Spielzeit',
+      'Fortschritt',
     ]);
   });
 });

@@ -4,9 +4,9 @@ import { describe, expect, it } from 'vitest';
 import { App } from './App';
 import type { Collection, Game, LibraryFilter, Operations } from './operations';
 
-const PORTAL_2: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: 1260, lastPlayed: null, status: 'unplayed', favorite: false };
-const HADES: Game = { id: 'local:1', title: 'Hades', source: 'local', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
-const PORTAL: Game = { id: 'steam:400', title: 'Portal', source: 'steam', installed: false, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false };
+const PORTAL_2: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: 1260, lastPlayed: null, status: 'unplayed', favorite: false, progress: null };
+const HADES: Game = { id: 'local:1', title: 'Hades', source: 'local', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false, progress: null };
+const PORTAL: Game = { id: 'steam:400', title: 'Portal', source: 'steam', installed: false, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false, progress: null };
 
 /**
  * Fake operations whose Collections behave like the core's: a Game can be
@@ -131,6 +131,10 @@ function fakeOperations({
     removeLocalGame: async () => {},
     markFavorite: async () => {},
     favoriteCount: async () => 0,
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
   };
   return { operations, calls };
 }

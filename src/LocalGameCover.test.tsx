@@ -11,6 +11,7 @@ const CELESTE: Game = {
   installed: true,
   playtimeMinutes: 0,
   lastPlayed: null,
+  progress: null,
   status: 'unplayed',
   favorite: false,
 };
@@ -21,6 +22,7 @@ const PORTAL_2: Game = {
   installed: true,
   playtimeMinutes: null,
   lastPlayed: null,
+  progress: null,
   status: 'unplayed',
   favorite: false,
 };
@@ -107,6 +109,10 @@ function fakeOperations({
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     markFavorite: async () => {},
     favoriteCount: async () => 0,
     gameCollections: async () => [],

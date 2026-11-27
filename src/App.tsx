@@ -18,7 +18,9 @@ import { WindowSettings } from './settings/WindowSettings';
 import { Tray } from './Tray';
 import { SortChoice, useLibrarySort } from './library/LibrarySort';
 import { StatusBadge } from './library/Status';
+import { ProgressBadge } from './library/Progress';
 import { LogSettings } from './settings/LogSettings';
+import { StatisticsPage } from './statistics/StatisticsPage';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -124,7 +126,7 @@ function Shell({ operations }: { operations: Operations }) {
             onCollectionsChanged={collectionsChanged}
           />
         )}
-        {view === 'statistics' && <PlaceholderPage title="nav.statistics" note="statistics.empty" />}
+        {view === 'statistics' && <StatisticsPage operations={operations} syncs={changes} />}
         {view === 'settings' && (
           <SettingsView operations={operations} onAccountChosen={() => setAccountChoices((n) => n + 1)} />
         )}
@@ -261,12 +263,12 @@ function LibraryView({
   const t = useT();
   // How many Local Games were added, edited or removed here; each one changes the stored Library.
   const [additions, setAdditions] = useState(0);
-  // How often the user set a Status while the app runs; each one changes the stored Library.
-  const [statusChanges, setStatusChanges] = useState(0);
+  // How often the user set a Status or a Manual Progress while the app runs; each one changes the stored Library.
+  const [gameChanges, setGameChanges] = useState(0);
   // How often a Game was hidden or unhidden here; each time changes the Library.
   const [hidings, setHidings] = useState(0);
   // A change of what is in a Collection changes which Games a chosen Collection shows.
-  const changes = syncs + additions + statusChanges + hidings + favoriteMarks + collectionChanges;
+  const changes = syncs + additions + gameChanges + hidings + favoriteMarks + collectionChanges;
   const changed = () => setAdditions((n) => n + 1);
   // The title of the Local Game removed last, which the Library then confirms.
   const [removed, setRemoved] = useState<string>();
@@ -472,7 +474,7 @@ function LibraryView({
           }
           notice={launchNotice}
           onPlay={launch}
-          onStatusSet={() => setStatusChanges((count) => count + 1)}
+          onChanged={() => setGameChanges((count) => count + 1)}
           onFavorite={favorite.toggle}
           onBack={back}
           onHidden={hidden}
@@ -551,6 +553,7 @@ function CoverGrid({
           </div>
           <h2 className="game-title">{game.title}</h2>
           <StatusBadge status={game.status} />
+          <ProgressBadge progress={game.progress} />
           <Played game={game} />
           {!game.installed && <span className="muted">{t('library.notInstalled')}</span>}
         </li>
@@ -910,15 +913,6 @@ function SteamWebApiKeySettings({ operations }: { operations: Operations }) {
         <p className="muted">{t('key.data')}</p>
       </div>
     </section>
-  );
-}
-
-function PlaceholderPage({ title, note }: { title: MessageKey; note: MessageKey }) {
-  const t = useT();
-  return (
-    <Page title={title}>
-      <p className="note">{t(note)}</p>
-    </Page>
   );
 }
 

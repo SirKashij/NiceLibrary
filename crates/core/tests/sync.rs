@@ -338,6 +338,7 @@ fn steam_game(app_id: u32, title: &str, installed: bool, minutes: u32, last_play
         installed,
         playtime_minutes: Some(minutes),
         last_played,
+        progress: None,
         status: Status::Unplayed,
         favorite: false,
     }

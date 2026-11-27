@@ -22,11 +22,28 @@ export interface Game {
   playtimeMinutes: number | null;
   /** Last Played, in seconds since the Unix epoch; `null` for never or not known. */
   lastPlayed: number | null;
+  /**
+   * Progress in percent, from 0 to 100, as the Game's Source works it out:
+   * for a Local Game its Manual Progress, for a Steam Game the share of its
+   * unlocked Achievements. `null` when the Game has none, such as a Steam Game
+   * without Achievements.
+   */
+  progress: number | null;
   /** Set by hand only, `unplayed` until then; no Sync changes it. */
   status: Status;
   /** Whether the user marked the Game as a Favorite. */
   favorite: boolean;
 }
+
+/**
+ * How setting or clearing a Local Game's Manual Progress went, when nothing
+ * failed. Every outcome but `set` changed nothing. Mirrors `ManualProgress`
+ * in crates/core.
+ */
+export type ManualProgress =
+  | { outcome: 'set'; /** The Game as the Library shows it now. */ game: Game }
+  | { outcome: 'outOfRange' }
+  | { outcome: 'notALocalGame' };
 
 /** How a Sync went, when nothing failed. Every outcome but `synced` changed nothing. Mirrors `SyncOutcome` in crates/core. */
 export type SyncOutcome =
@@ -166,7 +183,7 @@ export type AutomaticSteamAppListFetch =
  * Playtime (longest first). Games without a value come last, Games with the
  * same value by title. Mirrors `LibrarySort` in crates/core.
  */
-export type LibrarySort = 'recentlyPlayed' | 'name' | 'playtime';
+export type LibrarySort = 'recentlyPlayed' | 'name' | 'playtime' | 'progress';
 
 /**
  * What the Library is narrowed to, and in which order; every part that is set
@@ -357,6 +374,12 @@ export interface Operations {
   /** Makes `sort` the order of the Library, also after a restart. */
   chooseLibrarySort(sort: LibrarySort): Promise<void>;
   /**
+   * Sets a Local Game's Manual Progress to a whole number from 0 to 100, or
+   * clears it with `null`; it is then the Game's Progress. Anything outside
+   * 0 to 100 is `outOfRange`, a Steam Game `notALocalGame`; both change nothing.
+   */
+  setManualProgress(gameId: string, percent: number | null): Promise<ManualProgress>;
+  /**
    * Asks the user to choose an image in the operating system's file dialog
    * and makes it the Cover of a Local Game, in place of its executable's
    * icon. The image is copied into the app's data folder. Rejects for a Game
@@ -430,6 +453,11 @@ export interface Operations {
    * about it; its files on disk stay. Rejects for a Steam Game.
    */
   removeLocalGame(gameId: string): Promise<void>;
+  /**
+   * The Statistics of the Library as it shows, worked out by the core;
+   * Hidden Games count in none of them.
+   */
+  statistics(): Promise<Statistics>;
   /**
    * Marks a Game as a Favorite, or with `false` unmarks it. The mark stays
    * through Syncs and restarts. Rejects when the Game is not in the Library.
@@ -511,6 +539,7 @@ export const tauriOperations: Operations = {
   showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
   librarySort: () => invoke<LibrarySort>('library_sort'),
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
+  setManualProgress: (gameId, percent) => invoke<ManualProgress>('set_manual_progress', { gameId, percent }),
   chooseCoverImage: (gameId) => invoke<CoverImageChoice>('choose_cover_image', { gameId }),
   coverImageChosen: (gameId) => invoke<boolean>('cover_image_chosen', { gameId }),
   removeCoverImage: (gameId) => invoke<void>('remove_cover_image', { gameId }),
@@ -538,6 +567,25 @@ export const tauriOperations: Operations = {
   editLocalGame: (gameId, title, executable) =>
     invoke<EditLocalGame>('edit_local_game', { gameId, title, executable }),
   removeLocalGame: (gameId) => invoke<void>('remove_local_game', { gameId }),
+  statistics: () => invoke<Statistics>('statistics'),
   markFavorite: (gameId, favorite) => invoke<void>('mark_favorite', { gameId, favorite }),
   favoriteCount: () => invoke<number>('favorite_count'),
 };
+
+/** Mirrors `Statistics` in crates/core: the totals over the Games in the Library. */
+export interface Statistics {
+  /** How many Games the Library holds. */
+  games: number;
+  /** The Playtime of every Game together, in minutes. */
+  playtimeMinutes: number;
+  /** How many Achievements of all Steam Games are unlocked. */
+  achievementsUnlocked: number;
+  /** How many Achievements the Steam Games have together. */
+  achievementsTotal: number;
+  /** The share of unlocked Achievements in whole percent, rounded down; `null` while there are none. */
+  achievementShare: number | null;
+  /** How many Games are at 100 % Progress. */
+  completeGames: number;
+  /** How many Games have each Status. */
+  gamesByStatus: Record<Status, number>;
+}
