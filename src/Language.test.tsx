@@ -202,6 +202,20 @@ describe('The interface language', () => {
     );
   });
 
+  it('switches the texts of every part of the window, not only the settings', async () => {
+    const { operations } = fakeOperations();
+    const { user, section } = await openLanguageSettings(operations, 'en');
+
+    await user.click(within(section()).getByRole('radio', { name: 'Deutsch' }));
+    await user.click(screen.getByRole('button', { name: 'Bibliothek' }));
+
+    expect(screen.getByRole('button', { name: 'Über NiceLibrary' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Favoriten, 0 Spiele' })).toBeInTheDocument();
+    expect(await screen.findByRole('group', { name: 'Ansicht' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Portal 2 als Favorit' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'About NiceLibrary' })).not.toBeInTheDocument();
+  });
+
   it('stays in the system language while the stored choice cannot be read', async () => {
     const { operations } = fakeOperations({ language: () => Promise.reject(new Error('store locked')) });
     const { section } = await openLanguageSettings(operations, 'de');
