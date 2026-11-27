@@ -6,7 +6,7 @@ pub mod ports;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AutomaticSync, Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
+    AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
     SyncOutcome,
 };
 use percent_encoding::percent_decode_str;
@@ -78,6 +78,26 @@ async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(),
     core.open_steam_web_api_key_page()
 }
 
+#[tauri::command]
+fn collections(core: tauri::State<'_, Core>) -> Result<Vec<Collection>, Error> {
+    core.collections()
+}
+
+#[tauri::command]
+fn create_collection(core: tauri::State<'_, Core>, name: String) -> Result<CollectionNaming, Error> {
+    core.create_collection(&name)
+}
+
+#[tauri::command]
+fn rename_collection(core: tauri::State<'_, Core>, id: i64, name: String) -> Result<CollectionNaming, Error> {
+    core.rename_collection(id, &name)
+}
+
+#[tauri::command]
+fn delete_collection(core: tauri::State<'_, Core>, id: i64) -> Result<(), Error> {
+    core.delete_collection(id)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -121,7 +141,11 @@ pub fn run() {
             remove_steam_web_api_key,
             open_steam_web_api_key_page,
             sync,
-            last_sync
+            last_sync,
+            collections,
+            create_collection,
+            rename_collection,
+            delete_collection
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

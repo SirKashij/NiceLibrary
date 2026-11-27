@@ -25,6 +25,10 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'named', id: 1 }),
+    renameCollection: async (id) => ({ outcome: 'named', id }),
+    deleteCollection: async () => {},
     launch: (game) => {
       requested.push(game.id);
       return launch(game);

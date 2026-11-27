@@ -58,6 +58,17 @@ export type LaunchOutcome = { outcome: 'launched' } | { outcome: 'steamNotFound'
 /** How storing the Steam Web API key went, when nothing failed. Mirrors `SteamWebApiKeyCheck` in crates/core. */
 export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' } | { outcome: 'steamUnreachable' };
 
+/** A named group of Games the user created. Mirrors `Collection` in crates/core. */
+export interface Collection {
+  id: number;
+  name: string;
+  /** How many Games of the Library are in it. */
+  gameCount: number;
+}
+
+/** How naming a Collection went, when nothing failed. Every outcome but `named` changed nothing. Mirrors `CollectionNaming` in crates/core. */
+export type CollectionNaming = { outcome: 'named'; id: number } | { outcome: 'emptyName' } | { outcome: 'nameTaken' };
+
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
@@ -114,6 +125,18 @@ export interface Operations {
    * the function that stops listening.
    */
   onAutomaticSync(listener: (event: AutomaticSync) => void): () => void;
+  /** Every Collection with how many Games of the Library are in it, ordered by name. */
+  collections(): Promise<Collection[]>;
+  /**
+   * Creates a Collection; the name is saved without the spaces around it.
+   * An empty name, or one another Collection has in any case, is refused
+   * and creates nothing.
+   */
+  createCollection(name: string): Promise<CollectionNaming>;
+  /** Renames a Collection under the same rules as `createCollection`. Rejects when there is no such Collection. */
+  renameCollection(id: number, name: string): Promise<CollectionNaming>;
+  /** Deletes a Collection. Its Games stay in the Library. */
+  deleteCollection(id: number): Promise<void>;
 }
 
 export const tauriOperations: Operations = {
@@ -138,4 +161,8 @@ export const tauriOperations: Operations = {
       void listening.then((stop) => stop());
     };
   },
+  collections: () => invoke<Collection[]>('collections'),
+  createCollection: (name) => invoke<CollectionNaming>('create_collection', { name }),
+  renameCollection: (id, name) => invoke<CollectionNaming>('rename_collection', { id, name }),
+  deleteCollection: (id) => invoke<void>('delete_collection', { id }),
 };

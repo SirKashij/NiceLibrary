@@ -48,6 +48,8 @@
   --brand-mark-width: 14px;
   --brand-mark-height: 20px;
   --note-max-width: 56ch;
+  --icon-size: 14px;
+  --icon-stroke: 1.75;
 
   /* Covers: Steam's upright library image is 600 x 900. Not Installed: desaturated (ADR-0007). */
   --cover-min-width: 158px;

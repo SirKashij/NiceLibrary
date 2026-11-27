@@ -22,6 +22,10 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'named', id: 1 }),
+    renameCollection: async (id) => ({ outcome: 'named', id }),
+    deleteCollection: async () => {},
     launch: async () => ({ outcome: 'launched' }),
   };
 }

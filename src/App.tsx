@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Collections } from './Collections';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 
@@ -45,6 +46,7 @@ function Shell({ operations }: { operations: Operations }) {
             </button>
           ))}
         </nav>
+        <Collections operations={operations} />
         {/* Starts over for each chosen account: shows its last Sync, never one of the account chosen before. */}
         <SyncStatus key={accountChoices} operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
       </aside>

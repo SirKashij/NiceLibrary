@@ -37,6 +37,29 @@ button:focus-visible, input:focus-visible {
 }
 .sidebar nav button:hover { color: var(--color-text); }
 .sidebar nav button[aria-current='page'] { color: var(--color-text); box-shadow: inset var(--nav-indicator) 0 0 var(--color-text); }
+/* Collections in the sidebar: name, count, and quiet actions that show on hover or focus. */
+.collections { display: grid; gap: var(--space-2); padding-right: var(--space-3); font-size: var(--text-size-label); }
+.sidebar-heading { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.collection-list { display: grid; }
+.collection-row { display: flex; align-items: center; gap: var(--space-2); min-height: var(--nav-item-height); }
+.collection-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collection-count { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.collection-actions { display: flex; gap: var(--space-1); opacity: 0; }
+.collection-row:hover .collection-actions, .collection-row:focus-within .collection-actions { opacity: 1; }
+.text-button { display: inline-flex; padding: var(--space-1); color: var(--color-text-muted); border-radius: var(--radius-control); }
+.text-button:hover { color: var(--color-text); }
+.icon { width: var(--icon-size); height: var(--icon-size); fill: none; stroke: currentColor; stroke-width: var(--icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
+.collection-form, .delete-question { display: grid; gap: var(--space-2); padding: var(--space-1) 0; }
+.collection-form input {
+  min-width: 0; font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
+.collections .note { font-size: var(--text-size-label); }
+/* Read by screen readers, not shown. */
+.visually-hidden {
+  position: absolute; width: var(--hairline); height: var(--hairline); overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
 /* The last Sync and Sync now, at the bottom of the sidebar. */
 .sync { margin-top: auto; display: grid; justify-items: start; gap: var(--space-2); padding-right: var(--space-3); }
 .sync .note { font-size: var(--text-size-label); }
