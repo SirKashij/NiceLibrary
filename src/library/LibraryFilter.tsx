@@ -3,11 +3,11 @@ import { useT, type MessageKey } from '../i18n';
 import type { Game, LibraryFilter, Operations, Source } from '../operations';
 
 /** The filter that narrows nothing: the whole Library. */
-export const NO_FILTER: LibraryFilter = { search: '', source: null, installedOnly: false };
+export const NO_FILTER: LibraryFilter = { search: '', source: null, installedOnly: false, favoritesOnly: false };
 
 /** Whether `filter` narrows the Library at all. */
 export function isFiltering(filter: LibraryFilter): boolean {
-  return filter.search !== '' || filter.source !== null || filter.installedOnly;
+  return filter.search !== '' || filter.source !== null || filter.installedOnly || filter.favoritesOnly;
 }
 
 /** What the Library shows for a filter: the Games, or that the core could not filter. */

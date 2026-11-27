@@ -19,6 +19,8 @@ export interface Game {
   playtimeMinutes: number | null;
   /** Last Played, in seconds since the Unix epoch; `null` for never or not known. */
   lastPlayed: number | null;
+  /** Whether the user marked the Game as a Favorite. */
+  favorite: boolean;
 }
 
 /** How a Sync went, when nothing failed. Every outcome but `synced` changed nothing. Mirrors `SyncOutcome` in crates/core. */
@@ -100,6 +102,8 @@ export interface LibraryFilter {
   source: Source | null;
   /** Only Installed Games. */
   installedOnly: boolean;
+  /** Only Favorites. */
+  favoritesOnly: boolean;
 }
 
 export interface Operations {
@@ -189,6 +193,13 @@ export interface Operations {
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /**
+   * Marks a Game as a Favorite, or with `false` unmarks it. The mark stays
+   * through Syncs and restarts. Rejects when the Game is not in the Library.
+   */
+  markFavorite(gameId: string, favorite: boolean): Promise<void>;
+  /** How many Games of the Library are Favorites. */
+  favoriteCount(): Promise<number>;
 }
 
 export const tauriOperations: Operations = {
@@ -223,4 +234,6 @@ export const tauriOperations: Operations = {
   deleteCollection: (id) => invoke<void>('delete_collection', { id }),
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  markFavorite: (gameId, favorite) => invoke<void>('mark_favorite', { gameId, favorite }),
+  favoriteCount: () => invoke<number>('favorite_count'),
 };

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFormat, useT, type MessageKey } from './i18n';
+import { FavoriteToggle } from './Favorites';
 import type { Game, Operations, Source } from './operations';
 
 const SOURCES: Record<Source, MessageKey> = {
@@ -10,27 +11,30 @@ const SOURCES: Record<Source, MessageKey> = {
 /**
  * The detail page of one Game: its large Cover, title, Source, whether it is
  * Installed, Playtime, Last Played and the main action, and the way back to
- * the Library. Shows the Game as opened at once and as the core answers it
- * then, again after each Sync.
+ * the Library, and marking it as a Favorite. Shows the Game as opened at once
+ * and as the core answers it then, again after each change.
  */
 export function GameDetail({
   operations,
   game: opened,
-  syncs,
+  changes,
   cover,
   notice,
   onPlay,
+  onFavorite,
   onBack,
 }: {
   operations: Operations;
   /** The Game as the Library showed it when it was opened. */
   game: Game;
-  /** Changes with each successful Sync, which may change the Game. */
-  syncs: number;
+  /** Changes with each successful Sync and each Favorite mark taken, which may change the Game. */
+  changes: number;
   cover: (game: Game) => ReactNode;
   /** Why the last Launch did not start, if it did not. */
   notice?: ReactNode;
   onPlay: (game: Game) => void;
+  /** Marks the Game as a Favorite, or unmarks it. */
+  onFavorite: (game: Game) => void;
   onBack: () => void;
 }) {
   const t = useT();
@@ -49,7 +53,7 @@ export function GameDetail({
     return () => {
       active = false;
     };
-  }, [operations, opened.id, syncs]);
+  }, [operations, opened.id, changes]);
 
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => heading.current?.focus(), []);
@@ -66,7 +70,10 @@ export function GameDetail({
       </button>
       {notice}
       <div className="game-detail-body">
-        <div className="game-detail-cover">{cover(game ?? opened)}</div>
+        <div className="game-detail-cover">
+          {cover(game ?? opened)}
+          {game && <FavoriteToggle game={game} onToggle={onFavorite} />}
+        </div>
         <div className="game-detail-info">
           <h1 id={headingId} ref={heading} tabIndex={-1}>
             {opened.title}

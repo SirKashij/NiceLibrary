@@ -7,7 +7,7 @@ import type { AddLocalGame, ExecutableChoice, Game, Operations } from './operati
 const CELESTE = 'C:\\Games\\Celeste\\Celeste.exe';
 
 function localGame(id: number, title: string): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, favorite: false };
 }
 
 /**
@@ -55,6 +55,8 @@ function fakeOperations({
       games.push(game);
       return { outcome: 'added', game };
     },
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, added };
 }

@@ -140,6 +140,12 @@ export const en = {
   'game.never': 'Never',
   'game.notKnown': 'Not known yet',
   'game.gone': '{title} is no longer in your library.',
+  'favorites.title': 'Favorites',
+  'favorites.entryOne': 'Favorites, 1 game',
+  'favorites.entry': 'Favorites, {count} games',
+  'favorites.toggle': 'Favorite {title}',
+  'favorites.none': 'No favorites yet. Mark a game with its star to find it here.',
+  'favorites.failed': '{title} could not be marked or unmarked as a favorite.',
 } as const;
 
 export type MessageKey = keyof typeof en;

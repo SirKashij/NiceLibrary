@@ -7,6 +7,7 @@
 mod clock;
 mod collections;
 mod covers;
+mod favorites;
 pub mod keyvalues;
 mod launch;
 mod local_games;
@@ -60,6 +61,8 @@ pub struct Game {
     /// Last Played, in seconds since the Unix epoch; `None` for never or
     /// not known.
     pub last_played: Option<u64>,
+    /// Whether the user marked the Game as a Favorite.
+    pub favorite: bool,
 }
 
 impl Game {
@@ -73,6 +76,7 @@ impl Game {
             installed,
             playtime_minutes: None,
             last_played: None,
+            favorite: false,
         }
     }
 }
@@ -146,6 +150,7 @@ impl Core {
             None => Vec::new(),
         };
         games.extend(self.store.local_games()?.into_iter().map(|game| Game::local(game.id, game.title)));
+        favorites::mark(&mut games, &self.store.favorites()?);
         games.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()).then_with(|| a.id.cmp(&b.id)));
         Ok(games)
     }
@@ -464,6 +469,23 @@ impl Core {
     /// a Collection that is gone already changes nothing.
     pub fn delete_collection(&self, id: i64) -> Result<(), Error> {
         self.store.delete_collection(id)
+    }
+
+    /// Marks the Game `game_id` as a Favorite, or with `favorite` false
+    /// unmarks it. The mark stays through Syncs and restarts, also while a
+    /// Steam Game is out of the Library. Fails when the Game is not in the
+    /// Library.
+    pub fn mark_favorite(&self, game_id: &str, favorite: bool) -> Result<(), Error> {
+        if !self.library()?.iter().any(|game| game.id == game_id) {
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
+        }
+        self.store.mark_favorite(game_id, favorite)
+    }
+
+    /// How many Games of the Library are Favorites.
+    pub fn favorite_count(&self) -> Result<u32, Error> {
+        let count = self.library()?.iter().filter(|game| game.favorite).count();
+        Ok(u32::try_from(count).unwrap_or(u32::MAX))
     }
 }
 

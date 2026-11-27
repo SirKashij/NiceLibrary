@@ -129,6 +129,16 @@ fn delete_collection(core: tauri::State<'_, Core>, id: i64) -> Result<(), Error>
     core.delete_collection(id)
 }
 
+#[tauri::command]
+fn mark_favorite(core: tauri::State<'_, Core>, game_id: String, favorite: bool) -> Result<(), Error> {
+    core.mark_favorite(&game_id, favorite)
+}
+
+#[tauri::command]
+fn favorite_count(core: tauri::State<'_, Core>) -> Result<u32, Error> {
+    core.favorite_count()
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -182,7 +192,9 @@ pub fn run() {
             filter_library,
             game,
             choose_local_game_executable,
-            add_local_game
+            add_local_game,
+            mark_favorite,
+            favorite_count
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

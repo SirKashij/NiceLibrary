@@ -142,4 +142,10 @@ export const de: Record<MessageKey, string> = {
   'game.never': 'Nie',
   'game.notKnown': 'Noch nicht bekannt',
   'game.gone': '{title} ist nicht mehr in deiner Bibliothek.',
+  'favorites.title': 'Favoriten',
+  'favorites.entryOne': 'Favoriten, 1 Spiel',
+  'favorites.entry': 'Favoriten, {count} Spiele',
+  'favorites.toggle': '{title} als Favorit',
+  'favorites.none': 'Noch keine Favoriten. Markiere ein Spiel mit seinem Stern, um es hier zu finden.',
+  'favorites.failed': '{title} konnte nicht als Favorit markiert oder entfernt werden.',
 };

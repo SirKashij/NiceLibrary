@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Collections } from './Collections';
+import { FavoritesEntry, FavoriteToggle, NoFavorites, useFavoriteMarking } from './Favorites';
 import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import { AddLocalGameButton } from './library/AddLocalGame';
@@ -33,6 +34,10 @@ function Shell({ operations }: { operations: Operations }) {
   const [syncs, setSyncs] = useState(0);
   // How often the user chose a Steam Account while the app runs; each choice changes whose Sync and Library are shown.
   const [accountChoices, setAccountChoices] = useState(0);
+  // Whether the Library shows only the Favorites, chosen in the sidebar.
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  // How many Favorite marks the core took while the app runs; each one changes the stored Library.
+  const [favoriteMarks, setFavoriteMarks] = useState(0);
 
   return (
     <div className="shell">
@@ -46,19 +51,39 @@ function Shell({ operations }: { operations: Operations }) {
             <button
               key={v.view}
               type="button"
-              aria-current={view === v.view ? 'page' : undefined}
-              onClick={() => setView(v.view)}
+              aria-current={view === v.view && !(v.view === 'library' && favoritesOnly) ? 'page' : undefined}
+              onClick={() => {
+                setView(v.view);
+                setFavoritesOnly(false);
+              }}
             >
               {t(v.label)}
             </button>
           ))}
         </nav>
+        <FavoritesEntry
+          operations={operations}
+          changes={syncs + favoriteMarks}
+          active={view === 'library' && favoritesOnly}
+          onOpen={() => {
+            setView('library');
+            setFavoritesOnly(true);
+          }}
+        />
         <Collections operations={operations} />
         {/* Starts over for each chosen account: shows its last Sync, never one of the account chosen before. */}
         <SyncStatus key={accountChoices} operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
       </aside>
       <main className="main">
-        {view === 'library' && <LibraryView operations={operations} syncs={syncs} />}
+        {view === 'library' && (
+          <LibraryView
+            operations={operations}
+            syncs={syncs}
+            favoritesOnly={favoritesOnly}
+            favoriteMarks={favoriteMarks}
+            onFavoriteMarked={() => setFavoriteMarks((n) => n + 1)}
+          />
+        )}
         {view === 'statistics' && <PlaceholderPage title="nav.statistics" note="statistics.empty" />}
         {view === 'settings' && (
           <SettingsView operations={operations} onAccountChosen={() => setAccountChoices((n) => n + 1)} />
@@ -165,11 +190,25 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
   );
 }
 
-function LibraryView({ operations, syncs }: { operations: Operations; syncs: number }) {
+function LibraryView({
+  operations,
+  syncs,
+  favoritesOnly,
+  favoriteMarks,
+  onFavoriteMarked,
+}: {
+  operations: Operations;
+  syncs: number;
+  /** Whether only the Favorites are shown. */
+  favoritesOnly: boolean;
+  /** Changes with each Favorite mark the core took. */
+  favoriteMarks: number;
+  onFavoriteMarked: () => void;
+}) {
   const t = useT();
   // How many Local Games were added here; each one changes the stored Library.
   const [additions, setAdditions] = useState(0);
-  const changes = syncs + additions;
+  const changes = syncs + additions + favoriteMarks;
   // The stored Library answers at once; reading Steam again replaces it.
   const stored = useOperation(operations, (o) => o.library());
   const fromSteam = useOperation(operations, (o) => o.readInstalledGames());
@@ -193,7 +232,9 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
 
   const library = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
   const [filter, setFilter] = useState(NO_FILTER);
-  const filtered = useFilteredLibrary(operations, filter, library);
+  // What the toolbar sets, narrowed to the Favorites when the sidebar asks for them.
+  const narrowed = useMemo(() => ({ ...filter, favoritesOnly }), [filter, favoritesOnly]);
+  const filtered = useFilteredLibrary(operations, narrowed, library);
   const games = filtered.state === 'ready' ? filtered.games : undefined;
   const failure: MessageKey | undefined =
     fromSteam.state !== 'failed'
@@ -217,10 +258,16 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     );
   };
 
-  const launchNotice = launchProblem && (
-    <p className="note" role="alert">
-      {t(launchProblem.message, { title: launchProblem.title })}
-    </p>
+  const favorite = useFavoriteMarking(operations, onFavoriteMarked);
+  const launchNotice = (
+    <>
+      {launchProblem && (
+        <p className="note" role="alert">
+          {t(launchProblem.message, { title: launchProblem.title })}
+        </p>
+      )}
+      {favorite.notice}
+    </>
   );
 
   // The Game whose detail page is open. The Library stays mounted behind it,
@@ -253,7 +300,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
   return (
     <>
       <div ref={libraryView} hidden={opened !== undefined}>
-        <Page title="nav.library">
+        <Page title={favoritesOnly ? 'favorites.title' : 'nav.library'}>
           <AddLocalGameButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
           <LibraryToolbar filter={filter} onChange={setFilter} />
           {filtered.state === 'failed' && (
@@ -267,12 +314,19 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
             </p>
           )}
           {!opened && launchNotice}
-          {!isFiltering(filter) && fromSteam.state === 'ready' && games?.length === 0 && (
+          {!isFiltering(narrowed) && fromSteam.state === 'ready' && games?.length === 0 && (
             <p className="note">{t('library.empty')}</p>
           )}
+          {favoritesOnly && !isFiltering(filter) && games?.length === 0 && <NoFavorites />}
           {isFiltering(filter) && games?.length === 0 && <NoMatch onReset={() => setFilter(NO_FILTER)} />}
           {games && games.length > 0 && (
-            <CoverGrid games={games} coverUrl={operations.coverUrl} onPlay={launch} onOpen={open} />
+            <CoverGrid
+              games={games}
+              coverUrl={operations.coverUrl}
+              onPlay={launch}
+              onOpen={open}
+              onFavorite={favorite.toggle}
+            />
           )}
         </Page>
       </div>
@@ -281,10 +335,11 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           key={opened.id}
           operations={operations}
           game={opened}
-          syncs={syncs}
+          changes={syncs + favoriteMarks}
           cover={(game) => <Cover key={game.id} title={game.title} src={operations.coverUrl(game)} />}
           notice={launchNotice}
           onPlay={launch}
+          onFavorite={favorite.toggle}
           onBack={back}
         />
       )}
@@ -297,12 +352,15 @@ function CoverGrid({
   coverUrl,
   onPlay,
   onOpen,
+  onFavorite,
 }: {
   games: Game[];
   coverUrl: Operations['coverUrl'];
   onPlay: (game: Game) => void;
   /** Opens the Game's detail page. */
   onOpen: (game: Game) => void;
+  /** Marks the Game as a Favorite, or unmarks it. */
+  onFavorite: (game: Game) => void;
 }) {
   const t = useT();
   return (
@@ -328,6 +386,7 @@ function CoverGrid({
                 {t('library.play')}
               </button>
             )}
+            <FavoriteToggle game={game} onToggle={onFavorite} />
           </div>
           <h2 className="game-title">{game.title}</h2>
           <Played game={game} />

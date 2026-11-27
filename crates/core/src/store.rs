@@ -18,6 +18,8 @@ use crate::sync::OwnedGame;
 use crate::theme::Theme;
 use crate::{Error, Game};
 
+mod favorites;
+
 /// The schema changes, oldest first. Never edit or reorder a released entry;
 /// append a new one instead.
 const MIGRATIONS: &[&str] = &[
@@ -56,6 +58,10 @@ const MIGRATIONS: &[&str] = &[
          collection_id INTEGER NOT NULL REFERENCES collections (id),
          game_id       TEXT    NOT NULL,
          PRIMARY KEY (collection_id, game_id)
+     );",
+    // 5: Favorites, by Game id; like Collections they belong to the person, not to a Steam Account.
+    "CREATE TABLE favorites (
+         game_id TEXT PRIMARY KEY
      );",
 ];
 

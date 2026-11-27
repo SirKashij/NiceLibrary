@@ -178,3 +178,23 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .game-facts dt { color: var(--color-text-muted); }
 .game-facts dd { margin: 0; }
 .game-detail[data-installed='false'] .cover { filter: var(--filter-not-installed); }
+
+/* Favorites: the sidebar entry with its count, and the star on a Cover that marks a Favorite. */
+.favorites-entry {
+  display: flex; align-items: center; justify-content: space-between; margin-right: var(--space-3);
+  height: var(--nav-item-height); padding-left: var(--space-4);
+  color: var(--color-text-muted); font-weight: var(--weight-medium);
+}
+.favorites-entry:hover { color: var(--color-text); }
+.favorites-entry[aria-current='page'] { color: var(--color-text); box-shadow: inset var(--nav-indicator) 0 0 var(--color-text); }
+.favorites-count { font-size: var(--text-size-label); font-variant-numeric: tabular-nums; }
+.game-detail-cover { position: relative; }
+.favorite-toggle {
+  position: absolute; top: var(--space-2); right: var(--space-2); display: inline-flex; padding: var(--space-1);
+  border-radius: var(--radius-control); background: var(--color-bg); color: var(--color-text);
+  opacity: 0;
+}
+.favorite-toggle[aria-pressed='true'] { opacity: 1; }
+.favorite-toggle[aria-pressed='true'] .icon { fill: currentColor; }
+.game:hover .favorite-toggle, .game:focus-within .favorite-toggle,
+.game-detail-cover .favorite-toggle, .favorite-toggle:focus-visible { opacity: 1; }

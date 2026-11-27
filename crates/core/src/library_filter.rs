@@ -1,5 +1,5 @@
-//! Which Games of the Library the user wants to see: filters by Source and
-//! to Installed Games, combined with a search in the title.
+//! Which Games of the Library the user wants to see: filters by Source, to
+//! Installed Games and to Favorites, combined with a search in the title.
 
 use serde::Deserialize;
 
@@ -16,12 +16,15 @@ pub struct LibraryFilter {
     pub source: Option<Source>,
     /// Only Installed Games.
     pub installed_only: bool,
+    /// Only Favorites.
+    pub favorites_only: bool,
 }
 
 impl LibraryFilter {
     pub(crate) fn matches(&self, game: &Game) -> bool {
         self.source.is_none_or(|source| game.source == source)
             && (!self.installed_only || game.installed)
+            && (!self.favorites_only || game.favorite)
             && game.title.to_lowercase().contains(&self.search.to_lowercase())
     }
 }
