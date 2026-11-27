@@ -86,6 +86,8 @@ function fakeOperations(
     },
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
   };
   return { operations, calls, change: (next: Game[]) => (games = next) };
 }

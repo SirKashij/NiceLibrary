@@ -20,7 +20,7 @@ use crate::sessions::Played;
 use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
 use crate::theme::Theme;
-use crate::{Error, Game, Status};
+use crate::{Error, Game, LaunchOptions, Status};
 
 mod achievements;
 
@@ -116,6 +116,10 @@ const MIGRATIONS: &[&str] = &[
          day   INTEGER PRIMARY KEY,
          calls INTEGER NOT NULL
      );",
+    // 9: How each Local Game is launched: its Launch Arguments as typed, and
+    // its Working Directory, NULL for the executable's folder.
+    "ALTER TABLE local_games ADD COLUMN launch_arguments TEXT NOT NULL DEFAULT '';
+     ALTER TABLE local_games ADD COLUMN working_directory TEXT;",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
@@ -350,11 +354,26 @@ impl Store {
     /// Every Local Game, in the order they were added.
     pub(crate) fn local_games(&self) -> Result<Vec<StoredLocalGame>, Error> {
         let connection = self.connection();
-        let mut statement = connection.prepare("SELECT id, title, executable FROM local_games ORDER BY id")?;
-        let games = statement
-            .query_map([], |row| Ok(StoredLocalGame { id: row.get(0)?, title: row.get(1)?, executable: row.get(2)? }))?
-            .collect::<Result<_, _>>()?;
+        let mut statement = connection.prepare(&format!("{SELECT_LOCAL_GAMES} ORDER BY id"))?;
+        let games = statement.query_map([], stored_local_game)?.collect::<Result<_, _>>()?;
         Ok(games)
+    }
+
+    /// The Local Game stored under `id`, if there is one.
+    pub(crate) fn local_game(&self, id: i64) -> Result<Option<StoredLocalGame>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(&format!("{SELECT_LOCAL_GAMES} WHERE id = ?1"))?;
+        Ok(statement.query_map([id], stored_local_game)?.next().transpose()?)
+    }
+
+    /// Keeps `options` for the Local Game `id`; `false` when there is no
+    /// such Game.
+    pub(crate) fn set_launch_options(&self, id: i64, options: &LaunchOptions) -> Result<bool, Error> {
+        let changed = self.connection().execute(
+            "UPDATE local_games SET launch_arguments = ?2, working_directory = ?3 WHERE id = ?1",
+            params![id, options.arguments, options.working_directory],
+        )?;
+        Ok(changed > 0)
     }
 
     /// Adds the Local Game `title` with its `executable` and answers its id.
@@ -467,6 +486,19 @@ impl Store {
             .collect::<Result<_, _>>()?;
         Ok(played)
     }
+}
+
+/// The columns [`stored_local_game`] reads, from every Local Game.
+const SELECT_LOCAL_GAMES: &str =
+    "SELECT id, title, executable, launch_arguments, working_directory FROM local_games";
+
+fn stored_local_game(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredLocalGame> {
+    Ok(StoredLocalGame {
+        id: row.get(0)?,
+        title: row.get(1)?,
+        executable: row.get(2)?,
+        launch_options: LaunchOptions { arguments: row.get(3)?, working_directory: row.get(4)? },
+    })
 }
 
 /// A time in seconds since the Unix epoch, as SQLite stores it.

@@ -203,6 +203,19 @@ export const en = {
   'achievements.none': '{title} has no achievements.',
   'achievements.notFetchedYet': 'The achievements have not been fetched yet. They arrive with one of the next syncs.',
   'achievements.loadFailed': 'The achievements could not be loaded.',
+  'launch.executableNotFound':
+    '{title} could not be launched because its executable was not found. It may have been moved or deleted.',
+  'launch.workingDirectoryNotFound':
+    '{title} could not be launched because its working directory was not found. Check its launch options.',
+  'launchOptions.title': 'Launch options',
+  'launchOptions.arguments': 'Launch arguments',
+  'launchOptions.argumentsHint': 'Separate arguments with spaces. Put an argument that contains spaces in double quotes.',
+  'launchOptions.workingDirectory': 'Working directory',
+  'launchOptions.workingDirectoryHint': 'Leave it empty to start the game in the folder of its executable.',
+  'launchOptions.save': 'Save',
+  'launchOptions.saved': 'The launch options were saved.',
+  'launchOptions.saveFailed': 'The launch options could not be saved.',
+  'launchOptions.loadFailed': 'The launch options could not be loaded.',
 } as const;
 
 export type MessageKey = keyof typeof en;

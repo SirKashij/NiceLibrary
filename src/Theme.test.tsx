@@ -58,6 +58,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
   };
   return { operations, calls };
 }

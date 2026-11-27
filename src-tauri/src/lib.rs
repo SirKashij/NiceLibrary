@@ -8,9 +8,9 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
-    ExecutableChoice, Game, GameAchievements, Launch, LibraryFilter, LibrarySort, Log, Status, SteamAccountChoice,
-    SteamAppList, SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking,
-    started_with_windows,
+    ExecutableChoice, Game, GameAchievements, Launch, LaunchOptions, LibraryFilter, LibrarySort, Log, Status,
+    SteamAccountChoice, SteamAppList, SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome,
+    Theme, Tracking, started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -202,6 +202,16 @@ async fn open_log_folder(core: tauri::State<'_, Core>) -> Result<(), Error> {
     core.open_log_folder()
 }
 
+#[tauri::command]
+fn launch_options(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<LaunchOptions>, Error> {
+    core.launch_options(&game_id)
+}
+
+#[tauri::command]
+fn set_launch_options(core: tauri::State<'_, Core>, game_id: String, options: LaunchOptions) -> Result<(), Error> {
+    core.set_launch_options(&game_id, &options)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 /// Achievement icons come from `<game id>/achievements/<icon>` under the same scheme
@@ -294,7 +304,9 @@ pub fn run() {
             open_log_folder,
             starts_with_windows,
             set_start_with_windows,
-            achievements
+            achievements,
+            launch_options,
+            set_launch_options
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

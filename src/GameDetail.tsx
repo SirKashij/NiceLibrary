@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Achievements } from './Achievements';
 import { useFormat, useT, type MessageKey } from './i18n';
+import { LaunchOptionsForm } from './LaunchOptions';
 import { StatusChoice } from './library/Status';
 import type { Game, Operations, Source, Status } from './operations';
 
@@ -135,6 +136,7 @@ export function GameDetail({
                   {t('status.setFailed', { title: game.title })}
                 </p>
               )}
+              {game.source === 'local' && <LaunchOptionsForm operations={operations} game={game} />}
             </>
           )}
         </div>

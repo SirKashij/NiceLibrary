@@ -77,6 +77,8 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     },
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
   };
   return { operations, calls };
 }

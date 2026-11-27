@@ -119,6 +119,7 @@ impl Profile {
                 executable_picker: Box::new(NoExecutableChosen),
                 autostart: Box::new(NoAutostart),
                 processes: Box::new(NothingRuns),
+                process_starter: Box::new(NothingStarted),
             },
             Store::open(&self.0.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.0.path().join("covers")),
@@ -321,5 +322,14 @@ struct NothingRuns;
 impl nicelibrary_core::ProcessList for NothingRuns {
     fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
         Ok(Vec::new())
+    }
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
     }
 }

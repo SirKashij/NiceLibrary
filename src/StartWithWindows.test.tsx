@@ -47,6 +47,8 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     onAutomaticSync: () => () => {},
     filterLibrary: async () => [],
     game: async () => null,
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     closeToTray: async () => true,

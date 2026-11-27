@@ -216,3 +216,11 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .achievement-status { font-size: var(--text-size-label); }
 .achievement[data-unlocked='false'] .achievement-icon,
 .achievement[data-unlocked='false'] .achievement-text { opacity: var(--achievement-locked-opacity); }
+/* Launch Options of a Local Game, on its detail page below the facts. */
+.launch-options { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); padding-top: var(--space-5); border-top: var(--hairline) solid var(--color-line); }
+.launch-options h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.launch-options label { color: var(--color-text-muted); font-size: var(--text-size-label); }
+.launch-options input {
+  font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}

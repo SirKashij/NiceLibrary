@@ -205,4 +205,18 @@ export const de: Record<MessageKey, string> = {
   'achievements.none': '{title} hat keine Trophäen.',
   'achievements.notFetchedYet': 'Die Trophäen wurden noch nicht abgerufen. Sie kommen mit einer der nächsten Synchronisierungen.',
   'achievements.loadFailed': 'Die Trophäen konnten nicht geladen werden.',
+  'launch.executableNotFound':
+    '{title} konnte nicht gestartet werden, weil seine ausführbare Datei nicht gefunden wurde. Vielleicht wurde sie verschoben oder gelöscht.',
+  'launch.workingDirectoryNotFound':
+    '{title} konnte nicht gestartet werden, weil sein Arbeitsverzeichnis nicht gefunden wurde. Prüfe seine Startoptionen.',
+  'launchOptions.title': 'Startoptionen',
+  'launchOptions.arguments': 'Startparameter',
+  'launchOptions.argumentsHint':
+    'Trenne Parameter durch Leerzeichen. Setze einen Parameter, der Leerzeichen enthält, in doppelte Anführungszeichen.',
+  'launchOptions.workingDirectory': 'Arbeitsverzeichnis',
+  'launchOptions.workingDirectoryHint': 'Lass es leer, um das Spiel im Ordner seiner ausführbaren Datei zu starten.',
+  'launchOptions.save': 'Speichern',
+  'launchOptions.saved': 'Die Startoptionen wurden gespeichert.',
+  'launchOptions.saveFailed': 'Die Startoptionen konnten nicht gespeichert werden.',
+  'launchOptions.loadFailed': 'Die Startoptionen konnten nicht geladen werden.',
 };

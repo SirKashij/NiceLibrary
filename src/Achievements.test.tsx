@@ -62,6 +62,8 @@ function fakeOperations(games: Game[], achievements: Record<string, GameAchievem
     onAutomaticSync: () => () => {},
     filterLibrary: async () => games,
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
     achievements: async (gameId) => {
       asked.push(gameId);
       const answer = achievements[gameId];

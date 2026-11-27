@@ -24,6 +24,8 @@ function fakeOperations() {
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     theme: async () => 'system',

@@ -47,6 +47,8 @@ function fakeOperations({ closeToTray = true } = {}) {
     },
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
     filterLibrary: async () => [],
     game: async () => null,
     achievements: async () => ({ state: 'notFetchedYet' }),

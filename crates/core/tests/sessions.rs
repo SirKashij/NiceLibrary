@@ -156,6 +156,7 @@ impl App {
                 clock: Box::new(processes.clock.clone()),
                 executable_picker: Box::new(NoExecutableChosen),
                 processes: Box::new(processes.clone()),
+                process_starter: Box::new(NothingStarted),
                 autostart: Box::new(NoAutostart),
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
@@ -477,5 +478,19 @@ impl nicelibrary_core::Autostart for NoAutostart {
 
     fn turn_off(&self) -> Result<(), String> {
         Ok(())
+    }
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(
+        &self,
+        executable: &std::path::Path,
+        _arguments: &[String],
+        _working_directory: &std::path::Path,
+    ) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
     }
 }
