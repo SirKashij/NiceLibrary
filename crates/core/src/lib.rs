@@ -12,6 +12,7 @@ mod steam;
 mod steam_web_api;
 mod store;
 mod sync;
+mod theme;
 
 use std::fmt;
 use std::ops::ControlFlow;
@@ -26,6 +27,7 @@ pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocato
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
 pub use sync::{AutomaticSync, SyncOutcome};
+pub use theme::Theme;
 
 /// The origin a Game is read from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -341,6 +343,18 @@ impl Core {
             .opener
             .open_url(steam_web_api::KEY_PAGE)
             .map_err(|error| Error::new(format!("{} could not be opened: {error}", steam_web_api::KEY_PAGE)))
+    }
+
+    /// The theme the user chose; until they choose, [`Theme::System`]: the
+    /// interface follows the operating system's dark or light setting.
+    pub fn theme(&self) -> Result<Theme, Error> {
+        self.store.theme()
+    }
+
+    /// Makes `theme` the theme of the interface, from now on and after every
+    /// restart.
+    pub fn choose_theme(&self, theme: Theme) -> Result<(), Error> {
+        self.store.choose_theme(theme)
     }
 }
 

@@ -58,6 +58,9 @@ export type LaunchOutcome = { outcome: 'launched' } | { outcome: 'steamNotFound'
 /** How storing the Steam Web API key went, when nothing failed. Mirrors `SteamWebApiKeyCheck` in crates/core. */
 export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' } | { outcome: 'steamUnreachable' };
 
+/** The theme the user chose; `system` follows the operating system's dark or light setting. Mirrors `Theme` in crates/core. */
+export type Theme = 'system' | 'dark' | 'light';
+
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
@@ -114,6 +117,10 @@ export interface Operations {
    * the function that stops listening.
    */
   onAutomaticSync(listener: (event: AutomaticSync) => void): () => void;
+  /** The theme the user chose; `system` until they choose. */
+  theme(): Promise<Theme>;
+  /** Makes a theme the theme of the interface, also after a restart. */
+  chooseTheme(theme: Theme): Promise<void>;
 }
 
 export const tauriOperations: Operations = {
@@ -138,4 +145,6 @@ export const tauriOperations: Operations = {
       void listening.then((stop) => stop());
     };
   },
+  theme: () => invoke<Theme>('theme'),
+  chooseTheme: (theme) => invoke<void>('choose_theme', { theme }),
 };

@@ -13,6 +13,7 @@ use rusqlite::{Connection, params};
 
 use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
+use crate::theme::Theme;
 use crate::{Error, Game};
 
 /// The schema changes, oldest first. Never edit or reorder a released entry;
@@ -47,6 +48,9 @@ const LAST_READ_STEAM_ACCOUNT: &str = "steam_account";
 
 /// The setting that names the Steam Account the user chose.
 const CHOSEN_STEAM_ACCOUNT: &str = "chosen_steam_account";
+
+/// The setting that holds the theme the user chose.
+const THEME: &str = "theme";
 
 /// The local store.
 pub struct Store {
@@ -97,6 +101,21 @@ impl Store {
             "INSERT INTO settings (key, value) VALUES (?1, ?2)
              ON CONFLICT (key) DO UPDATE SET value = excluded.value",
             params![CHOSEN_STEAM_ACCOUNT, steam_id],
+        )?;
+        Ok(())
+    }
+
+    /// The theme the user chose; [`Theme::System`] until they choose.
+    pub(crate) fn theme(&self) -> Result<Theme, Error> {
+        Ok(self.setting(THEME)?.map_or(Theme::System, |setting| Theme::from_setting(&setting)))
+    }
+
+    /// Remembers `theme` as the theme the user chose.
+    pub(crate) fn choose_theme(&self, theme: Theme) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![THEME, theme.as_setting()],
         )?;
         Ok(())
     }

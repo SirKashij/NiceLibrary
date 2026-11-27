@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
+import { ThemeSettings } from './settings/ThemeSettings';
+import { ThemeProvider } from './theme';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -13,7 +15,9 @@ const VIEWS: { view: View; label: MessageKey }[] = [
 export function App({ operations, lang }: { operations: Operations; lang: Lang }) {
   return (
     <I18nProvider lang={lang}>
-      <Shell operations={operations} />
+      <ThemeProvider operations={operations}>
+        <Shell operations={operations} />
+      </ThemeProvider>
     </I18nProvider>
   );
 }
@@ -294,6 +298,7 @@ function SettingsView({ operations, onAccountChosen }: { operations: Operations;
     <Page title="nav.settings">
       <SteamSettings operations={operations} onAccountChosen={onAccountChosen} />
       <SteamWebApiKeySettings operations={operations} />
+      <ThemeSettings />
     </Page>
   );
 }

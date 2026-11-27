@@ -7,7 +7,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AutomaticSync, Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
-    SyncOutcome,
+    SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -78,6 +78,16 @@ async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(),
     core.open_steam_web_api_key_page()
 }
 
+#[tauri::command]
+fn theme(core: tauri::State<'_, Core>) -> Result<Theme, Error> {
+    core.theme()
+}
+
+#[tauri::command]
+fn choose_theme(core: tauri::State<'_, Core>, theme: Theme) -> Result<(), Error> {
+    core.choose_theme(theme)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -121,7 +131,9 @@ pub fn run() {
             remove_steam_web_api_key,
             open_steam_web_api_key_page,
             sync,
-            last_sync
+            last_sync,
+            theme,
+            choose_theme
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
