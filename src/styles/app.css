@@ -325,3 +325,6 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .cover-match-results { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .cover-match-result { text-align: left; color: var(--color-text-muted); }
 .cover-match-result:hover, .cover-match-result:focus-visible { color: var(--color-text); }
+/* The Limited Mode hint above the Library: quiet, a hairline beside it, no card (ADR-0007). */
+.limited-mode { display: grid; gap: var(--space-2); max-width: var(--note-max-width); padding-left: var(--space-3); border-left: var(--hairline) solid var(--color-line); }
+.limited-mode h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }

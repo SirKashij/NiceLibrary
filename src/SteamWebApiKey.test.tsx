@@ -101,6 +101,8 @@ function fakeOperations({ stored = false } = {}) {
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
   };
   return { operations, calls };
 }

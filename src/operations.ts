@@ -242,6 +242,13 @@ export type GameAchievements =
     };
 /** How the Library shows its Games: a grid of Covers or one row per Game. Mirrors `LibraryLayout` in crates/core. */
 export type LibraryLayout = 'coverGrid' | 'list';
+/** Whether the app runs in Limited Mode, and why. Mirrors `LimitedMode` in crates/core. */
+export type LimitedMode =
+  | { outcome: 'off' }
+  | { outcome: 'noKey' }
+  | { outcome: 'keyRejected' }
+  | { outcome: 'gameDetailsPrivate' }
+  | { outcome: 'steamUnreachable' };
 
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
@@ -407,6 +414,13 @@ export interface Operations {
    * the folder could not be shown.
    */
   openLogFolder(): Promise<void>;
+  /**
+   * Whether the app runs in Limited Mode, and why: no key stored, or what the
+   * last Sync of the Steam Account found. A successful Sync ends it.
+   */
+  limitedMode(): Promise<LimitedMode>;
+  /** Opens Steam's privacy settings of the signed-in profile in the browser. Rejects when it could not be opened. */
+  openSteamPrivacySettings(): Promise<void>;
   /**
    * Whether the app starts with Windows, hidden in the Tray: what the current
    * user's autostart entry says, also after it was changed outside the app.
@@ -622,6 +636,8 @@ export const tauriOperations: Operations = {
   chooseLanguage: (language) => invoke<void>('choose_language', { language }),
   setStatus: (gameId, status) => invoke<Game>('set_status', { gameId, status }),
   openLogFolder: () => invoke<void>('open_log_folder'),
+  limitedMode: () => invoke<LimitedMode>('limited_mode'),
+  openSteamPrivacySettings: () => invoke<void>('open_steam_privacy_settings'),
   startsWithWindows: () => invoke<boolean>('starts_with_windows'),
   setStartWithWindows: (on) => invoke<void>('set_start_with_windows', { on }),
   onSession: (listener) => {

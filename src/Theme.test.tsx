@@ -27,6 +27,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     closeToTray: async () => true,

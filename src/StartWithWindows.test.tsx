@@ -51,6 +51,8 @@ function fakeOperations({ startsWithWindows = false } = {}) {
       throw new Error('this test sets no Status');
     },
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     onAutomaticSync: () => () => {},
     filterLibrary: async () => [],
     game: async () => null,

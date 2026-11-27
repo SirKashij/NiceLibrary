@@ -83,6 +83,8 @@ function fakeOperations() {
     language: async () => 'system',
     chooseLanguage: async () => {},
     coverHue: async () => null,
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
   };
   return { operations, calls };
 }

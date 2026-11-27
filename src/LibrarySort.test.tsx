@@ -71,6 +71,8 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     setStartWithWindows: async () => {},
     install: async () => ({ outcome: 'started' }),
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },

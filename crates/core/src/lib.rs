@@ -18,6 +18,7 @@ pub mod keyvalues;
 mod language;
 mod launch;
 mod local_covers;
+mod limited_mode;
 mod local_games;
 mod library_filter;
 mod library_layout;
@@ -50,6 +51,7 @@ pub use covers::{Cover, CoverCache, Downloader};
 pub use executables_in_folder::{FolderSuggestions, SuggestedExecutable};
 pub use language::Language;
 pub use launch::{Install, Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
+pub use limited_mode::LimitedMode;
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
 pub use local_games::{AddLocalGame, EditLocalGame, ExecutableChoice, ExecutablePicker, LocalGame};
@@ -350,7 +352,8 @@ impl Core {
             && let Some(account) = self.chosen_steam_account_or(|| Ok(most_recent_account(&folder)))?
             && let Some(apps) = steam::installed_apps(&folder)
         {
-            self.store.record_installed_steam_games(&account, &apps)?;
+            let local = steam::local_playtimes(&folder, &account);
+            self.store.record_installed_steam_games(&account, &apps, &local)?;
         }
         self.stored_library()
     }
@@ -520,15 +523,51 @@ impl Core {
         let Some(account) = self.current_steam_account()?.filter(|id| steam::personal_steam_id(id).is_some()) else {
             return Ok(SyncOutcome::NoSteamAccount);
         };
-        let games = match sync::owned_games(self.ports.web_api.as_ref(), &key, &account) {
-            Ok(games) => games,
-            Err(failed) => return Ok(failed),
+        let outcome = match sync::owned_games(self.ports.web_api.as_ref(), &key, &account) {
+            Ok(games) => {
+                let at = clock::seconds_since_epoch(self.ports.clock.now());
+                self.store.record_steam_sync(&account, &games, at)?;
+                // One call so far: the owned games.
+                achievements::fetch(self.ports.web_api.as_ref(), &self.store, &key, &account, at, 1)?;
+                SyncOutcome::Synced { at }
+            }
+            Err(failed) => failed,
         };
-        let at = clock::seconds_since_epoch(self.ports.clock.now());
-        self.store.record_steam_sync(&account, &games, at)?;
-        // One call so far: the owned games.
-        achievements::fetch(self.ports.web_api.as_ref(), &self.store, &key, &account, at, 1)?;
-        Ok(SyncOutcome::Synced { at })
+        if let Some(reason) = LimitedMode::after_sync(outcome) {
+            self.store.record_limited_mode_reason(&account, reason.stored_name())?;
+        }
+        Ok(outcome)
+    }
+
+    /// Whether the app runs in Limited Mode, and why: without a stored Steam
+    /// Web API key, or when the last Sync of the Steam Account the app works
+    /// with found Steam refusing the key, its game details private, or Steam
+    /// unreachable. A successful Sync, or storing a key Steam accepts, ends
+    /// it.
+    pub fn limited_mode(&self) -> Result<LimitedMode, Error> {
+        self.logged("limited_mode", self.current_limited_mode())
+    }
+
+    fn current_limited_mode(&self) -> Result<LimitedMode, Error> {
+        if !self.key_stored()? {
+            return Ok(LimitedMode::NoKey);
+        }
+        let Some(account) = self.current_steam_account()? else {
+            return Ok(LimitedMode::Off);
+        };
+        Ok(self.store.limited_mode_reason(&account)?.map_or(LimitedMode::Off, |name| LimitedMode::from_stored_name(&name)))
+    }
+
+    /// Opens the Steam page where the user makes their game details
+    /// public, in the browser.
+    pub fn open_steam_privacy_settings(&self) -> Result<(), Error> {
+        let page = limited_mode::PRIVACY_SETTINGS_PAGE;
+        let opened = self
+            .ports
+            .opener
+            .open_url(page)
+            .map_err(|error| Error::new(format!("{page} could not be opened: {error}")));
+        self.logged("open_steam_privacy_settings", opened)
     }
 
     /// Syncs on its own while the app runs: shortly after the start, then
@@ -604,6 +643,8 @@ impl Core {
         let check = steam_web_api::check_key(self.ports.web_api.as_ref(), &key);
         if check == SteamWebApiKeyCheck::Stored {
             self.ports.secrets.write(steam_web_api::KEY_SECRET, &key).map_err(secret_store_error)?;
+            // Steam accepts this key; why an earlier Sync failed is for the next Sync to tell.
+            self.store.forget_limited_mode_reasons()?;
             self.sync_soon.ring();
             self.steam_app_list_soon.ring();
         }
