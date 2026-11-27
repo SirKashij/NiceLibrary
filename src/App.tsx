@@ -306,6 +306,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           notice={launchNotice}
           onPlay={launch}
           onStatusSet={() => setStatusChanges((count) => count + 1)}
+          onPlaytimeAdjusted={() => setStatusChanges((count) => count + 1)}
           onBack={back}
         />
       )}

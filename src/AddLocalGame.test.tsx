@@ -57,6 +57,10 @@ function fakeOperations({
     renameCollection: async () => ({ outcome: 'emptyName' }),
     deleteCollection: async () => {},
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     filterLibrary: async () => [...games],
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

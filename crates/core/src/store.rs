@@ -5,6 +5,7 @@
 //! a database from any earlier version is brought up to date on open. Every
 //! Steam-derived row carries the Steam Account it belongs to.
 
+mod playtime_adjustments;
 mod steam_app_list;
 
 use std::collections::{BTreeMap, HashMap};
@@ -80,6 +81,11 @@ const MIGRATIONS: &[&str] = &[
          ended_at   INTEGER NOT NULL
      );
      CREATE INDEX local_game_sessions_by_game ON local_game_sessions (local_game);",
+    // 8: The Playtime Adjustment of a Local Game, in minutes, added to or (when negative) removed from its Sessions.
+    "CREATE TABLE local_game_playtime_adjustments (
+         local_game INTEGER PRIMARY KEY REFERENCES local_games (id) ON DELETE CASCADE,
+         minutes    INTEGER NOT NULL
+     );",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from

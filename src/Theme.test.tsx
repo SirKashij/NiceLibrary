@@ -38,6 +38,10 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     filterLibrary: async () => [],
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

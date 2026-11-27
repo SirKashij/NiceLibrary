@@ -91,6 +91,10 @@ function fakeOperations({
       return () => listeners.delete(listener);
     },
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
   };
   const automatic = {
     start: () => heard({ state: 'started' }),

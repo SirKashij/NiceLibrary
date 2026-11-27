@@ -41,6 +41,10 @@ function fakeOperations({ closeToTray = true } = {}) {
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     openLogFolder: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');

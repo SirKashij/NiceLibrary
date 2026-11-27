@@ -41,6 +41,10 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

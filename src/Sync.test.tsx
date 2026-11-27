@@ -106,6 +106,10 @@ function fakeOperations({
       throw new Error('this test sets no Status');
     },
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
   };
   return { operations, calls, automaticSync, listeners };
 }

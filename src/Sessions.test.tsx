@@ -61,6 +61,10 @@ function fakeOperations(initial: Game[]) {
       throw new Error('this test sets no Status');
     },
     openLogFolder: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     onSession: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

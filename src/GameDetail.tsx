@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFormat, useT, type MessageKey } from './i18n';
+import { PlaytimeAdjustment } from './library/PlaytimeAdjustment';
 import { StatusChoice } from './library/Status';
 import type { Game, Operations, Source, Status } from './operations';
 
@@ -22,6 +23,7 @@ export function GameDetail({
   notice,
   onPlay,
   onStatusSet,
+  onPlaytimeAdjusted,
   onBack,
 }: {
   operations: Operations;
@@ -35,6 +37,8 @@ export function GameDetail({
   onPlay: (game: Game) => void;
   /** Hears that the Game's Status was set, which changes the Library. */
   onStatusSet: (game: Game) => void;
+  /** Hears that a Local Game's Playtime Adjustment changed, which changes the Library. */
+  onPlaytimeAdjusted: (game: Game) => void;
   onBack: () => void;
 }) {
   const t = useT();
@@ -132,6 +136,16 @@ export function GameDetail({
                 <p className="note" role="alert">
                   {t('status.setFailed', { title: game.title })}
                 </p>
+              )}
+              {game.source === 'local' && (
+                <PlaytimeAdjustment
+                  operations={operations}
+                  game={game}
+                  onAdjusted={(answer) => {
+                    setGame(answer);
+                    onPlaytimeAdjusted(answer);
+                  }}
+                />
               )}
             </>
           )}

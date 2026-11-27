@@ -65,6 +65,9 @@
 
   /* Game detail page: the large Cover. */
   --detail-cover-width: 300px;
+
+  /* Playtime Adjustment: an hours or minutes field, wide enough for four digits. */
+  --adjustment-field-width: 10ch;
 }
 
 /* The light theme: the same roles on warm paper surfaces. */
