@@ -173,7 +173,7 @@ const MIGRATIONS: &[&str] = &[
          local_game INTEGER PRIMARY KEY REFERENCES local_games (id) ON DELETE CASCADE,
          minutes    INTEGER NOT NULL
      );",
-    // 18: The setting for the Steam Account read last gets a name that says so.
+    // 18: The setting of the Steam Account read last moves from `steam_account` to `last_read_steam_account`.
     "UPDATE settings SET key = 'last_read_steam_account' WHERE key = 'steam_account';",
 ];
 

@@ -402,7 +402,7 @@ fn write_a_schema_1_database(database: &Path, last_read: Option<&str>) {
     }
 }
 
-/// The keys of all settings in the database, in order.
+/// The keys of all settings in the database, ordered by key.
 fn settings_keys(database: &Path) -> Vec<String> {
     let connection = rusqlite::Connection::open(database).unwrap();
     let mut statement = connection.prepare("SELECT key FROM settings ORDER BY key").unwrap();
