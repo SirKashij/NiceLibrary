@@ -49,6 +49,8 @@ function fakeOperations({
       games.push(game);
       return { outcome: 'added', game };
     },
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
   };
   return { operations, added };
 }

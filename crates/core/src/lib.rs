@@ -23,7 +23,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 pub use clock::{Clock, Wakeup};
 pub use covers::{Cover, CoverCache, Downloader};
-pub use launch::{Launch, OpenError, Opener};
+pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
 pub use library_filter::LibraryFilter;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
@@ -114,6 +114,7 @@ pub struct Ports {
     pub web_api: Box<dyn WebApi>,
     pub clock: Box<dyn Clock>,
     pub executable_picker: Box<dyn ExecutablePicker>,
+    pub process_starter: Box<dyn ProcessStarter>,
 }
 
 /// The application core. Each public method is one operation.
@@ -229,8 +230,17 @@ impl Core {
 
     /// Launches the Game `game_id`. A Steam Game is launched through Steam, by
     /// opening its `steam://rungameid/` URL; the app never starts a Steam
-    /// Game's executable itself (ADR-0002).
+    /// Game's executable itself (ADR-0002). A Local Game is launched by
+    /// starting its executable, not through a shell, with its Launch
+    /// Arguments in its Working Directory, or else in the executable's
+    /// folder (see [`Self::set_launch_options`]).
     pub fn launch(&self, game_id: &str) -> Result<Launch, Error> {
+        if let Some(id) = local_game_id(game_id) {
+            return match self.store.local_game(id)? {
+                Some(game) => launch::launch_local_game(self.ports.process_starter.as_ref(), &game),
+                None => Err(Error::new(format!("no such game in the library: {game_id}"))),
+            };
+        }
         let Some(game) = self.library()?.into_iter().find(|game| game.id == game_id) else {
             return Err(Error::new(format!("no such game in the library: {game_id}")));
         };
@@ -238,7 +248,7 @@ impl Core {
             return Err(Error::new(format!("not installed: {}", game.title)));
         }
         let Some(app_id) = steam_app_id(&game.id) else {
-            return Err(Error::new(format!("only Steam Games can be launched so far: {}", game.title)));
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
         };
         if self.ports.steam_locator.steam_folder().is_none() {
             return Ok(Launch::SteamNotFound);
@@ -397,6 +407,36 @@ impl Core {
         Ok(AddLocalGame::Added { game: Game::local(id, title.to_owned()) })
     }
 
+    /// How the Local Game `game_id` is launched; `None` when it is not a
+    /// Local Game in the Library.
+    pub fn launch_options(&self, game_id: &str) -> Result<Option<LaunchOptions>, Error> {
+        let Some(id) = local_game_id(game_id) else {
+            return Ok(None);
+        };
+        Ok(self.store.local_game(id)?.map(|game| game.launch_options))
+    }
+
+    /// Sets how the Local Game `game_id` is launched, from now on and after
+    /// every restart: its Launch Arguments as typed, split when it is
+    /// launched (see [`Self::launch`]), and its Working Directory. A Working
+    /// Directory of only spaces is none, so the executable's folder is used.
+    /// Anything but a Local Game in the Library is refused.
+    pub fn set_launch_options(&self, game_id: &str, options: &LaunchOptions) -> Result<(), Error> {
+        let options = LaunchOptions {
+            arguments: options.arguments.trim().to_owned(),
+            working_directory: options
+                .working_directory
+                .as_deref()
+                .map(str::trim)
+                .filter(|folder| !folder.is_empty())
+                .map(str::to_owned),
+        };
+        match local_game_id(game_id) {
+            Some(id) if self.store.set_launch_options(id, &options)? => Ok(()),
+            _ => Err(Error::new(format!("no such Local Game in the library: {game_id}"))),
+        }
+    }
+
     /// Opens the Steam page where the user creates their Steam Web API key,
     /// in the browser.
     pub fn open_steam_web_api_key_page(&self) -> Result<(), Error> {
@@ -416,6 +456,11 @@ fn secret_store_error(reason: String) -> Error {
 /// installation in `folder`.
 fn most_recent_account(folder: &std::path::Path) -> Option<String> {
     steam::current_account(folder).map(|account| account.steam_id)
+}
+
+/// The store's number in a Local Game's id (`local:<number>`).
+fn local_game_id(game_id: &str) -> Option<i64> {
+    game_id.strip_prefix("local:")?.parse().ok()
 }
 
 /// Steam's app id in a Steam Game's id (`steam:<app id>`).

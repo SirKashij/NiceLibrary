@@ -10,6 +10,8 @@ mod http;
 #[cfg(windows)]
 mod opener_windows;
 #[cfg(windows)]
+mod process_starter_windows;
+#[cfg(windows)]
 mod secrets_windows;
 #[cfg(windows)]
 mod steam_windows;
@@ -21,11 +23,13 @@ pub use http::{HttpDownloader, HttpWebApi};
 #[cfg(windows)]
 pub use opener_windows::WindowsOpener;
 #[cfg(windows)]
+pub use process_starter_windows::WindowsProcessStarter;
+#[cfg(windows)]
 pub use secrets_windows::WindowsSecretStore;
 #[cfg(windows)]
 pub use steam_windows::{Hive, RegistryValue, WindowsSteamLocator};
 
-use nicelibrary_core::{ExecutablePicker, Opener, Ports, SecretStore, SteamLocator};
+use nicelibrary_core::{ExecutablePicker, Opener, Ports, ProcessStarter, SecretStore, SteamLocator};
 
 /// The ports of this machine.
 pub fn real_ports() -> Ports {
@@ -37,7 +41,27 @@ pub fn real_ports() -> Ports {
         web_api: Box::new(HttpWebApi::new()),
         clock: Box::new(SystemClock),
         executable_picker: executable_picker(),
+        process_starter: process_starter(),
     }
+}
+
+#[cfg(windows)]
+fn process_starter() -> Box<dyn ProcessStarter> {
+    Box::new(WindowsProcessStarter)
+}
+
+#[cfg(not(windows))]
+fn process_starter() -> Box<dyn ProcessStarter> {
+    /// Launching Local Games on Linux and macOS is not part of version 1.
+    struct NoProcessStarter;
+
+    impl ProcessStarter for NoProcessStarter {
+        fn start(&self, executable: &std::path::Path, _: &[String], _: &std::path::Path) -> Result<(), String> {
+            Err(format!("starting {} is not supported on this system", executable.display()))
+        }
+    }
+
+    Box::new(NoProcessStarter)
 }
 
 #[cfg(windows)]

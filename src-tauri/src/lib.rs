@@ -6,7 +6,7 @@ pub mod ports;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSync, Core, CoverCache, Error, ExecutableChoice, Game, Launch, LibraryFilter,
+    AddLocalGame, AutomaticSync, Core, CoverCache, Error, ExecutableChoice, Game, Launch, LaunchOptions, LibraryFilter,
     SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome,
 };
 use percent_encoding::percent_decode_str;
@@ -99,6 +99,16 @@ fn add_local_game(core: tauri::State<'_, Core>, executable: String, title: Strin
     core.add_local_game(&executable, &title)
 }
 
+#[tauri::command]
+fn launch_options(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<LaunchOptions>, Error> {
+    core.launch_options(&game_id)
+}
+
+#[tauri::command]
+fn set_launch_options(core: tauri::State<'_, Core>, game_id: String, options: LaunchOptions) -> Result<(), Error> {
+    core.set_launch_options(&game_id, &options)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -146,7 +156,9 @@ pub fn run() {
             filter_library,
             game,
             choose_local_game_executable,
-            add_local_game
+            add_local_game,
+            launch_options,
+            set_launch_options
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

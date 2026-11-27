@@ -694,3 +694,155 @@ mod executable_picker {
         assert_eq!(std::env::current_dir().unwrap(), before);
     }
 }
+
+/// `ProcessStarter` (crates/core): starts an executable directly, never
+/// through a shell, with each argument as given, in the working directory;
+/// returns without waiting for the process to end.
+///
+/// The program the tests start is this test executable itself, running only
+/// its `probe`, which writes the arguments and working directory it was
+/// started with to a file in a temporary folder. Nothing else is started.
+#[cfg(windows)]
+mod process_starter {
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::time::{Duration, Instant};
+
+    use nicelibrary_core::ProcessStarter;
+    use nicelibrary_lib::ports::WindowsProcessStarter;
+
+    /// In the working directory, tells the `probe` that a test started it.
+    const STARTED_BY_TEST: &str = "started-by-test";
+    /// In the working directory, tells the `probe` to wait for `RELEASE` before it records.
+    const WAIT: &str = "wait";
+    const RELEASE: &str = "release";
+    /// What the `probe` writes, once it is complete.
+    const RECORD: &str = "record.txt";
+    /// Separates the arguments for libtest from the arguments under test.
+    const UNDER_TEST: &str = "--";
+
+    /// The program a test starts: this executable, running only the `probe`,
+    /// then each of `arguments`.
+    fn probe_arguments(arguments: &[&str]) -> Vec<String> {
+        let libtest = ["--ignored", "--exact", "--test-threads=1", "process_starter::probe", UNDER_TEST];
+        libtest.iter().chain(arguments).map(|argument| argument.to_string()).collect()
+    }
+
+    fn this_executable() -> PathBuf {
+        std::env::current_exe().unwrap()
+    }
+
+    /// A working directory for one test, with a space in its name.
+    fn working_directory() -> tempfile::TempDir {
+        let folder = tempfile::Builder::new().prefix("NiceLibrary contract ").tempdir().unwrap();
+        fs::write(folder.path().join(STARTED_BY_TEST), "").unwrap();
+        folder
+    }
+
+    /// What the `probe` started in `folder` recorded: its working directory
+    /// and its arguments under test; waits for it up to ten seconds.
+    fn recorded(folder: &Path) -> Option<(PathBuf, Vec<String>)> {
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while Instant::now() < deadline {
+            if let Ok(text) = fs::read_to_string(folder.join(RECORD)) {
+                let mut parts = text.split('\0').map(str::to_owned);
+                let directory = PathBuf::from(parts.next()?);
+                return Some((directory, parts.collect()));
+            }
+            std::thread::sleep(Duration::from_millis(50));
+        }
+        None
+    }
+
+    fn same_folder(a: &Path, b: &Path) -> bool {
+        fs::canonicalize(a).unwrap() == fs::canonicalize(b).unwrap()
+    }
+
+    /// Not a test of its own: the program the other tests start. It records
+    /// only in a working directory a test prepared.
+    #[test]
+    #[ignore = "started by the process_starter tests"]
+    fn probe() {
+        let directory = std::env::current_dir().unwrap();
+        if !directory.join(STARTED_BY_TEST).exists() {
+            return;
+        }
+        if directory.join(WAIT).exists() {
+            let deadline = Instant::now() + Duration::from_secs(20);
+            while !directory.join(RELEASE).exists() && Instant::now() < deadline {
+                std::thread::sleep(Duration::from_millis(50));
+            }
+        }
+        let arguments: Vec<String> = std::env::args().skip_while(|argument| argument != UNDER_TEST).skip(1).collect();
+        let text = std::iter::once(directory.display().to_string()).chain(arguments).collect::<Vec<_>>().join("\0");
+        // Written aside and renamed, so a test never reads half a record.
+        fs::write(directory.join("record.partial"), text).unwrap();
+        fs::rename(directory.join("record.partial"), directory.join(RECORD)).unwrap();
+    }
+
+    #[test]
+    fn starts_the_executable_with_each_argument_as_given_in_the_working_directory() {
+        let folder = working_directory();
+        let arguments = [
+            "-windowed",
+            "two words",
+            r#"say "hi""#,
+            r"C:\Saves\",
+            "",
+            "Größe 100 %",
+            "%PATH%",
+            "a & echo injected> injected.txt",
+            "| more",
+        ];
+
+        WindowsProcessStarter.start(&this_executable(), &probe_arguments(&arguments), folder.path()).unwrap();
+
+        let (directory, received) = recorded(folder.path()).expect("the program recorded nothing");
+        assert!(same_folder(&directory, folder.path()), "{}", directory.display());
+        assert_eq!(received, arguments);
+        assert!(!folder.path().join("injected.txt").exists(), "an argument was run by a shell");
+    }
+
+    #[test]
+    fn returns_while_the_process_still_runs() {
+        let folder = working_directory();
+        fs::write(folder.path().join(WAIT), "").unwrap();
+
+        WindowsProcessStarter.start(&this_executable(), &probe_arguments(&["waited"]), folder.path()).unwrap();
+
+        assert!(!folder.path().join(RECORD).exists(), "start waited for the process to end");
+        fs::write(folder.path().join(RELEASE), "").unwrap();
+        assert_eq!(recorded(folder.path()).expect("the program recorded nothing").1, ["waited"]);
+    }
+
+    #[test]
+    fn a_missing_executable_is_an_error() {
+        let folder = working_directory();
+
+        assert!(WindowsProcessStarter.start(&folder.path().join("gone.exe"), &[], folder.path()).is_err());
+    }
+
+    #[test]
+    fn a_missing_working_directory_is_an_error_and_starts_nothing() {
+        let folder = working_directory();
+        let gone = folder.path().join("gone");
+
+        assert!(WindowsProcessStarter.start(&this_executable(), &probe_arguments(&[]), &gone).is_err());
+        std::thread::sleep(Duration::from_secs(1));
+        assert!(!folder.path().join(RECORD).exists());
+    }
+
+    #[test]
+    fn a_batch_file_is_refused_and_not_started() {
+        let folder = working_directory();
+        let marker = folder.path().join("started.txt");
+        for name in ["game.cmd", "game.bat"] {
+            let program = folder.path().join(name);
+            fs::write(&program, format!("@echo started> \"{}\"\r\n", marker.display())).unwrap();
+
+            assert!(WindowsProcessStarter.start(&program, &[], folder.path()).is_err(), "{name} was not refused");
+        }
+        std::thread::sleep(Duration::from_secs(1));
+        assert!(!marker.exists(), "a batch file was started");
+    }
+}

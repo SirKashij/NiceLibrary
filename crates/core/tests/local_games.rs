@@ -121,6 +121,7 @@ impl App {
                 web_api: Box::new(NoSecretsNoWebApi),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(user.clone()),
+                process_starter: Box::new(NothingStarted),
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.join("covers")),
@@ -265,6 +266,7 @@ fn a_failing_file_dialog_is_an_error() {
             web_api: Box::new(NoSecretsNoWebApi),
             clock: Box::new(StoppedClock),
             executable_picker: Box::new(BrokenDialog),
+            process_starter: Box::new(NothingStarted),
         },
         Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.path().join("covers")),
@@ -448,4 +450,13 @@ fn a_local_game_is_found_by_the_local_source_and_installed_only_filters() {
     let filter = nicelibrary_core::LibraryFilter { source: Some(Source::Local), installed_only: true, ..Default::default() };
 
     assert_eq!(app.core.filter_library(&filter).unwrap(), [game]);
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
+    }
 }

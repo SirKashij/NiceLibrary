@@ -313,6 +313,7 @@ impl Computer {
                 web_api: api,
                 clock: Box::new(self.clock.clone()),
                 executable_picker: Box::new(NoExecutableChosen),
+                process_starter: Box::new(NothingStarted),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -796,6 +797,7 @@ fn an_automatic_sync_that_fails_in_the_app_reaches_the_interface_with_its_reason
             web_api: Box::new(SteamWebApi::owning(vec![])),
             clock: Box::new(computer.clock.clone()),
             executable_picker: Box::new(NoExecutableChosen),
+            process_starter: Box::new(NothingStarted),
         },
         Store::open(&computer.profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(computer.profile.path().join("covers")),
@@ -860,5 +862,14 @@ struct NoExecutableChosen;
 impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
     fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
+    }
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
     }
 }

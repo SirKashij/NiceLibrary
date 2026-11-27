@@ -46,6 +46,8 @@ function fakeOperations({ stored = false } = {}) {
     game: async () => null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
   };
   return { operations, calls };
 }

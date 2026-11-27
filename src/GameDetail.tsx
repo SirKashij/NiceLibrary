@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFormat, useT, type MessageKey } from './i18n';
+import { LaunchOptionsForm } from './LaunchOptions';
 import type { Game, Operations, Source } from './operations';
 
 const SOURCES: Record<Source, MessageKey> = {
@@ -103,6 +104,7 @@ export function GameDetail({
                   <dd>{lastPlayed}</dd>
                 </div>
               </dl>
+              {game.source === 'local' && <LaunchOptionsForm operations={operations} game={game} />}
             </>
           )}
         </div>

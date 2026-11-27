@@ -113,3 +113,14 @@ _Avoid_: Offline mode, basic mode
 **Launch**:
 Starting a Game from the app.
 _Avoid_: Run, start, open
+
+**Launch Options**:
+How a Local Game is launched: its Launch Arguments and its Working Directory, set by the person per Game.
+
+**Launch Arguments**:
+The arguments a Local Game's executable is started with. The person types them on one line, separated by spaces; a part in double quotes is one argument. Each reaches the executable as an argument of its own, never through a shell.
+_Avoid_: Command line, parameters (in English text)
+
+**Working Directory**:
+The folder a Local Game's executable is started in. Without one, the executable's own folder.
+_Avoid_: Start folder, current directory

@@ -152,6 +152,7 @@ impl App {
                 web_api: Box::new(SteamOwnsPortal2AndHalfLife2),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(NoExecutableChosen),
+                process_starter: Box::new(NothingStarted),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -227,4 +228,13 @@ fn a_game_that_is_not_in_the_library_has_no_detail_page() {
 
     assert_eq!(app.core.game("steam:400"), Ok(None));
     assert_eq!(app.core.game(r"C:\Windows\notepad.exe"), Ok(None));
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
+    }
 }

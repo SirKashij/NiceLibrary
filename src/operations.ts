@@ -55,8 +55,24 @@ export type SteamInstallation =
 /** How choosing the Steam Account went, when nothing failed. Mirrors `SteamAccountChoice` in crates/core. */
 export type SteamAccountChoice = { outcome: 'chosen' } | { outcome: 'invalidSteamId' };
 
-/** How a Launch went, when nothing failed. Mirrors `Launch` in crates/core. */
-export type LaunchOutcome = { outcome: 'launched' } | { outcome: 'steamNotFound' };
+/**
+ * How a Launch went, when nothing failed. `executableNotFound` and
+ * `workingDirectoryNotFound` are for a Local Game and started nothing.
+ * Mirrors `Launch` in crates/core.
+ */
+export type LaunchOutcome =
+  | { outcome: 'launched' }
+  | { outcome: 'steamNotFound' }
+  | { outcome: 'executableNotFound' }
+  | { outcome: 'workingDirectoryNotFound' };
+
+/** How a Local Game is launched, as the user set it. Mirrors `LaunchOptions` in crates/core. */
+export interface LaunchOptions {
+  /** The Launch Arguments as typed: separated by spaces, a part in double quotes is one argument. */
+  arguments: string;
+  /** The Working Directory; `null` for the executable's folder. */
+  workingDirectory: string | null;
+}
 
 /** How storing the Steam Web API key went, when nothing failed. Mirrors `SteamWebApiKeyCheck` in crates/core. */
 export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' } | { outcome: 'steamUnreachable' };
@@ -111,7 +127,8 @@ export interface Operations {
    */
   coverUrl(game: Game): string;
   /**
-   * Launches an Installed Game. A Steam Game starts through Steam itself.
+   * Launches an Installed Game. A Steam Game starts through Steam itself, a
+   * Local Game by starting its executable with its Launch Options.
    * Rejects when the Game could not be launched.
    */
   launch(game: Game): Promise<LaunchOutcome>;
@@ -158,6 +175,14 @@ export interface Operations {
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /** How a Local Game is launched; `null` for anything but a Local Game in the Library. */
+  launchOptions(gameId: string): Promise<LaunchOptions | null>;
+  /**
+   * Sets how a Local Game is launched, also after a restart. A Working
+   * Directory of only spaces is none: the executable's folder is used.
+   * Rejects for anything but a Local Game in the Library.
+   */
+  setLaunchOptions(gameId: string, options: LaunchOptions): Promise<void>;
 }
 
 export const tauriOperations: Operations = {
@@ -186,4 +211,6 @@ export const tauriOperations: Operations = {
   addLocalGame: (executable, title) => invoke<AddLocalGame>('add_local_game', { executable, title }),
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  launchOptions: (gameId) => invoke<LaunchOptions | null>('launch_options', { gameId }),
+  setLaunchOptions: (gameId, options) => invoke<void>('set_launch_options', { gameId, options }),
 };

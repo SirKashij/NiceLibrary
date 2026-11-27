@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import { AddLocalGameButton } from './library/AddLocalGame';
+import { whyNotLaunched } from './launchProblem';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
 
@@ -206,7 +207,10 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
       if (id === latestLaunch.current) setLaunchProblem(problem);
     };
     operations.launch(game).then(
-      ({ outcome }) => report(outcome === 'steamNotFound' ? { message: 'launch.steamNotFound', title: game.title } : undefined),
+      (outcome) => {
+        const message = whyNotLaunched(outcome);
+        report(message && { message, title: game.title });
+      },
       () => report({ message: 'launch.failed', title: game.title }),
     );
   };

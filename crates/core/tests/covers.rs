@@ -131,7 +131,7 @@ impl Profile {
     /// Starts the app over this profile, reaching Steam's artwork through `steam`.
     fn start(&self, steam: &FakeSteam) -> Core {
         Core::new(
-            Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(steam.clone()), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen) },
+            Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(steam.clone()), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen), process_starter: Box::new(NothingStarted) },
             Store::open(&self.0.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(self.covers().join("covers")),
         )
@@ -285,5 +285,14 @@ struct NoExecutableChosen;
 impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
     fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
+    }
+}
+
+/// A computer that starts no process; these tests launch no Local Game.
+struct NothingStarted;
+
+impl nicelibrary_core::ProcessStarter for NothingStarted {
+    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
+        Err(format!("this test starts no process, not even {}", executable.display()))
     }
 }
