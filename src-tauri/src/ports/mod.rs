@@ -4,6 +4,8 @@
 //! app builds with stand-ins that report nothing found.
 
 mod clock;
+#[cfg(windows)]
+mod file_dialog_windows;
 mod http;
 #[cfg(windows)]
 mod opener_windows;
@@ -13,6 +15,8 @@ mod secrets_windows;
 mod steam_windows;
 
 pub use clock::SystemClock;
+#[cfg(windows)]
+pub use file_dialog_windows::WindowsExecutablePicker;
 pub use http::{HttpDownloader, HttpWebApi};
 #[cfg(windows)]
 pub use opener_windows::WindowsOpener;
@@ -21,7 +25,7 @@ pub use secrets_windows::WindowsSecretStore;
 #[cfg(windows)]
 pub use steam_windows::{Hive, RegistryValue, WindowsSteamLocator};
 
-use nicelibrary_core::{Opener, Ports, SecretStore, SteamLocator};
+use nicelibrary_core::{ExecutablePicker, Opener, Ports, SecretStore, SteamLocator};
 
 /// The ports of this machine.
 pub fn real_ports() -> Ports {
@@ -32,7 +36,27 @@ pub fn real_ports() -> Ports {
         secrets: secrets(),
         web_api: Box::new(HttpWebApi::new()),
         clock: Box::new(SystemClock),
+        executable_picker: executable_picker(),
     }
+}
+
+#[cfg(windows)]
+fn executable_picker() -> Box<dyn ExecutablePicker> {
+    Box::new(WindowsExecutablePicker)
+}
+
+#[cfg(not(windows))]
+fn executable_picker() -> Box<dyn ExecutablePicker> {
+    /// Adding Local Games on Linux and macOS is not part of version 1.
+    struct NoFileDialog;
+
+    impl ExecutablePicker for NoFileDialog {
+        fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
+            Err("choosing an executable is not supported on this system".into())
+        }
+    }
+
+    Box::new(NoFileDialog)
 }
 
 #[cfg(windows)]

@@ -317,6 +317,7 @@ impl Computer {
                 secrets: Box::new(self.secrets.clone()),
                 web_api: api,
                 clock: Box::new(self.clock.clone()),
+                executable_picker: Box::new(NoExecutableChosen),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -799,6 +800,7 @@ fn an_automatic_sync_that_fails_in_the_app_reaches_the_interface_with_its_reason
             secrets: Box::new(LockedSecrets),
             web_api: Box::new(SteamWebApi::owning(vec![])),
             clock: Box::new(computer.clock.clone()),
+            executable_picker: Box::new(NoExecutableChosen),
         },
         Store::open(&computer.profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(computer.profile.path().join("covers")),
@@ -854,5 +856,14 @@ impl WebApi for SlowSteam {
         let answer = self.steam.get(url);
         *self.running.lock().unwrap() -= 1;
         answer
+    }
+}
+
+/// A computer whose user chooses no executable; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
     }
 }

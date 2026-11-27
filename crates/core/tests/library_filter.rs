@@ -126,6 +126,7 @@ impl Computer {
                 secrets: Box::new(SteamOwning),
                 web_api: Box::new(SteamOwning),
                 clock: Box::new(StoppedClock),
+                executable_picker: Box::new(NoExecutableChosen),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -197,4 +198,13 @@ fn a_filter_arrives_from_the_interface_in_the_shape_the_interface_sends() {
 
     let for_both_sources = serde_json::json!({ "search": "", "source": null, "installedOnly": false });
     assert_eq!(serde_json::from_value::<LibraryFilter>(for_both_sources).unwrap(), LibraryFilter::default());
+}
+
+/// A computer whose user chooses no executable; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

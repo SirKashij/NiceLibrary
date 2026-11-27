@@ -68,6 +68,14 @@ function fakeOperations(games: Game[], achievements: Record<string, GameAchievem
       return answer ?? Promise.reject(new Error('no such game'));
     },
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'emptyName' }),
+    renameCollection: async () => ({ outcome: 'emptyName' }),
+    deleteCollection: async () => {},
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, asked };
 }

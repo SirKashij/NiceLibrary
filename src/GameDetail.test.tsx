@@ -52,12 +52,20 @@ function fakeOperations(
     openSteamWebApiKeyPage: async () => {},
     sync: options.sync ?? (async () => ({ outcome: 'noKey' })),
     lastSync: async () => null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     onAutomaticSync: () => () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'named', id: 1 }),
+    renameCollection: async (id) => ({ outcome: 'named', id }),
+    deleteCollection: async () => {},
     filterLibrary: async () => games,
     game: async (gameId) => {
       calls.game.push(gameId);
       return games.find((game) => game.id === gameId) ?? null;
     },
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
   };

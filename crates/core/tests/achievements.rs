@@ -281,6 +281,15 @@ impl Opener for NoUrls {
     }
 }
 
+/// These tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+}
+
 /// Steam on disk with PLAYER logged in.
 struct SteamAt(TempDir);
 
@@ -321,6 +330,7 @@ impl Computer {
                 secrets: Box::new(KeyStored),
                 web_api: Box::new(steam.clone()),
                 clock: Box::new(self.clock.clone()),
+                executable_picker: Box::new(NoExecutableChosen),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.covers()),

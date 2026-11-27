@@ -30,7 +30,13 @@ function fakeOperations() {
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     onAutomaticSync: () => () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'named', id: 1 }),
+    renameCollection: async (id) => ({ outcome: 'named', id }),
+    deleteCollection: async () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);
       return LIBRARY.filter(
@@ -41,6 +47,8 @@ function fakeOperations() {
       );
     },
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
   };

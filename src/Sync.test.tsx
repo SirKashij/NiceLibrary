@@ -75,12 +75,20 @@ function fakeOperations({
       return outcome;
     },
     lastSync: async () => last,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     filterLibrary: async () => [],
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'named', id: 1 }),
+    renameCollection: async (id) => ({ outcome: 'named', id }),
+    deleteCollection: async () => {},
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
   };
