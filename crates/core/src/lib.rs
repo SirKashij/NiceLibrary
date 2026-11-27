@@ -28,7 +28,7 @@ pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
-pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
+pub use local_games::{AddLocalGame, EditLocalGame, ExecutableChoice, ExecutablePicker, LocalGame};
 pub use library_filter::LibraryFilter;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
@@ -367,6 +367,14 @@ impl Core {
     /// proposes its title (see [`Self::add_local_game`]). An executable
     /// already in the Library is answered with the title it has there.
     pub fn choose_local_game_executable(&self) -> Result<ExecutableChoice, Error> {
+        self.choose_executable_except(None)
+    }
+
+    /// Asks the user to choose an executable, answered as
+    /// [`Self::choose_local_game_executable`] does; the Local Game numbered
+    /// `except`, whose executable is being replaced, does not count as
+    /// having it already.
+    fn choose_executable_except(&self, except: Option<i64>) -> Result<ExecutableChoice, Error> {
         let chosen = self
             .ports
             .executable_picker
@@ -378,7 +386,7 @@ impl Core {
         let Some(executable) = path.to_str() else {
             return Err(Error::new(format!("not a path that can be stored: {}", path.display())));
         };
-        if let Some(game) = local_games::already_added(&self.store.local_games()?, executable) {
+        if let Some(game) = local_games::already_added(&self.local_games_except(except)?, executable) {
             return Ok(ExecutableChoice::AlreadyAdded { title: game.title.clone() });
         }
         Ok(ExecutableChoice::Chosen { executable: executable.to_owned(), title: local_games::proposed_title(&path) })
@@ -485,6 +493,81 @@ impl Core {
     pub fn close_window(&self) -> Result<WindowClose, Error> {
         window::close_window(&self.store)
     }
+
+    /// The Local Game `game_id` with its title and executable, for editing;
+    /// `None` for a Steam Game or a Game that is not in the Library.
+    pub fn local_game(&self, game_id: &str) -> Result<Option<LocalGame>, Error> {
+        let Some(number) = local_games::local_number(game_id) else {
+            return Ok(None);
+        };
+        Ok(self.store.local_game(number)?.map(|game| LocalGame {
+            id: game_id.to_owned(),
+            title: game.title,
+            executable: game.executable,
+        }))
+    }
+
+    /// Asks the user to choose a new executable for the Local Game `game_id`
+    /// and proposes its title, as [`Self::choose_local_game_executable`]
+    /// does; the Game's own executable is not already in the Library. Fails
+    /// for a Steam Game.
+    pub fn choose_executable_for(&self, game_id: &str) -> Result<ExecutableChoice, Error> {
+        let number = local_number_or_refuse(game_id)?;
+        self.choose_executable_except(Some(number))
+    }
+
+    /// Gives the Local Game `game_id` the title `title`, without the spaces
+    /// around it, and the executable at `executable`, kept as given; its id,
+    /// and so everything kept about it, stays. Refused as in
+    /// [`Self::add_local_game`]: an empty title, a new executable with no
+    /// file, an executable of another Local Game. The unchanged executable
+    /// may be missing, so a Game whose files moved can still be renamed.
+    /// Fails for a Steam Game and for a Local Game that is gone.
+    pub fn edit_local_game(&self, game_id: &str, title: &str, executable: &str) -> Result<EditLocalGame, Error> {
+        let number = local_number_or_refuse(game_id)?;
+        let Some(stored) = self.store.local_game(number)? else {
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
+        };
+        let title = title.trim();
+        if title.is_empty() {
+            return Ok(EditLocalGame::NoTitle);
+        }
+        if executable != stored.executable && !std::path::Path::new(executable).is_file() {
+            return Ok(EditLocalGame::NotFound);
+        }
+        if let Some(other) = local_games::already_added(&self.local_games_except(Some(number))?, executable) {
+            return Ok(EditLocalGame::AlreadyAdded { title: other.title.clone() });
+        }
+        self.store.edit_local_game(number, title, executable)?;
+        match self.game(game_id)? {
+            Some(game) => Ok(EditLocalGame::Edited { game }),
+            None => Err(Error::new(format!("no such game in the library: {game_id}"))),
+        }
+    }
+
+    /// Removes the Local Game `game_id` from the Library with everything the
+    /// app keeps about it, such as its Collection memberships and Cover. The
+    /// Game's files on disk stay as they are. Removing a Local Game that is
+    /// gone already changes nothing; fails for a Steam Game.
+    pub fn remove_local_game(&self, game_id: &str) -> Result<(), Error> {
+        let number = local_number_or_refuse(game_id)?;
+        self.store.remove_local_game(number)?;
+        self.covers.forget(game_id);
+        Ok(())
+    }
+
+    /// Every stored Local Game but the one numbered `except`.
+    fn local_games_except(&self, except: Option<i64>) -> Result<Vec<local_games::StoredLocalGame>, Error> {
+        let mut games = self.store.local_games()?;
+        games.retain(|game| Some(game.id) != except);
+        Ok(games)
+    }
+}
+
+/// The number in the Local Game id `game_id`; an error for any other Game,
+/// since only Local Games are edited and removed by hand.
+fn local_number_or_refuse(game_id: &str) -> Result<i64, Error> {
+    local_games::local_number(game_id).ok_or_else(|| Error::new(format!("not a Local Game: {game_id}")))
 }
 
 /// The secret store's reason, which never contains the secret (see [`SecretStore`]).

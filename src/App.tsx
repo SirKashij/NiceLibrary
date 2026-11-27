@@ -3,6 +3,7 @@ import { Collections } from './Collections';
 import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import { AddLocalGameButton } from './library/AddLocalGame';
+import { LocalGameActions } from './library/LocalGameActions';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { ThemeSettings } from './settings/ThemeSettings';
 import { ThemeProvider } from './theme';
@@ -170,9 +171,12 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
 
 function LibraryView({ operations, syncs }: { operations: Operations; syncs: number }) {
   const t = useT();
-  // How many Local Games were added here; each one changes the stored Library.
+  // How many Local Games were added, edited or removed here; each one changes the stored Library.
   const [additions, setAdditions] = useState(0);
   const changes = syncs + additions;
+  const changed = () => setAdditions((n) => n + 1);
+  // The title of the Local Game removed last, which the Library then confirms.
+  const [removed, setRemoved] = useState<string>();
   // The stored Library answers at once; reading Steam again replaces it.
   const stored = useOperation(operations, (o) => o.library());
   const fromSteam = useOperation(operations, (o) => o.readInstalledGames());
@@ -235,6 +239,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
   const open = (game: Game) => {
     left.current = { scrollTop: libraryView.current?.closest('main')?.scrollTop ?? 0, focus: document.activeElement };
     setLaunchProblem(undefined);
+    setRemoved(undefined);
     setOpened(game);
   };
   const back = () => {
@@ -257,7 +262,12 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     <>
       <div ref={libraryView} hidden={opened !== undefined}>
         <Page title="nav.library">
-          <AddLocalGameButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
+          <AddLocalGameButton operations={operations} onAdded={changed} />
+          {removed !== undefined && (
+            <p className="note" role="status">
+              {t('editGame.removed', { title: removed })}
+            </p>
+          )}
           <LibraryToolbar filter={filter} onChange={setFilter} />
           {filtered.state === 'failed' && (
             <p className="note" role="alert">
@@ -284,11 +294,25 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           key={opened.id}
           operations={operations}
           game={opened}
-          syncs={syncs}
+          syncs={changes}
           cover={(game) => <Cover key={game.id} title={game.title} src={operations.coverUrl(game)} />}
           notice={launchNotice}
           onPlay={launch}
           onBack={back}
+          actions={(game) =>
+            game.source === 'local' && (
+              <LocalGameActions
+                operations={operations}
+                game={game}
+                onEdited={changed}
+                onRemoved={(gone) => {
+                  changed();
+                  back();
+                  setRemoved(gone.title);
+                }}
+              />
+            )
+          }
         />
       )}
     </>

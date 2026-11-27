@@ -60,6 +60,10 @@ function fakeOperations({
       games.push(game);
       return { outcome: 'added', game };
     },
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
   };
   return { operations, added };
 }

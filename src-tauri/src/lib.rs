@@ -7,8 +7,8 @@ mod tray;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error, ExecutableChoice, Game, Launch,
-    LibraryFilter, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
+    AddLocalGame, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, EditLocalGame, Error, ExecutableChoice, Game,
+    Launch, LibraryFilter, LocalGame, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -99,6 +99,32 @@ async fn choose_local_game_executable(core: tauri::State<'_, Core>) -> Result<Ex
 #[tauri::command]
 fn add_local_game(core: tauri::State<'_, Core>, executable: String, title: String) -> Result<AddLocalGame, Error> {
     core.add_local_game(&executable, &title)
+}
+
+#[tauri::command]
+fn local_game(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<LocalGame>, Error> {
+    core.local_game(&game_id)
+}
+
+/// Async, so the window stays responsive while the file dialog is open.
+#[tauri::command]
+async fn choose_executable_for(core: tauri::State<'_, Core>, game_id: String) -> Result<ExecutableChoice, Error> {
+    core.choose_executable_for(&game_id)
+}
+
+#[tauri::command]
+fn edit_local_game(
+    core: tauri::State<'_, Core>,
+    game_id: String,
+    title: String,
+    executable: String,
+) -> Result<EditLocalGame, Error> {
+    core.edit_local_game(&game_id, &title, &executable)
+}
+
+#[tauri::command]
+fn remove_local_game(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Error> {
+    core.remove_local_game(&game_id)
 }
 
 #[tauri::command]
@@ -220,7 +246,11 @@ pub fn run() {
             close_to_tray,
             set_close_to_tray,
             close_window,
-            show_tray_menu
+            show_tray_menu,
+            local_game,
+            choose_executable_for,
+            edit_local_game,
+            remove_local_game
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
