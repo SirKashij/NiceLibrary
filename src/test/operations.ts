@@ -101,5 +101,12 @@ export function baseOperations(): Operations {
     coverMatch: async () => null,
     setCoverMatch: async () => {},
     importData: async () => ({ outcome: 'cancelled' }),
+    checksForUpdates: async () => true,
+    setCheckForUpdates: async () => {},
+    checkForUpdate: async () => ({ outcome: 'upToDate' }),
+    installUpdate: async () => {
+      throw new Error('this test installs no Update');
+    },
+    onUpdateFound: () => () => {},
   };
 }

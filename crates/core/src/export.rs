@@ -22,7 +22,7 @@ use crate::local_covers;
 use crate::sessions::Tracked;
 use crate::store::Store;
 use crate::theme::Theme;
-use crate::{Error, Status, about, window};
+use crate::{Error, Status, about, updates, window};
 
 /// What every Export File names as its `format`.
 pub(crate) const FORMAT: &str = "nicelibrary-export";
@@ -87,6 +87,14 @@ pub(crate) struct ExportedSettings {
     pub library_sort: LibrarySort,
     pub close_to_tray: bool,
     pub start_with_windows: bool,
+    /// Whether the app checks for Updates on its own; on in files written
+    /// before the setting existed, as it is on until turned off.
+    #[serde(default = "on")]
+    pub check_for_updates: bool,
+}
+
+fn on() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -234,6 +242,7 @@ pub(crate) fn contents(
             library_sort: store.library_sort()?.and_then(|name| LibrarySort::from_stored_name(&name)).unwrap_or_default(),
             close_to_tray: window::close_to_tray(store)?,
             start_with_windows: autostart::starts_with_windows(autostart)?,
+            check_for_updates: updates::checks_for_updates(store)?,
         },
         local_games,
         sessions,

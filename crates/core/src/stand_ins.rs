@@ -35,6 +35,7 @@ pub fn ports() -> Ports {
         icon_extractor: Box::new(NoIcons),
         image_picker: Box::new(NoImageChosen),
         data_file_picker: Box::new(NoDataFileChosen),
+        update_downloader: Box::new(Offline),
     }
 }
 

@@ -70,6 +70,7 @@ A Status, Favorite, Hidden Game or Collection membership may name a Steam Game t
 | `librarySort` | string | `recentlyPlayed`, `name`, `playtime`, `progress` |
 | `closeToTray` | boolean | Whether closing the window keeps the app in the Tray. |
 | `startWithWindows` | boolean | Whether the app starts with Windows (the autostart entry as it was when exporting). |
+| `checkForUpdates` | boolean | Whether the app checks GitHub Releases for Updates on its own. Optional: a file without it (written before the setting existed) turns the check on. |
 
 ## `localGames`
 

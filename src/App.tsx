@@ -12,7 +12,8 @@ import { AddFromFolderButton } from './library/AddFromFolder';
 import { HiddenGamesPage } from './library/HiddenGames';
 import { useSessionChanges } from './library/Sessions';
 import { LocalGameActions } from './library/LocalGameActions';
-import type { Collection, Database, Game, Operations, SteamLogin, SyncOutcome } from './operations';
+import type { Collection, Database, Game, Operations, SteamLogin, SyncOutcome, Update } from './operations';
+import { UpdateOffer, UpdateSettings } from './Update';
 import { ThemeSettings } from './settings/ThemeSettings';
 import { ThemeProvider } from './theme';
 import { GameList, LibraryLayoutSwitch, useLibraryLayout } from './library/LibraryLayout';
@@ -107,6 +108,9 @@ function Shell({ operations }: { operations: Operations }) {
     setFavoritesOnly(false);
     setChosen(undefined);
   };
+  // The Update a check found, offered until the user installs it or puts it off.
+  const [offeredUpdate, setOfferedUpdate] = useState<Update>();
+  useEffect(() => operations.onUpdateFound(setOfferedUpdate), [operations]);
 
   return (
     <div className="shell">
@@ -199,10 +203,20 @@ function Shell({ operations }: { operations: Operations }) {
             operations={operations}
             toKeySettings={toKeySettings}
             onAccountChosen={() => setAccountChoices((n) => n + 1)}
+            onUpdateFound={setOfferedUpdate}
           />
         )}
       </main>
       <Tray operations={operations} />
+      {offeredUpdate && (
+        // A new offer starts over, so no answer about an earlier one shows.
+        <UpdateOffer
+          key={offeredUpdate.version}
+          operations={operations}
+          update={offeredUpdate}
+          onClose={() => setOfferedUpdate(undefined)}
+        />
+      )}
     </div>
   );
 }
@@ -701,11 +715,14 @@ function SettingsView({
   operations,
   toKeySettings,
   onAccountChosen,
+  onUpdateFound,
 }: {
   operations: Operations;
   /** Whether to open at the section of the Steam Web API key. */
   toKeySettings: boolean;
   onAccountChosen: () => void;
+  /** Hears an Update a check by hand found, to offer it. */
+  onUpdateFound: (update: Update) => void;
 }) {
   useEffect(() => {
     if (toKeySettings) document.getElementById('settings-key')?.scrollIntoView?.({ block: 'start' });
@@ -717,6 +734,7 @@ function SettingsView({
       <ThemeSettings />
       <LanguageSettings />
       <WindowSettings operations={operations} />
+      <UpdateSettings operations={operations} onFound={onUpdateFound} />
       <SteamAppListSettings operations={operations} />
       <ExportSettings operations={operations} />
       <LogSettings operations={operations} />

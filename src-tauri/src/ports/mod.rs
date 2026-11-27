@@ -62,6 +62,7 @@ pub fn real_ports() -> Ports {
         icon_extractor: icon_extractor(),
         image_picker: image_picker(),
         data_file_picker: data_file_picker(),
+        update_downloader: Box::new(HttpDownloader::for_update_packages()),
     }
 }
 

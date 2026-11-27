@@ -30,11 +30,13 @@ Get-FileHash .\NiceLibrary_0.1.0_x64-setup.exe -Algorithm SHA256
 
 If the two match, choose **More info**, then **Run anyway**. If they do not match, do not run the file. Later releases are meant to be signed through the SignPath Foundation, which removes the warning.
 
+Once installed, NiceLibrary updates itself. When a newer version is out, it asks you whether to install it, and installs nothing without your yes. Every update package is signed with the project's own updater key, whose private half exists only in the release workflow on GitHub; the app refuses a package whose signature does not match.
+
 To uninstall, open **Settings > Apps > Installed apps** in Windows and uninstall NiceLibrary. This also turns off **Start with Windows**. Tick **Delete the application data** to remove your Library, the Covers and the stored Steam Web API key too; otherwise they stay for a later installation.
 
 ## Privacy
 
-NiceLibrary connects only to the Steam Web API, for your games, playtime and achievements, and to Steam’s image servers, for covers.
+NiceLibrary connects only to the Steam Web API, for your games, playtime and achievements, to Steam’s image servers, for covers, and to GitHub, for updates.
 
 Everything it stores stays only on this computer: your library and settings in a database in your user profile, covers in a cache folder, and your Steam Web API key in the Windows Credential Manager.
 
@@ -46,6 +48,7 @@ In detail:
 | --- | --- |
 | `api.steampowered.com` | The Steam Web API, with your own key: your Games, Playtime and Achievements during a Sync, a check of a newly entered key, and Steam's app list for Cover Matches |
 | `shared.steamstatic.com` | Steam's image servers: the Covers of your Games |
+| `github.com` and GitHub's download servers | GitHub Releases: once a day whether a newer version is out, and its update package once you agree to install it. Switch the daily check off under **Settings > Updates**; the app then asks only when you click **Check for updates now** |
 
 The page where you create a Steam Web API key opens in your own browser; the app does not load it. Covers are downloaded at runtime and kept only in the cache on your computer; no game artwork is part of this repo or the installer.
 
@@ -105,11 +108,13 @@ Get-FileHash .\NiceLibrary_0.1.0_x64-setup.exe -Algorithm SHA256
 
 Stimmen beide überein, wähle **Weitere Informationen** und dann **Trotzdem ausführen**. Stimmen sie nicht überein, führe die Datei nicht aus. Spätere Releases sollen über die SignPath Foundation signiert werden; dann entfällt die Warnung.
 
+Einmal installiert, aktualisiert sich NiceLibrary selbst. Ist eine neuere Version erschienen, fragt es dich, ob es sie installieren soll, und installiert nichts ohne dein Ja. Jedes Update-Paket ist mit dem eigenen Update-Schlüssel des Projekts signiert, dessen privater Teil nur im Release-Workflow auf GitHub existiert; ein Paket mit unpassender Signatur lehnt die App ab.
+
 Zum Deinstallieren öffne in Windows **Einstellungen > Apps > Installierte Apps** und deinstalliere NiceLibrary. Dabei wird auch **Mit Windows starten** ausgeschaltet. Setze den Haken bei **Lösche die Anwendungsdaten**, um auch deine Bibliothek, die Cover und den gespeicherten Steam-Web-API-Schlüssel zu entfernen; sonst bleiben sie für eine spätere Installation erhalten.
 
 ### Datenschutz
 
-NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Trophäen und mit den Bildservern von Steam für Cover.
+NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Trophäen, mit den Bildservern von Steam für Cover und mit GitHub für Updates.
 
 Alles, was es speichert, bleibt nur auf diesem Computer: deine Bibliothek und Einstellungen in einer Datenbank in deinem Benutzerprofil, Cover in einem Cache-Ordner und dein Steam-Web-API-Schlüssel in der Windows-Anmeldeinformationsverwaltung.
 
@@ -121,6 +126,7 @@ Im Einzelnen:
 | --- | --- |
 | `api.steampowered.com` | Die Steam Web API mit deinem eigenen Schlüssel: deine Spiele, Spielzeit und Trophäen bei einer Synchronisierung, die Prüfung eines neu eingegebenen Schlüssels und Steams App-Liste für die Cover-Zuordnung |
 | `shared.steamstatic.com` | Die Bildserver von Steam: die Cover deiner Spiele |
+| `github.com` und die Download-Server von GitHub | GitHub Releases: einmal am Tag, ob eine neuere Version erschienen ist, und ihr Update-Paket, sobald du der Installation zustimmst. Die tägliche Suche schaltest du unter **Einstellungen > Updates** aus; dann fragt die App nur, wenn du auf **Jetzt nach Updates suchen** klickst |
 
 Die Seite, auf der du einen Steam-Web-API-Schlüssel anlegst, öffnet sich in deinem eigenen Browser; die App lädt sie nicht. Cover werden zur Laufzeit heruntergeladen und nur im Cache auf deinem Rechner abgelegt; kein Spielbild ist Teil dieses Repos oder des Installers.
 
