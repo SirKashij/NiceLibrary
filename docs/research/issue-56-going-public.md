@@ -6,7 +6,8 @@ Markers used below: **Verified** = read in the primary source or the code. **Unv
 
 ## Decisions (2026-11-27)
 
-- **Name:** the project stays NiceLibrary. No rename of repo, identifier or data folder.
+- **Visibility:** the repo stays public. ADR-0006 is updated.
+- **Name:** the project stays NiceLibrary. No rename of repo, identifier or data folder. `bundle.publisher` is set to NiceLibrary, so Windows no longer lists "github" as the publisher.
 - **SteamGridDB:** not built, not even as an opt-in. Recorded in ADR-0005.
 - **History:** the sample user name in the profile-path examples is replaced in a new commit. The history is not rewritten.
 - **SignPath:** the "Code signing policy" section is in the README (English and German) ahead of the application.
