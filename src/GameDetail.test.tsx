@@ -64,6 +64,9 @@ function fakeOperations(
     createCollection: async () => ({ outcome: 'named', id: 1 }),
     renameCollection: async (id) => ({ outcome: 'named', id }),
     deleteCollection: async () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
     filterLibrary: async () => games,
     game: async (gameId) => {
       calls.game.push(gameId);

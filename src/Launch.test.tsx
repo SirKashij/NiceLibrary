@@ -37,6 +37,9 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     createCollection: async () => ({ outcome: 'named', id: 1 }),
     renameCollection: async (id) => ({ outcome: 'named', id }),
     deleteCollection: async () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
     game: async () => null,
     launch: (game) => {
       requested.push(game.id);
