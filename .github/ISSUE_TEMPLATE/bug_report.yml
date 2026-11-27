@@ -1,0 +1,55 @@
+name: Bug report
+description: Something in NiceLibrary does not work as it should.
+labels: [needs-triage]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug. Please never paste your Steam Web API key, and leave out anything else you would not want to be public, such as your SteamID or paths that contain your Windows user name.
+
+        Security problems do not belong here; report them privately as described in SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What did you see, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the settings
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: NiceLibrary version
+      description: The version from the About dialog, or the commit you built.
+    validations:
+      required: true
+  - type: dropdown
+    id: windows
+    attributes:
+      label: Windows version
+      options:
+        - Windows 11
+        - Windows 10 (22H2)
+        - Other
+    validations:
+      required: true
+  - type: dropdown
+    id: language
+    attributes:
+      label: Interface language
+      options:
+        - English
+        - German
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Screenshots or error messages. Check them for personal data and game artwork you do not want to share before you attach them.
