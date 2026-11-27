@@ -231,6 +231,11 @@ mod downloader {
 /// `HKCU\Software\Classes\nicelibrary-contract-<name>-<process id>`, whose
 /// program writes the URL it receives to a file, and delete them again. They
 /// never open a `steam://` URL, so Steam does not start.
+///
+/// `open_folder`: `Ok` once File Explorer has the folder; anything that is
+/// not an existing folder is refused with `Err(Failed)` and nothing starts.
+/// The test that shows a folder leaves one Explorer window open on an empty
+/// temporary folder.
 #[cfg(windows)]
 mod opener {
     use std::fs;
@@ -330,6 +335,35 @@ mod opener {
             let refused = WindowsOpener.open_url(&target);
             assert!(matches!(refused, Err(OpenError::Failed(_))), "{target} was not refused: {refused:?}");
         }
+        std::thread::sleep(Duration::from_secs(1));
+        assert!(!marker.exists(), "the program was started");
+    }
+
+    /// Opens one File Explorer window, on an empty temporary folder.
+    #[test]
+    fn shows_an_existing_folder_in_file_explorer() {
+        let folder = tempfile::tempdir().unwrap();
+
+        assert_eq!(WindowsOpener.open_folder(folder.path()), Ok(()));
+    }
+
+    #[test]
+    fn a_folder_that_does_not_exist_is_refused() {
+        let folder = tempfile::tempdir().unwrap();
+
+        let refused = WindowsOpener.open_folder(&folder.path().join("missing"));
+
+        assert!(matches!(refused, Err(OpenError::Failed(_))), "{refused:?}");
+    }
+
+    #[test]
+    fn a_program_is_refused_as_a_folder_and_not_started() {
+        let folder = tempfile::tempdir().unwrap();
+        let (program, marker) = marker_program(folder.path());
+
+        let refused = WindowsOpener.open_folder(&program);
+
+        assert!(matches!(refused, Err(OpenError::Failed(_))), "{refused:?}");
         std::thread::sleep(Duration::from_secs(1));
         assert!(!marker.exists(), "the program was started");
     }

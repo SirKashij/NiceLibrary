@@ -50,6 +50,7 @@ function fakeOperations(
     storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    openLogFolder: async () => {},
     sync: options.sync ?? (async () => ({ outcome: 'noKey' })),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},

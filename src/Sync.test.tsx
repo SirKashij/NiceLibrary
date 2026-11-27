@@ -66,6 +66,7 @@ function fakeOperations({
     },
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    openLogFolder: async () => {},
     sync: async () => {
       calls.syncs += 1;
       if (outcome.outcome === 'synced') {

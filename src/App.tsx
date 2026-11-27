@@ -3,6 +3,7 @@ import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
+import { LogSettings } from './settings/LogSettings';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -365,6 +366,7 @@ function SettingsView({ operations, onAccountChosen }: { operations: Operations;
     <Page title="nav.settings">
       <SteamSettings operations={operations} onAccountChosen={onAccountChosen} />
       <SteamWebApiKeySettings operations={operations} />
+      <LogSettings operations={operations} />
     </Page>
   );
 }

@@ -44,6 +44,7 @@ function fakeOperations({ stored = false } = {}) {
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    openLogFolder: async () => {},
   };
   return { operations, calls };
 }

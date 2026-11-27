@@ -6,7 +6,7 @@ pub mod ports;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AutomaticSync, Core, CoverCache, Error, Game, Launch, LibraryFilter, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
+    AutomaticSync, Core, CoverCache, Error, Game, Launch, LibraryFilter, Log, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
     SyncOutcome,
 };
 use percent_encoding::percent_decode_str;
@@ -88,6 +88,12 @@ async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(),
     core.open_steam_web_api_key_page()
 }
 
+/// Async, so a slow start of File Explorer does not block the window.
+#[tauri::command]
+async fn open_log_folder(core: tauri::State<'_, Core>) -> Result<(), Error> {
+    core.open_log_folder()
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -117,6 +123,10 @@ const DATABASE: &str = "nicelibrary.db";
 /// profile (`%LOCALAPPDATA%\<identifier>` on Windows).
 const COVERS: &str = "covers";
 
+/// The folder of the log files in the app's data folder, next to the
+/// database (`%APPDATA%\<identifier>\logs` on Windows).
+const LOGS: &str = "logs";
+
 pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
@@ -133,7 +143,8 @@ pub fn run() {
             sync,
             last_sync,
             filter_library,
-            game
+            game,
+            open_log_folder
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
@@ -146,7 +157,8 @@ pub fn run() {
         .setup(|app| {
             let store = Store::open(&app.path().app_data_dir()?.join(DATABASE))?;
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
-            app.manage(Core::new(ports::real_ports(), store, covers));
+            let log = Log::new(app.path().app_data_dir()?.join(LOGS));
+            app.manage(Core::new(ports::real_ports(), store, covers).with_log(log));
             start_automatic_syncs(app)?;
             create_main_window(app)
         })

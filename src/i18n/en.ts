@@ -99,6 +99,12 @@ export const en = {
   'game.never': 'Never',
   'game.notKnown': 'Not known yet',
   'game.gone': '{title} is no longer in your library.',
+  'settings.log': 'Log file',
+  'log.why':
+    'NiceLibrary writes errors and notable events to a log file on this computer. If something goes wrong, open the folder and attach the file to your bug report yourself.',
+  'log.private': 'Nothing is sent. Your key and your SteamIDs are never written to the log.',
+  'log.openFolder': 'Open log folder',
+  'log.openFailed': 'The log folder could not be opened.',
 } as const;
 
 export type MessageKey = keyof typeof en;

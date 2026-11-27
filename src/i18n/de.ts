@@ -101,4 +101,10 @@ export const de: Record<MessageKey, string> = {
   'game.never': 'Nie',
   'game.notKnown': 'Noch nicht bekannt',
   'game.gone': '{title} ist nicht mehr in deiner Bibliothek.',
+  'settings.log': 'Protokolldatei',
+  'log.why':
+    'NiceLibrary schreibt Fehler und wichtige Ereignisse in eine Protokolldatei auf diesem Computer. Wenn etwas schiefgeht, öffne den Ordner und hänge die Datei selbst an deine Fehlermeldung an.',
+  'log.private': 'Nichts wird gesendet. Dein Schlüssel und deine SteamIDs landen nie im Protokoll.',
+  'log.openFolder': 'Protokollordner öffnen',
+  'log.openFailed': 'Der Protokollordner konnte nicht geöffnet werden.',
 };

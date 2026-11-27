@@ -128,6 +128,12 @@ export interface Operations {
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /**
+   * Shows the folder of the log files in File Explorer, so the user can attach
+   * one to a bug report themselves. The app never sends the log. Rejects when
+   * the folder could not be shown.
+   */
+  openLogFolder(): Promise<void>;
 }
 
 export const tauriOperations: Operations = {
@@ -154,4 +160,5 @@ export const tauriOperations: Operations = {
   },
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  openLogFolder: () => invoke<void>('open_log_folder'),
 };

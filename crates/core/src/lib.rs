@@ -9,6 +9,7 @@ mod covers;
 pub mod keyvalues;
 mod launch;
 mod library_filter;
+mod log;
 mod steam;
 mod steam_web_api;
 mod store;
@@ -20,10 +21,13 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 
 use serde::{Deserialize, Serialize, Serializer};
 
+use log::Level;
+
 pub use clock::{Clock, Wakeup};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
 pub use library_filter::LibraryFilter;
+pub use log::Log;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
@@ -120,16 +124,64 @@ pub struct Core {
     syncing: Mutex<()>,
     /// Rung when a key is stored, so the automatic Syncs do not wait for their next round.
     sync_soon: Wakeup,
+    /// Where errors and notable events are written.
+    log: Log,
 }
 
 impl Core {
     pub fn new(ports: Ports, store: Store, covers: CoverCache) -> Self {
-        Self { ports, store, covers, syncing: Mutex::new(()), sync_soon: Wakeup::new() }
+        Self { ports, store, covers, syncing: Mutex::new(()), sync_soon: Wakeup::new(), log: Log::none() }
+    }
+
+    /// This core, writing errors and notable events to `log`; without it,
+    /// the core keeps no Log.
+    pub fn with_log(mut self, log: Log) -> Self {
+        self.log = log;
+        self
+    }
+
+    /// Writes the error of `operation` to the Log, if it failed, and answers `result`.
+    fn logged<T>(&self, operation: &str, result: Result<T, Error>) -> Result<T, Error> {
+        if let Err(error) = &result {
+            self.log.write(self.ports.clock.now(), Level::Error, &format!("{operation}: {error}"));
+        }
+        result
+    }
+
+    /// Like [`Self::logged`], and writes the outcome as a notable event when nothing failed.
+    fn logged_outcome<T: Serialize>(&self, operation: &str, result: Result<T, Error>) -> Result<T, Error> {
+        if let Ok(outcome) = &result {
+            self.note(&format!("{operation}: {}", outcome_name(outcome)));
+        }
+        self.logged(operation, result)
+    }
+
+    /// Writes a notable event to the Log.
+    fn note(&self, event: &str) {
+        self.log.write(self.ports.clock.now(), Level::Info, event);
+    }
+
+    /// Shows the folder of the Log in the file manager, so the user can
+    /// attach a log file to a bug report themselves. Nothing in the Log is
+    /// ever sent by the app.
+    pub fn open_log_folder(&self) -> Result<(), Error> {
+        let opened = self.log.folder().and_then(|folder| {
+            self.ports
+                .opener
+                .open_folder(folder)
+                .map_err(|error| Error::new(format!("the log folder could not be opened: {error}")))
+        });
+        self.logged("open_log_folder", opened)
     }
 
     /// All Games in the Library, as last stored, ordered by title. Answers
     /// from the store alone, so a start shows the Library at once.
     pub fn library(&self) -> Result<Vec<Game>, Error> {
+        self.logged("library", self.stored_library())
+    }
+
+    /// [`Self::library`], without writing to the Log.
+    fn stored_library(&self) -> Result<Vec<Game>, Error> {
         // Until the user chooses, the account read last: it holds the Games.
         let account = self.chosen_steam_account_or(|| self.store.last_read_steam_account())?;
         let mut games = match account {
@@ -143,16 +195,19 @@ impl Core {
     /// The Games in the Library that match `filter`, as last stored, ordered
     /// by title like [`Self::library`].
     pub fn filter_library(&self, filter: &LibraryFilter) -> Result<Vec<Game>, Error> {
-        let mut games = self.library()?;
-        games.retain(|game| filter.matches(game));
-        Ok(games)
+        let games = self.stored_library().map(|mut games| {
+            games.retain(|game| filter.matches(game));
+            games
+        });
+        self.logged("filter_library", games)
     }
 
     /// The Game `game_id` as the Library shows it, for its detail page;
     /// `None` when it is not in the Library, for instance after a Sync
     /// took it out.
     pub fn game(&self, game_id: &str) -> Result<Option<Game>, Error> {
-        Ok(self.library()?.into_iter().find(|game| game.id == game_id))
+        let game = self.stored_library().map(|games| games.into_iter().find(|game| game.id == game_id));
+        self.logged("game", game)
     }
 
     /// Reads which Steam Games are Installed from Steam's library folders,
@@ -162,19 +217,28 @@ impl Core {
     /// When Steam, a Steam Account or its list of library folders cannot be
     /// found or read, the stored Library is left as it is.
     pub fn read_installed_games(&self) -> Result<Vec<Game>, Error> {
+        self.logged("read_installed_games", self.read_and_record_installed_games())
+    }
+
+    fn read_and_record_installed_games(&self) -> Result<Vec<Game>, Error> {
         if let Some(folder) = self.ports.steam_locator.steam_folder()
             && let Some(account) = self.chosen_steam_account_or(|| Ok(most_recent_account(&folder)))?
             && let Some(apps) = steam::installed_apps(&folder)
         {
             self.store.record_installed_steam_games(&account, &apps)?;
         }
-        self.library()
+        self.stored_library()
     }
 
     /// The SteamID of the Steam Account the app works with: the one the user
     /// chose; until then the one that logged in most recently on this
     /// computer, or else the one whose Games were read last.
     pub fn steam_account(&self) -> Result<Option<String>, Error> {
+        self.logged("steam_account", self.current_steam_account())
+    }
+
+    /// [`Self::steam_account`], without writing to the Log.
+    fn current_steam_account(&self) -> Result<Option<String>, Error> {
         self.chosen_steam_account_or(|| {
             match self.ports.steam_locator.steam_folder().and_then(|folder| most_recent_account(&folder)) {
                 Some(detected) => Ok(Some(detected)),
@@ -200,11 +264,11 @@ impl Core {
     /// SteamID64 the user entered by hand. Anything that is not a SteamID64
     /// of a personal account is refused and changes nothing.
     pub fn choose_steam_account(&self, steam_id: &str) -> Result<SteamAccountChoice, Error> {
-        let Some(steam_id) = steam::personal_steam_id(steam_id) else {
-            return Ok(SteamAccountChoice::InvalidSteamId);
+        let choice = match steam::personal_steam_id(steam_id) {
+            Some(steam_id) => self.store.choose_steam_account(steam_id).map(|()| SteamAccountChoice::Chosen),
+            None => Ok(SteamAccountChoice::InvalidSteamId),
         };
-        self.store.choose_steam_account(steam_id)?;
-        Ok(SteamAccountChoice::Chosen)
+        self.logged_outcome("choose_steam_account", choice)
     }
 
     /// The Steam installation on this computer and its Steam Accounts.
@@ -225,7 +289,11 @@ impl Core {
     /// opening its `steam://rungameid/` URL; the app never starts a Steam
     /// Game's executable itself (ADR-0002).
     pub fn launch(&self, game_id: &str) -> Result<Launch, Error> {
-        let Some(game) = self.library()?.into_iter().find(|game| game.id == game_id) else {
+        self.logged_outcome("launch", self.launch_game(game_id))
+    }
+
+    fn launch_game(&self, game_id: &str) -> Result<Launch, Error> {
+        let Some(game) = self.stored_library()?.into_iter().find(|game| game.id == game_id) else {
             return Err(Error::new(format!("no such game in the library: {game_id}")));
         };
         if !game.installed {
@@ -253,7 +321,7 @@ impl Core {
     /// it was. A Sync asked for while another runs begins once that one ends.
     pub fn sync(&self) -> Result<SyncOutcome, Error> {
         let _syncing = self.wait_until_no_sync_runs();
-        self.sync_now()
+        self.logged_outcome("sync", self.sync_now())
     }
 
     /// Blocks until no other Sync runs; no other begins until the answer is dropped.
@@ -268,7 +336,7 @@ impl Core {
             return Ok(SyncOutcome::NoKey);
         };
         // Only a SteamID64 may reach the URL.
-        let Some(account) = self.steam_account()?.filter(|id| steam::personal_steam_id(id).is_some()) else {
+        let Some(account) = self.current_steam_account()?.filter(|id| steam::personal_steam_id(id).is_some()) else {
             return Ok(SyncOutcome::NoSteamAccount);
         };
         let games = match sync::owned_games(self.ports.web_api.as_ref(), &key, &account) {
@@ -298,7 +366,7 @@ impl Core {
     }
 
     fn automatic_sync_round(&self, report: &mut impl FnMut(AutomaticSync) -> ControlFlow<()>) -> ControlFlow<()> {
-        match self.steam_web_api_key_stored() {
+        match self.logged("automatic_sync", self.key_stored()) {
             Ok(false) => return report(AutomaticSync::Skipped),
             Ok(true) => {}
             Err(reason) => return report(AutomaticSync::Failed { reason }),
@@ -306,7 +374,7 @@ impl Core {
         // Started only once a Sync begun elsewhere has ended, so the interface shows the one that runs.
         let _syncing = self.wait_until_no_sync_runs();
         report(AutomaticSync::Started)?;
-        report(match self.sync_now() {
+        report(match self.logged_outcome("automatic_sync", self.sync_now()) {
             Ok(outcome) => AutomaticSync::Finished(outcome),
             Err(reason) => AutomaticSync::Failed { reason },
         })
@@ -316,15 +384,23 @@ impl Core {
     /// shown happened, in seconds since the Unix epoch; `None` before the
     /// first.
     pub fn last_sync(&self) -> Result<Option<u64>, Error> {
-        match self.chosen_steam_account_or(|| self.store.last_read_steam_account())? {
-            Some(account) => self.store.last_steam_sync(&account),
-            None => Ok(None),
-        }
+        let last = self.chosen_steam_account_or(|| self.store.last_read_steam_account()).and_then(|account| {
+            match account {
+                Some(account) => self.store.last_steam_sync(&account),
+                None => Ok(None),
+            }
+        });
+        self.logged("last_sync", last)
     }
 
     /// Whether a Steam Web API key is stored. The key itself never leaves
     /// the core.
     pub fn steam_web_api_key_stored(&self) -> Result<bool, Error> {
+        self.logged("steam_web_api_key_stored", self.key_stored())
+    }
+
+    /// [`Self::steam_web_api_key_stored`], without writing to the Log.
+    fn key_stored(&self) -> Result<bool, Error> {
         let stored = self.ports.secrets.read(steam_web_api::KEY_SECRET).map_err(secret_store_error)?;
         Ok(stored.is_some())
     }
@@ -335,6 +411,10 @@ impl Core {
     /// (see [`Self::sync_automatically`]). A key that is refused or cannot
     /// be checked changes nothing.
     pub fn store_steam_web_api_key(&self, key: &str) -> Result<SteamWebApiKeyCheck, Error> {
+        self.logged_outcome("store_steam_web_api_key", self.check_and_store_key(key))
+    }
+
+    fn check_and_store_key(&self, key: &str) -> Result<SteamWebApiKeyCheck, Error> {
         let Some(key) = steam_web_api::key_in(key) else {
             return Ok(SteamWebApiKeyCheck::Invalid);
         };
@@ -348,16 +428,34 @@ impl Core {
 
     /// Removes the stored Steam Web API key, if there is one.
     pub fn remove_steam_web_api_key(&self) -> Result<(), Error> {
-        self.ports.secrets.delete(steam_web_api::KEY_SECRET).map_err(secret_store_error)
+        let removed = self.ports.secrets.delete(steam_web_api::KEY_SECRET).map_err(secret_store_error);
+        if removed.is_ok() {
+            self.note("remove_steam_web_api_key: removed");
+        }
+        self.logged("remove_steam_web_api_key", removed)
     }
 
     /// Opens the Steam page where the user creates their Steam Web API key,
     /// in the browser.
     pub fn open_steam_web_api_key_page(&self) -> Result<(), Error> {
-        self.ports
+        let opened = self
+            .ports
             .opener
             .open_url(steam_web_api::KEY_PAGE)
-            .map_err(|error| Error::new(format!("{} could not be opened: {error}", steam_web_api::KEY_PAGE)))
+            .map_err(|error| Error::new(format!("{} could not be opened: {error}", steam_web_api::KEY_PAGE)));
+        self.logged("open_steam_web_api_key_page", opened)
+    }
+}
+
+/// The name of an outcome the interface branches on (its `outcome` tag),
+/// for the Log.
+fn outcome_name(outcome: &impl Serialize) -> String {
+    match serde_json::to_value(outcome) {
+        Ok(serde_json::Value::Object(fields)) => match fields.get("outcome") {
+            Some(serde_json::Value::String(name)) => name.clone(),
+            _ => "done".to_owned(),
+        },
+        _ => "done".to_owned(),
     }
 }
 
