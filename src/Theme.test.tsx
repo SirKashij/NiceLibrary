@@ -23,6 +23,7 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     storeSteamWebApiKey: async () => ({ outcome: 'invalid' }),
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    openLogFolder: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
@@ -50,6 +51,9 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     deleteCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
   };
   return { operations, calls };
 }

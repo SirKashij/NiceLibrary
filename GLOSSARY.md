@@ -84,7 +84,7 @@ A named group of Games created by the person. A Game can be in several Collectio
 _Avoid_: Category, tag, folder, list
 
 **Detail Page**:
-The page of one Game, opened from the Library: its large Cover, Source, whether it is Installed, Playtime, Last Played and its Launch. Going back returns to the Library as it was left.
+The page of one Game, opened from the Library: its large Cover, Source, whether it is Installed, its Status, Playtime, Last Played and its Launch. Going back returns to the Library as it was left.
 _Avoid_: Game page, info screen, dialog
 
 **Sort Order**:
@@ -125,6 +125,10 @@ _Avoid_: Offline mode, basic mode
 **Launch**:
 Starting a Game from the app.
 _Avoid_: Run, start, open
+
+**Log**:
+The files on this computer the app writes its errors and notable events to, for the person to attach to a bug report themselves. It never holds the Steam Web API key or a full SteamID, and the app never sends it.
+_Avoid_: Crash report, telemetry, diagnostics
 
 ### Interface
 

@@ -55,6 +55,7 @@ function fakeOperations(
     storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    openLogFolder: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => (account && lastSyncs[account]) || null,
     theme: async () => 'system',
@@ -76,6 +77,9 @@ function fakeOperations(
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
     coverHue: async () => null,
     launch: async () => ({ outcome: 'launched' }),
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
@@ -181,8 +185,8 @@ describe('Choosing the Steam Account', () => {
 /** 2026-11-20 20:15 UTC, in seconds since the Unix epoch. */
 const LAST_WEEK = 1_795_205_700;
 
-const portal2: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null };
-const halfLife: Game = { id: 'steam:70', title: 'Half-Life', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null };
+const portal2: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed' };
+const halfLife: Game = { id: 'steam:70', title: 'Half-Life', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed' };
 
 function syncRegion() {
   return within(screen.getByRole('complementary')).getByRole('region', { name: 'Sync' });

@@ -147,7 +147,7 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .theme-choice { display: grid; gap: var(--space-1); }
 .theme-choice label { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; cursor: pointer; }
 
-/* Library toolbar: search, Source and Installed only; the empty state when nothing matches. */
+/* Library toolbar: search, Source, Status and Installed only; the empty state when nothing matches. */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding-bottom: var(--space-2); }
 .toolbar-search {
   flex: 1; min-width: 0; max-width: var(--note-max-width); font: inherit; color: var(--color-text); background: var(--color-surface);
@@ -200,3 +200,12 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
   background: var(--color-surface-raised); border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control);
 }
 .tray-notice h2 { font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display); }
+
+/* Status: a quiet label under each Cover, a choice on the detail page, a select in the toolbar. */
+.status-badge { color: var(--color-text-muted); font-size: var(--text-size-label); }
+.status-badge[data-status='playing'] { color: var(--color-text); }
+.game-facts .segmented { display: inline-flex; flex-wrap: wrap; }
+.toolbar-select {
+  font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}

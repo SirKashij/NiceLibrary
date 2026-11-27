@@ -63,6 +63,10 @@ function fakeOperations({ stored = false } = {}) {
     coverHue: async () => null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
+    openLogFolder: async () => {},
   };
   return { operations, calls };
 }

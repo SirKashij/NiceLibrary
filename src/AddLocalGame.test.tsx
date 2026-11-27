@@ -7,7 +7,7 @@ import type { AddLocalGame, ExecutableChoice, Game, Operations } from './operati
 const CELESTE = 'C:\\Games\\Celeste\\Celeste.exe';
 
 function localGame(id: number, title: string): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed' };
 }
 
 /**
@@ -36,6 +36,7 @@ function fakeOperations({
     storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    openLogFolder: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
@@ -65,6 +66,9 @@ function fakeOperations({
       const game = localGame(games.length + 1, title.trim());
       games.push(game);
       return { outcome: 'added', game };
+    },
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
     },
   };
   return { operations, added };

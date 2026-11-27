@@ -7,9 +7,9 @@ mod tray;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, CoverHue,
-    Error, ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, SteamAccountChoice, SteamAppList,
-    SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
+    AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, CoverHue, Error,
+    ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
+    SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -95,6 +95,11 @@ fn choose_library_sort(core: tauri::State<'_, Core>, sort: LibrarySort) -> Resul
     core.choose_library_sort(sort)
 }
 
+#[tauri::command]
+fn set_status(core: tauri::State<'_, Core>, game_id: String, status: Status) -> Result<Game, Error> {
+    core.set_status(&game_id, status)
+}
+
 /// Async, so a slow start of the browser does not block the window.
 #[tauri::command]
 async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(), Error> {
@@ -175,6 +180,12 @@ async fn fetch_steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppLi
     core.fetch_steam_app_list()
 }
 
+/// Async, so a slow start of File Explorer does not block the window.
+#[tauri::command]
+async fn open_log_folder(core: tauri::State<'_, Core>) -> Result<(), Error> {
+    core.open_log_folder()
+}
+
 /// Async: the Cover may have to be downloaded, and its image is decoded.
 #[tauri::command]
 async fn cover_hue(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<CoverHue>, Error> {
@@ -209,6 +220,10 @@ const DATABASE: &str = "nicelibrary.db";
 /// The folder of downloaded Covers in the app's cache folder in the user
 /// profile (`%LOCALAPPDATA%\<identifier>` on Windows).
 const COVERS: &str = "covers";
+
+/// The folder of the log files in the app's data folder, next to the
+/// database (`%APPDATA%\<identifier>\logs` on Windows).
+const LOGS: &str = "logs";
 
 pub fn run() {
     tauri::Builder::default()
@@ -253,6 +268,8 @@ pub fn run() {
             set_close_to_tray,
             close_window,
             show_tray_menu,
+            set_status,
+            open_log_folder,
             cover_hue
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
@@ -266,7 +283,8 @@ pub fn run() {
         .setup(|app| {
             let store = Store::open(&app.path().app_data_dir()?.join(DATABASE))?;
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
-            app.manage(Core::new(ports::real_ports(), store, covers));
+            let log = Log::new(app.path().app_data_dir()?.join(LOGS));
+            app.manage(Core::new(ports::real_ports(), store, covers).with_log(log));
             start_automatic_syncs(app)?;
             tray::create(app.handle())?;
             start_automatic_steam_app_list_fetches(app)?;

@@ -176,4 +176,19 @@ export const de: Record<MessageKey, string> = {
   'tray.notice':
     'Wenn du das Fenster schließt, läuft NiceLibrary im Infobereich der Taskleiste weiter und erfasst weiter deine Spielzeit. Ein Klick auf das Symbol dort öffnet es wieder, über sein Menü beendest du es. Ändern kannst du das in den Einstellungen unter Fenster.',
   'tray.ok': 'OK',
+  'game.status': 'Status',
+  'status.unplayed': 'Ungespielt',
+  'status.playing': 'Wird gespielt',
+  'status.completed': 'Durchgespielt',
+  'status.dropped': 'Abgebrochen',
+  'status.of': 'Status von {title}',
+  'status.setFailed': 'Der Status von {title} konnte nicht geändert werden.',
+  'filter.status': 'Status',
+  'filter.anyStatus': 'Jeder Status',
+  'settings.log': 'Protokolldatei',
+  'log.why':
+    'NiceLibrary schreibt Fehler und wichtige Ereignisse in eine Protokolldatei auf diesem Computer. Wenn etwas schiefgeht, öffne den Ordner und hänge die Datei selbst an deine Fehlermeldung an.',
+  'log.private': 'Nichts wird gesendet. Dein Schlüssel und deine SteamIDs landen nie im Protokoll.',
+  'log.openFolder': 'Protokollordner öffnen',
+  'log.openFailed': 'Der Protokollordner konnte nicht geöffnet werden.',
 };

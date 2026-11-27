@@ -13,7 +13,7 @@ const LAST_WEEK = 1_795_205_700;
 const pending = <T,>() => new Promise<T>(() => {});
 
 function steamGame(appId: number, title: string, installed: boolean, minutes: number | null, lastPlayed: number | null): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: minutes, lastPlayed };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: minutes, lastPlayed, status: 'unplayed' };
 }
 
 /**
@@ -66,6 +66,7 @@ function fakeOperations({
     },
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    openLogFolder: async () => {},
     sync: async () => {
       calls.syncs += 1;
       if (outcome.outcome === 'synced') {
@@ -100,6 +101,9 @@ function fakeOperations({
     coverHue: async () => null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
   };
   return { operations, calls, automaticSync, listeners };
 }
@@ -394,6 +398,7 @@ describe('Playtime and Last Played in the Library', () => {
     render(<App operations={fakeOperations({ before: [steamGame(620, 'Portal 2', true, null, null)] }).operations} lang="en" />);
 
     const [portal2] = within(await screen.findByRole('list', { name: 'Games' })).getAllByRole('listitem');
-    expect(within(portal2).queryByText(/played/)).not.toBeInTheDocument();
+    // " played" is in every Playtime text, but not in the Status "Unplayed".
+    expect(within(portal2).queryByText(/ played/)).not.toBeInTheDocument();
   });
 });
