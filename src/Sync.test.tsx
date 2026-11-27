@@ -57,6 +57,9 @@ function fakeOperations({
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
+    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
+    coverImageChosen: async () => false,
+    removeCoverImage: async () => {},
     launch: async () => ({ outcome: 'launched' }),
     steamWebApiKeyStored: async () => keyStored,
     storeSteamWebApiKey: async () => {

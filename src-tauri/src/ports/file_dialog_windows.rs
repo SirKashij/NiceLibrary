@@ -1,11 +1,12 @@
-//! Asks the user for a Game's executable with Windows' own file dialog.
+//! Asks the user for a Game's executable, or an image for its Cover, with
+//! Windows' own file dialog.
 
 use std::ffi::OsString;
 use std::os::windows::ffi::OsStringExt;
 use std::path::PathBuf;
 use std::ptr;
 
-use nicelibrary_core::ExecutablePicker;
+use nicelibrary_core::{ExecutablePicker, ImagePicker};
 use windows_sys::Win32::System::Com::{
     COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE, CoInitializeEx, CoUninitialize,
 };
@@ -23,21 +24,38 @@ pub struct WindowsExecutablePicker;
 
 impl ExecutablePicker for WindowsExecutablePicker {
     fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
-        // A thread of its own: the dialog needs a single-threaded COM
-        // apartment, which the caller's thread may not be or may not want.
-        std::thread::Builder::new()
-            .name("executable-picker".into())
-            .spawn(show_dialog)
-            .map_err(|error| format!("the file dialog could not be started: {error}"))?
-            .join()
-            .map_err(|_| "the file dialog ended unexpectedly".to_owned())?
+        show_dialog_on_own_thread("executable-picker", "*.exe")
     }
 }
 
-fn show_dialog() -> Result<Option<PathBuf>, String> {
+/// Shows Windows' "Open" dialog for images a Cover may be (`*.png`, `*.jpg`,
+/// `*.jpeg`). Its title and buttons are Windows' own, in the language of
+/// Windows.
+pub struct WindowsImagePicker;
+
+impl ImagePicker for WindowsImagePicker {
+    fn choose_image(&self) -> Result<Option<PathBuf>, String> {
+        show_dialog_on_own_thread("image-picker", "*.png;*.jpg;*.jpeg")
+    }
+}
+
+/// The dialog for files matching `patterns` (separated by `;`), on a thread
+/// named `name`.
+fn show_dialog_on_own_thread(name: &str, patterns: &'static str) -> Result<Option<PathBuf>, String> {
+    // A thread of its own: the dialog needs a single-threaded COM
+    // apartment, which the caller's thread may not be or may not want.
+    std::thread::Builder::new()
+        .name(name.into())
+        .spawn(move || show_dialog(patterns))
+        .map_err(|error| format!("the file dialog could not be started: {error}"))?
+        .join()
+        .map_err(|_| "the file dialog ended unexpectedly".to_owned())?
+}
+
+fn show_dialog(patterns: &str) -> Result<Option<PathBuf>, String> {
     // The same text in both halves: a filter's name and its pattern, so the
     // dialog reads alike in every language.
-    let filter: Vec<u16> = "*.exe\0*.exe\0\0".encode_utf16().collect();
+    let filter: Vec<u16> = format!("{patterns}\0{patterns}\0\0").encode_utf16().collect();
     let mut path = vec![0u16; PATH_CAPACITY];
     // SAFETY: all-zero is a valid OPENFILENAMEW (null pointers, no flags).
     let mut dialog: OPENFILENAMEW = unsafe { std::mem::zeroed() };

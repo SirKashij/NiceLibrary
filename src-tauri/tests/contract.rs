@@ -805,8 +805,9 @@ mod autostart {
     }
 }
 
-/// `ExecutablePicker` (crates/core): `Some` with the absolute path of the
-/// file the user chose, `None` when they cancel; blocks until they decide.
+/// `ExecutablePicker` and `ImagePicker` (crates/core): `Some` with the
+/// absolute path of the file the user chose, `None` when they cancel;
+/// blocks until they decide.
 ///
 /// The tests play the user: they find the dialog this process opens, type a
 /// path into its file name box and confirm, or cancel it. A dialog shows on
@@ -819,8 +820,8 @@ mod executable_picker {
     use std::thread::JoinHandle;
     use std::time::{Duration, Instant};
 
-    use nicelibrary_core::ExecutablePicker;
-    use nicelibrary_lib::ports::WindowsExecutablePicker;
+    use nicelibrary_core::{ExecutablePicker, ImagePicker};
+    use nicelibrary_lib::ports::{WindowsExecutablePicker, WindowsImagePicker};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, WPARAM};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
         EnumWindows, GetClassNameW, GetDlgItem, GetWindowThreadProcessId, IDCANCEL, IDOK, IsWindowVisible,
@@ -920,6 +921,266 @@ mod executable_picker {
         answer.join().unwrap().unwrap();
 
         assert_eq!(std::env::current_dir().unwrap(), before);
+    }
+
+    #[test]
+    fn answers_the_image_the_user_chose() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let folder = tempfile::tempdir().unwrap();
+        let image = folder.path().join("Celeste cover.png");
+        fs::write(&image, b"\x89PNG\r\n\x1a\n").unwrap();
+        let answer = std::thread::spawn(|| WindowsImagePicker.choose_image());
+
+        let dialog = the_dialog();
+        let typed: Vec<u16> = image.display().to_string().encode_utf16().chain([0]).collect();
+        // SAFETY: SendMessageW returns only once the dialog has copied the text.
+        unsafe { SendMessageW(GetDlgItem(dialog, FILE_NAME_BOX), WM_SETTEXT, 0, typed.as_ptr() as LPARAM) };
+        press(dialog, IDOK);
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen image");
+        assert_eq!(fs::canonicalize(chosen).unwrap(), fs::canonicalize(&image).unwrap());
+    }
+
+    #[test]
+    fn answers_no_image_when_the_user_cancels() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = std::thread::spawn(|| WindowsImagePicker.choose_image());
+
+        press(the_dialog(), IDCANCEL);
+
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+}
+
+/// `IconExtractor` (crates/core): `Some` with the largest image of the
+/// executable's first icon, at its own size, as straight RGBA; `None` for an
+/// executable without an icon; `Err` for a file that is not an executable.
+///
+/// The tests copy Windows' `cmd.exe` into a temporary folder and replace all
+/// resources of the copy with icons generated for the test; the original is
+/// only read. One test reads the icon of Windows' own `explorer.exe`.
+#[cfg(windows)]
+mod icon_extractor {
+    use std::fs;
+    use std::path::{Path, PathBuf};
+
+    use nicelibrary_core::{Icon, IconExtractor};
+    use nicelibrary_lib::ports::WindowsIconExtractor;
+    use tempfile::TempDir;
+    use windows_sys::Win32::System::LibraryLoader::{BeginUpdateResourceW, EndUpdateResourceW, UpdateResourceW};
+    use windows_sys::Win32::UI::WindowsAndMessaging::{RT_GROUP_ICON, RT_ICON};
+    use windows_sys::core::PCWSTR;
+
+    const RED: [u8; 4] = [220, 30, 40, 255];
+    const GREEN: [u8; 4] = [30, 180, 60, 255];
+    const BLUE: [u8; 4] = [30, 60, 220, 255];
+
+    /// One image of an icon as an executable keeps it.
+    struct Image {
+        size: u32,
+        bit_count: u16,
+        bytes: Vec<u8>,
+    }
+
+    /// A square PNG image in one colour; the left half transparent when `half_transparent`.
+    fn png_image(size: u32, rgba: [u8; 4], half_transparent: bool) -> Image {
+        let mut pixels = Vec::new();
+        for _ in 0..size {
+            for x in 0..size {
+                pixels.extend(if half_transparent && x < size / 2 { [0, 0, 0, 0] } else { rgba });
+            }
+        }
+        let mut bytes = Vec::new();
+        let mut encoder = png::Encoder::new(&mut bytes, size, size);
+        encoder.set_color(png::ColorType::Rgba);
+        encoder.set_depth(png::BitDepth::Eight);
+        let mut writer = encoder.write_header().unwrap();
+        writer.write_image_data(&pixels).unwrap();
+        writer.finish().unwrap();
+        Image { size, bit_count: 32, bytes }
+    }
+
+    /// A square bitmap image in one colour as icons keep them: the colours,
+    /// bottom row first, then a mask whose set bits are transparent. With 32
+    /// bits per pixel the alpha channel says what is transparent; with 24
+    /// the left half is masked out.
+    fn bitmap_image(size: u32, rgba: [u8; 4], bit_count: u16) -> Image {
+        let mut bytes = Vec::new();
+        bytes.extend(40u32.to_le_bytes());
+        bytes.extend((size as i32).to_le_bytes());
+        bytes.extend((size as i32 * 2).to_le_bytes());
+        bytes.extend(1u16.to_le_bytes());
+        bytes.extend(bit_count.to_le_bytes());
+        bytes.extend([0u8; 24]);
+        let masked = |x: u32| bit_count == 24 && x < size / 2;
+        for _ in 0..size {
+            let mut row = Vec::new();
+            for x in 0..size {
+                let [r, g, b, a] = if masked(x) { [0; 4] } else { rgba };
+                row.extend(if bit_count == 32 { vec![b, g, r, a] } else { vec![b, g, r] });
+            }
+            row.resize(row.len().div_ceil(4) * 4, 0);
+            bytes.extend(row);
+        }
+        let mask_row = size.div_ceil(32) as usize * 4;
+        for _ in 0..size {
+            let mut row = vec![0u8; mask_row];
+            for x in 0..size {
+                if masked(x) {
+                    row[x as usize / 8] |= 0x80 >> (x % 8);
+                }
+            }
+            bytes.extend(row);
+        }
+        Image { size, bit_count, bytes }
+    }
+
+    /// A copy of Windows' `cmd.exe` whose resources are only `icons`, each a
+    /// list of images; the icons are numbered from 1 in order, their images
+    /// from 100 on.
+    fn executable_with(folder: &TempDir, icons: &[Vec<Image>]) -> PathBuf {
+        let windows = std::env::var_os("SystemRoot").expect("SystemRoot is set on Windows");
+        let path = folder.path().join("game.exe");
+        fs::copy(Path::new(&windows).join("System32").join("cmd.exe"), &path).unwrap();
+        let wide: Vec<u16> = path.to_str().unwrap().encode_utf16().chain([0]).collect();
+        let mut next_image = 100u16;
+        // SAFETY: plain Win32 calls; every buffer outlives the call it is handed to.
+        unsafe {
+            // TRUE: the copy's own resources, its icon among them, are removed.
+            let update = BeginUpdateResourceW(wide.as_ptr(), 1);
+            assert!(!update.is_null(), "{}", std::io::Error::last_os_error());
+            for (number, images) in icons.iter().enumerate() {
+                let mut group = Vec::new();
+                group.extend([0u16, 1, images.len() as u16].iter().flat_map(|value| value.to_le_bytes()));
+                for image in images {
+                    let id = next_image;
+                    next_image += 1;
+                    let added = UpdateResourceW(
+                        update,
+                        RT_ICON,
+                        id as usize as PCWSTR,
+                        0,
+                        image.bytes.as_ptr().cast(),
+                        image.bytes.len() as u32,
+                    );
+                    assert_ne!(added, 0, "{}", std::io::Error::last_os_error());
+                    let width = if image.size >= 256 { 0 } else { image.size as u8 };
+                    group.extend([width, width, 0, 0]);
+                    group.extend(1u16.to_le_bytes());
+                    group.extend(image.bit_count.to_le_bytes());
+                    group.extend((image.bytes.len() as u32).to_le_bytes());
+                    group.extend(id.to_le_bytes());
+                }
+                let name = (number + 1) as PCWSTR;
+                let added = UpdateResourceW(update, RT_GROUP_ICON, name, 0, group.as_ptr().cast(), group.len() as u32);
+                assert_ne!(added, 0, "{}", std::io::Error::last_os_error());
+            }
+            assert_ne!(EndUpdateResourceW(update, 0), 0, "{}", std::io::Error::last_os_error());
+        }
+        path
+    }
+
+    fn pixel(icon: &Icon, x: u32, y: u32) -> [u8; 4] {
+        let at = ((y * icon.width + x) * 4) as usize;
+        icon.rgba[at..at + 4].try_into().unwrap()
+    }
+
+    fn largest_icon(path: &Path) -> Icon {
+        WindowsIconExtractor.largest_icon(path).unwrap().expect("an icon")
+    }
+
+    #[test]
+    fn answers_the_largest_image_of_the_icon_at_its_own_size() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(
+            &folder,
+            &[vec![bitmap_image(32, BLUE, 32), png_image(256, RED, false), bitmap_image(48, GREEN, 32)]],
+        );
+
+        let icon = largest_icon(&game);
+
+        assert_eq!((icon.width, icon.height, icon.rgba.len()), (256, 256, 256 * 256 * 4));
+        assert_eq!(pixel(&icon, 128, 128), RED);
+    }
+
+    #[test]
+    fn an_icon_with_bitmaps_only_answers_its_largest_bitmap() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(&folder, &[vec![bitmap_image(48, GREEN, 32), bitmap_image(32, BLUE, 32)]]);
+
+        let icon = largest_icon(&game);
+
+        assert_eq!((icon.width, icon.height), (48, 48));
+        assert_eq!(pixel(&icon, 0, 0), GREEN);
+        assert_eq!(pixel(&icon, 47, 47), GREEN);
+    }
+
+    #[test]
+    fn transparent_pixels_stay_transparent() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(&folder, &[vec![png_image(256, RED, true)]]);
+
+        let icon = largest_icon(&game);
+
+        assert_eq!(pixel(&icon, 10, 128)[3], 0, "the left half is transparent");
+        assert_eq!(pixel(&icon, 200, 128), RED);
+    }
+
+    #[test]
+    fn an_icon_without_alpha_is_transparent_where_its_mask_says() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(&folder, &[vec![bitmap_image(32, BLUE, 24)]]);
+
+        let icon = largest_icon(&game);
+
+        assert_eq!((icon.width, icon.height), (32, 32));
+        assert_eq!(pixel(&icon, 3, 16)[3], 0, "the masked half is transparent");
+        assert_eq!(pixel(&icon, 28, 16), BLUE);
+    }
+
+    #[test]
+    fn the_first_icon_is_the_one_answered() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(&folder, &[vec![bitmap_image(32, BLUE, 32)], vec![png_image(256, RED, false)]]);
+
+        let icon = largest_icon(&game);
+
+        assert_eq!(pixel(&icon, 16, 16), BLUE);
+    }
+
+    #[test]
+    fn an_executable_without_an_icon_has_none() {
+        let folder = tempfile::tempdir().unwrap();
+        let game = executable_with(&folder, &[]);
+
+        assert_eq!(WindowsIconExtractor.largest_icon(&game), Ok(None));
+    }
+
+    #[test]
+    fn a_file_that_is_not_an_executable_is_an_error() {
+        let folder = tempfile::tempdir().unwrap();
+        let notes = folder.path().join("notes.exe");
+        fs::write(&notes, b"not an executable").unwrap();
+
+        assert!(WindowsIconExtractor.largest_icon(&notes).is_err());
+    }
+
+    #[test]
+    fn a_file_that_is_gone_is_an_error() {
+        let folder = tempfile::tempdir().unwrap();
+
+        assert!(WindowsIconExtractor.largest_icon(&folder.path().join("gone.exe")).is_err());
+    }
+
+    #[test]
+    fn reads_the_icon_of_a_program_of_windows() {
+        let windows = std::env::var_os("SystemRoot").expect("SystemRoot is set on Windows");
+
+        let icon = largest_icon(&Path::new(&windows).join("explorer.exe"));
+
+        assert_eq!(icon.width, icon.height);
+        assert!(icon.width >= 48, "{} pixels is not the largest size", icon.width);
+        assert!(icon.rgba.chunks(4).any(|pixel| pixel[3] == 255), "something is opaque");
     }
 }
 

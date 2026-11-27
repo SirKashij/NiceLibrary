@@ -11,6 +11,7 @@ mod collections;
 mod covers;
 pub mod keyvalues;
 mod launch;
+mod local_covers;
 mod local_games;
 mod library_filter;
 mod log;
@@ -39,6 +40,7 @@ pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
+pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
 pub use log::Log;
 pub use sessions::{ProcessList, Tracking};
@@ -141,6 +143,8 @@ pub struct Ports {
     pub executable_picker: Box<dyn ExecutablePicker>,
     pub processes: Box<dyn ProcessList>,
     pub process_starter: Box<dyn ProcessStarter>,
+    pub icon_extractor: Box<dyn IconExtractor>,
+    pub image_picker: Box<dyn ImagePicker>,
 }
 
 /// The application core. Each public method is one operation.
@@ -377,13 +381,18 @@ impl Core {
         steam::read_installation(self.ports.steam_locator.as_ref())
     }
 
-    /// The Cover of the Game `game_id`; `None` when it has none and the
-    /// interface shows a placeholder instead.
+    /// The Cover of the Game `game_id`: a Steam Game's from Steam, a Local
+    /// Game's the image the user chose, else its executable's icon on a
+    /// neutral background. `None` when it has none and the interface shows a
+    /// placeholder instead.
     pub fn cover(&self, game_id: &str) -> Result<Option<Cover>, Error> {
-        let Some(app_id) = steam_app_id(game_id) else {
-            return Ok(None);
-        };
-        self.covers.steam_cover(self.ports.downloader.as_ref(), app_id)
+        if let Some(app_id) = steam_app_id(game_id) {
+            return self.covers.steam_cover(self.ports.downloader.as_ref(), app_id);
+        }
+        match self.stored_local_game(game_id)? {
+            Some(game) => local_covers::cover(&self.covers, self.ports.icon_extractor.as_ref(), &game),
+            None => Ok(None),
+        }
     }
 
     /// Launches the Game `game_id`. A Steam Game is launched through Steam, by
@@ -962,6 +971,61 @@ impl Core {
             .steam_title_index()
             .and_then(|index| self.store.steam_titles(&index.find(&search, steam_app_list::LOOKUP_LIMIT)));
         self.logged("find_steam_titles", titles)
+    }
+
+    /// Asks the user to choose an image and makes it the Cover of the Local
+    /// Game `game_id`, in place of its executable's icon or an image chosen
+    /// before. The image is copied into the app's data folder, so it stays
+    /// the Cover when the original is moved or deleted. A file that is not a
+    /// PNG or JPEG image is refused and changes nothing. Fails for a Game
+    /// that is not a Local Game in the Library.
+    pub fn choose_cover_image(&self, game_id: &str) -> Result<CoverImageChoice, Error> {
+        self.logged_outcome("choose_cover_image", self.pick_cover_image(game_id))
+    }
+
+    fn pick_cover_image(&self, game_id: &str) -> Result<CoverImageChoice, Error> {
+        let Some(game) = self.stored_local_game(game_id)? else {
+            return Err(Error::new(format!("not a Local Game in the library: {game_id}")));
+        };
+        let chosen = self
+            .ports
+            .image_picker
+            .choose_image()
+            .map_err(|reason| Error::new(format!("file dialog: {reason}")))?;
+        match chosen {
+            Some(image) => local_covers::keep_chosen_image(&self.covers, game.id, &image),
+            None => Ok(CoverImageChoice::Cancelled),
+        }
+    }
+
+    /// Whether the user chose an image as the Cover of the Local Game
+    /// `game_id` (see [`Self::choose_cover_image`]).
+    pub fn cover_image_chosen(&self, game_id: &str) -> Result<bool, Error> {
+        let chosen = self.stored_local_game(game_id).and_then(|game| match game {
+            Some(game) => Ok(local_covers::chosen_image(&self.covers, game.id)?.is_some()),
+            None => Ok(false),
+        });
+        self.logged("cover_image_chosen", chosen)
+    }
+
+    /// Forgets the image the user chose as the Cover of the Local Game
+    /// `game_id`: the Game shows the Cover the app finds for it again, its
+    /// executable's icon. Without a chosen image nothing changes.
+    pub fn remove_cover_image(&self, game_id: &str) -> Result<(), Error> {
+        let removed = self.stored_local_game(game_id).and_then(|game| match game {
+            Some(game) => local_covers::remove_chosen_image(&self.covers, game.id),
+            None => Ok(()),
+        });
+        self.logged("remove_cover_image", removed)
+    }
+
+    /// The Local Game `game_id` as the store keeps it; `None` when the id is
+    /// not a Local Game's or the Game is not in the Library.
+    fn stored_local_game(&self, game_id: &str) -> Result<Option<local_games::StoredLocalGame>, Error> {
+        let Some(id) = game_id.strip_prefix("local:").and_then(|id| id.parse::<i64>().ok()) else {
+            return Ok(None);
+        };
+        Ok(self.store.local_games()?.into_iter().find(|game| game.id == id))
     }
 
     /// The names lookups search, loaded from the store unless already held.

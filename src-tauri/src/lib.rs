@@ -7,10 +7,10 @@ mod tray;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
-    ExecutableChoice, Game, GameAchievements, Launch, LaunchOptions, LibraryFilter, LibrarySort, Log, Status,
-    SteamAccountChoice, SteamAppList, SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome,
-    Theme, Tracking, started_with_windows,
+    AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
+    CoverImageChoice, Error, ExecutableChoice, Game, GameAchievements, Launch, LaunchOptions, LibraryFilter,
+    LibrarySort, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch, SteamInstallation,
+    SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -196,6 +196,22 @@ async fn fetch_steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppLi
     core.fetch_steam_app_list()
 }
 
+/// Async, so the window stays responsive while the file dialog is open.
+#[tauri::command]
+async fn choose_cover_image(core: tauri::State<'_, Core>, game_id: String) -> Result<CoverImageChoice, Error> {
+    core.choose_cover_image(&game_id)
+}
+
+#[tauri::command]
+fn cover_image_chosen(core: tauri::State<'_, Core>, game_id: String) -> Result<bool, Error> {
+    core.cover_image_chosen(&game_id)
+}
+
+#[tauri::command]
+fn remove_cover_image(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Error> {
+    core.remove_cover_image(&game_id)
+}
+
 /// Async, so a slow start of File Explorer does not block the window.
 #[tauri::command]
 async fn open_log_folder(core: tauri::State<'_, Core>) -> Result<(), Error> {
@@ -263,6 +279,10 @@ const DATABASE: &str = "nicelibrary.db";
 /// profile (`%LOCALAPPDATA%\<identifier>` on Windows).
 const COVERS: &str = "covers";
 
+/// The folder of images the user chose as Covers, in the app's data folder
+/// next to the database: data, not cache, as they cannot be fetched again.
+const CHOSEN_COVERS: &str = "covers";
+
 /// The folder of the log files in the app's data folder, next to the
 /// database (`%APPDATA%\<identifier>\logs` on Windows).
 const LOGS: &str = "logs";
@@ -315,6 +335,9 @@ pub fn run() {
             set_close_to_tray,
             close_window,
             show_tray_menu,
+            choose_cover_image,
+            cover_image_chosen,
+            remove_cover_image,
             set_status,
             open_log_folder,
             starts_with_windows,
@@ -336,7 +359,8 @@ pub fn run() {
         })
         .setup(|app| {
             let store = Store::open(&app.path().app_data_dir()?.join(DATABASE))?;
-            let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
+            let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS))
+                .with_chosen_images_in(app.path().app_data_dir()?.join(CHOSEN_COVERS));
             let log = Log::new(app.path().app_data_dir()?.join(LOGS));
             app.manage(Core::new(ports::real_ports(), store, covers).with_log(log));
             start_automatic_syncs(app)?;
