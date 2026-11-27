@@ -119,3 +119,18 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .add-local-game { display: grid; gap: var(--space-2); justify-items: start; }
 .local-game-form { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); }
 .local-game-form > label { color: var(--color-text-muted); font-size: var(--text-size-label); }
+
+/* Library toolbar: search, Source and Installed only; the empty state when nothing matches. */
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding-bottom: var(--space-2); }
+.toolbar-search {
+  flex: 1; min-width: 0; max-width: var(--note-max-width); font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
+.segmented { display: flex; border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); }
+.segmented button { padding: var(--space-1) var(--space-3); color: var(--color-text-muted); }
+.segmented button + button { border-left: var(--hairline) solid var(--color-line); }
+.segmented button:hover { color: var(--color-text); }
+.segmented button[aria-pressed='true'] { color: var(--color-text); background: var(--color-surface-raised); }
+.toolbar-toggle { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; color: var(--color-text-muted); }
+.toolbar-toggle input { margin: 0; accent-color: var(--color-accent); }
+.empty-state { display: grid; justify-items: start; gap: var(--space-2); padding-top: var(--space-5); }

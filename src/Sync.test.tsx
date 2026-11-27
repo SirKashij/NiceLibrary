@@ -75,6 +75,7 @@ function fakeOperations({
       return outcome;
     },
     lastSync: async () => last,
+    filterLibrary: async () => [],
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

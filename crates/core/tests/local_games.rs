@@ -430,3 +430,12 @@ fn generic_folders_are_passed_over_for_the_one_above() {
     assert_eq!(app.proposed_title("Games/Deep Rock/Binaries/Win64/launcher.exe"), "Deep Rock");
     assert_eq!(app.proposed_title("Games/Noita/bin/x64/game.exe"), "Noita");
 }
+
+#[test]
+fn a_local_game_is_found_by_the_local_source_and_installed_only_filters() {
+    let app = App::start();
+    let AddLocalGame::Added { game } = app.add(&app.put("Games/Celeste/Celeste.exe")) else { panic!() };
+    let filter = nicelibrary_core::LibraryFilter { source: Some(Source::Local), installed_only: true, ..Default::default() };
+
+    assert_eq!(app.core.filter_library(&filter).unwrap(), [game]);
+}

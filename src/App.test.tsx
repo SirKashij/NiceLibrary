@@ -21,6 +21,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     launch: async () => ({ outcome: 'launched' }),
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),

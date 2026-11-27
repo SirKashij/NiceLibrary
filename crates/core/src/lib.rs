@@ -9,6 +9,7 @@ mod covers;
 pub mod keyvalues;
 mod launch;
 mod local_games;
+mod library_filter;
 mod steam;
 mod steam_web_api;
 mod store;
@@ -18,19 +19,20 @@ use std::fmt;
 use std::ops::ControlFlow;
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use serde::{Serialize, Serializer};
+use serde::{Deserialize, Serialize, Serializer};
 
 pub use clock::{Clock, Wakeup};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
+pub use library_filter::LibraryFilter;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
 pub use sync::{AutomaticSync, SyncOutcome};
 
 /// The origin a Game is read from.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Source {
     Steam,
@@ -141,6 +143,14 @@ impl Core {
         };
         games.extend(self.store.local_games()?.into_iter().map(|game| Game::local(game.id, game.title)));
         games.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()).then_with(|| a.id.cmp(&b.id)));
+        Ok(games)
+    }
+
+    /// The Games in the Library that match `filter`, as last stored, ordered
+    /// by title like [`Self::library`].
+    pub fn filter_library(&self, filter: &LibraryFilter) -> Result<Vec<Game>, Error> {
+        let mut games = self.library()?;
+        games.retain(|game| filter.matches(game));
         Ok(games)
     }
 

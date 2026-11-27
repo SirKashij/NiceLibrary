@@ -39,6 +39,7 @@ function fakeOperations({
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    filterLibrary: async () => [...games],
     chooseLocalGameExecutable: choice,
     addLocalGame: async (executable, title) => {
       added.push({ executable, title });

@@ -77,6 +77,15 @@ export type AddLocalGame =
   | { outcome: 'alreadyAdded'; /** The title the Game has in the Library. */ title: string }
   | { outcome: 'noTitle' }
   | { outcome: 'notFound' };
+/** What the Library is narrowed to; every part that is set must match. Mirrors `LibraryFilter` in crates/core. */
+export interface LibraryFilter {
+  /** Text the title must contain, ignoring case; empty matches every title. */
+  search: string;
+  /** Only Games of this Source; `null` for both Sources. */
+  source: Source | null;
+  /** Only Installed Games. */
+  installedOnly: boolean;
+}
 
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
@@ -145,6 +154,8 @@ export interface Operations {
    * user confirmed or corrected. The same executable is never added twice.
    */
   addLocalGame(executable: string, title: string): Promise<AddLocalGame>;
+  /** The Games in the stored Library that match the filter, ordered by title like `library`. */
+  filterLibrary(filter: LibraryFilter): Promise<Game[]>;
 }
 
 export const tauriOperations: Operations = {
@@ -171,4 +182,5 @@ export const tauriOperations: Operations = {
   },
   chooseLocalGameExecutable: () => invoke<ExecutableChoice>('choose_local_game_executable'),
   addLocalGame: (executable, title) => invoke<AddLocalGame>('add_local_game', { executable, title }),
+  filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
 };
