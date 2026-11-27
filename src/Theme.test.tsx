@@ -27,6 +27,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
     filterLibrary: async () => [],
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async () => null,
     theme: async () => theme,
     chooseTheme: async (chosen) => {

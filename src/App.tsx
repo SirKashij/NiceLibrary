@@ -6,6 +6,7 @@ import { AddLocalGameButton } from './library/AddLocalGame';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { ThemeSettings } from './settings/ThemeSettings';
 import { ThemeProvider } from './theme';
+import { GameList, LibraryLayoutSwitch, useLibraryLayout } from './library/LibraryLayout';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
 
 type View = 'library' | 'statistics' | 'settings';
@@ -193,6 +194,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
 
   const library = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
   const [filter, setFilter] = useState(NO_FILTER);
+  const layout = useLibraryLayout(operations);
   const filtered = useFilteredLibrary(operations, filter, library);
   const games = filtered.state === 'ready' ? filtered.games : undefined;
   const failure: MessageKey | undefined =
@@ -255,7 +257,14 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
       <div ref={libraryView} hidden={opened !== undefined}>
         <Page title="nav.library">
           <AddLocalGameButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
-          <LibraryToolbar filter={filter} onChange={setFilter} />
+          <LibraryToolbar filter={filter} onChange={setFilter}>
+            <LibraryLayoutSwitch choice={layout} />
+          </LibraryToolbar>
+          {layout.saveFailed && (
+            <p className="note" role="alert">
+              {t('layout.saveFailed')}
+            </p>
+          )}
           {filtered.state === 'failed' && (
             <p className="note" role="alert">
               {t('filter.failed')}
@@ -271,8 +280,16 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
             <p className="note">{t('library.empty')}</p>
           )}
           {isFiltering(filter) && games?.length === 0 && <NoMatch onReset={() => setFilter(NO_FILTER)} />}
-          {games && games.length > 0 && (
+          {games && games.length > 0 && layout.layout === 'coverGrid' && (
             <CoverGrid games={games} coverUrl={operations.coverUrl} onPlay={launch} onOpen={open} />
+          )}
+          {games && games.length > 0 && layout.layout === 'list' && (
+            <GameList
+              games={games}
+              cover={(game) => <Cover title={game.title} src={operations.coverUrl(game)} />}
+              onPlay={launch}
+              onOpen={open}
+            />
           )}
         </Page>
       </div>

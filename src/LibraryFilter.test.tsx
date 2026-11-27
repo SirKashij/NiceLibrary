@@ -46,6 +46,8 @@ function fakeOperations() {
           game.title.toLowerCase().includes(filter.search.toLowerCase()),
       );
     },
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),

@@ -178,3 +178,21 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .game-facts dt { color: var(--color-text-muted); }
 .game-facts dd { margin: 0; }
 .game-detail[data-installed='false'] .cover { filter: var(--filter-not-installed); }
+
+/* Library as a list: one row per Game. The small Cover opens it, and so does the rest of the row;
+   the main action sits above that and stays its own button. */
+.game-list { padding-top: var(--space-3); }
+.game-row {
+  position: relative; display: grid; align-items: center; gap: var(--space-4);
+  grid-template-columns: var(--list-cover-width) minmax(0, 1fr) repeat(4, var(--list-fact-width));
+  padding: var(--space-2); border-top: var(--hairline) solid var(--color-line);
+}
+.game-list-head { border-top: 0; color: var(--color-text-muted); font-size: var(--text-size-label); }
+.game-row .cover { margin-bottom: 0; }
+.open-row { display: block; border-radius: var(--radius-cover); }
+.open-row::after { content: ''; position: absolute; inset: 0; }
+.game-list li:hover { background: var(--color-surface); }
+.game-row-fact { color: var(--color-text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.game-row-action { position: relative; justify-self: end; }
+.game-row[data-installed='false'] .cover { filter: var(--filter-not-installed); }
+.game-row[data-installed='false'] .game-title { color: var(--color-text-muted); }

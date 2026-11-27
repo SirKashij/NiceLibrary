@@ -7,7 +7,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error, ExecutableChoice, Game, Launch,
-    LibraryFilter, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
+    LibraryFilter, LibraryLayout, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -100,6 +100,16 @@ fn add_local_game(core: tauri::State<'_, Core>, executable: String, title: Strin
 }
 
 #[tauri::command]
+fn library_layout(core: tauri::State<'_, Core>) -> Result<LibraryLayout, Error> {
+    core.library_layout()
+}
+
+#[tauri::command]
+fn choose_library_layout(core: tauri::State<'_, Core>, layout: LibraryLayout) -> Result<(), Error> {
+    core.choose_library_layout(layout)
+}
+
+#[tauri::command]
 fn theme(core: tauri::State<'_, Core>) -> Result<Theme, Error> {
     core.theme()
 }
@@ -182,7 +192,9 @@ pub fn run() {
             filter_library,
             game,
             choose_local_game_executable,
-            add_local_game
+            add_local_game,
+            library_layout,
+            choose_library_layout
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

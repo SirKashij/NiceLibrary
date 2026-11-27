@@ -46,6 +46,8 @@ function fakeOperations({
     renameCollection: async () => ({ outcome: 'emptyName' }),
     deleteCollection: async () => {},
     filterLibrary: async () => [...games],
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: choice,
     addLocalGame: async (executable, title) => {

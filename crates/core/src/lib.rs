@@ -11,6 +11,7 @@ pub mod keyvalues;
 mod launch;
 mod local_games;
 mod library_filter;
+mod library_layout;
 mod steam;
 mod steam_web_api;
 mod store;
@@ -29,6 +30,7 @@ pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
 pub use library_filter::LibraryFilter;
+pub use library_layout::LibraryLayout;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
@@ -420,6 +422,17 @@ impl Core {
     /// restart.
     pub fn choose_theme(&self, theme: Theme) -> Result<(), Error> {
         self.store.choose_theme(theme)
+    }
+
+    /// How the Library shows its Games; until the user switches,
+    /// [`LibraryLayout::CoverGrid`].
+    pub fn library_layout(&self) -> Result<LibraryLayout, Error> {
+        self.store.library_layout()
+    }
+
+    /// Makes `layout` the Library Layout, from now on and after every restart.
+    pub fn choose_library_layout(&self, layout: LibraryLayout) -> Result<(), Error> {
+        self.store.choose_library_layout(layout)
     }
 
     /// Every Collection with how many Games of the Library are in it,

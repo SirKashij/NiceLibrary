@@ -140,6 +140,11 @@ export const en = {
   'game.never': 'Never',
   'game.notKnown': 'Not known yet',
   'game.gone': '{title} is no longer in your library.',
+  'layout.choose': 'Layout',
+  'layout.coverGrid': 'Grid',
+  'layout.list': 'List',
+  'layout.titleColumn': 'Title',
+  'layout.saveFailed': 'The layout could not be saved.',
 } as const;
 
 export type MessageKey = keyof typeof en;

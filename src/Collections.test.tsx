@@ -46,6 +46,8 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
     filterLibrary: async () => library,
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
     collections: async () => [...collections].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())),
     createCollection: async (raw) => name(null, raw),

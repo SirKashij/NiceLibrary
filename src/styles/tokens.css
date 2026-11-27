@@ -63,6 +63,10 @@
 
   /* Game detail page: the large Cover. */
   --detail-cover-width: 300px;
+
+  /* Library as a list: the small Cover of a row and the width of its fact columns. */
+  --list-cover-width: 40px;
+  --list-fact-width: 120px;
 }
 
 /* The light theme: the same roles on warm paper surfaces. */

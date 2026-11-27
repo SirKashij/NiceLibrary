@@ -102,6 +102,9 @@ export interface LibraryFilter {
   installedOnly: boolean;
 }
 
+/** How the Library shows its Games: a grid of Covers or one row per Game. Mirrors `LibraryLayout` in crates/core. */
+export type LibraryLayout = 'coverGrid' | 'list';
+
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
@@ -189,6 +192,10 @@ export interface Operations {
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /** How the Library shows its Games; `coverGrid` until the user switches. */
+  libraryLayout(): Promise<LibraryLayout>;
+  /** Makes a Library Layout the one the Library shows, also after a restart. */
+  chooseLibraryLayout(layout: LibraryLayout): Promise<void>;
 }
 
 export const tauriOperations: Operations = {
@@ -223,4 +230,6 @@ export const tauriOperations: Operations = {
   deleteCollection: (id) => invoke<void>('delete_collection', { id }),
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  libraryLayout: () => invoke<LibraryLayout>('library_layout'),
+  chooseLibraryLayout: (layout) => invoke<void>('choose_library_layout', { layout }),
 };

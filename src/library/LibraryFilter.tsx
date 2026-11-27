@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useT, type MessageKey } from '../i18n';
 import type { Game, LibraryFilter, Operations, Source } from '../operations';
 
@@ -53,13 +53,15 @@ const SOURCES: { source: Source | null; label: MessageKey }[] = [
   { source: 'local', label: 'filter.local' },
 ];
 
-/** The toolbar above the Library: search, Source and Installed only. */
+/** The toolbar above the Library: search, Source and Installed only, then any further controls. */
 export function LibraryToolbar({
   filter,
   onChange,
+  children,
 }: {
   filter: LibraryFilter;
   onChange: (filter: LibraryFilter) => void;
+  children?: ReactNode;
 }) {
   const t = useT();
   return (
@@ -92,6 +94,7 @@ export function LibraryToolbar({
         />
         {t('filter.installedOnly')}
       </label>
+      {children}
     </div>
   );
 }
