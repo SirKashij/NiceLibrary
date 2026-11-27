@@ -41,6 +41,7 @@ function fakeOperations({ stored = false } = {}) {
     },
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
   };
   return { operations, calls };
