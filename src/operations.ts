@@ -58,6 +58,36 @@ export type LaunchOutcome = { outcome: 'launched' } | { outcome: 'steamNotFound'
 /** How storing the Steam Web API key went, when nothing failed. Mirrors `SteamWebApiKeyCheck` in crates/core. */
 export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' } | { outcome: 'steamUnreachable' };
 
+/** What is stored of the Steam App List. Mirrors `SteamAppList` in crates/core. */
+export interface SteamAppList {
+  /** How many titles are stored. */
+  titles: number;
+  /** When the last fetch that ran to its end ended, in seconds since the Unix epoch; `null` before the first. */
+  fetchedAt: number | null;
+  /** Whether a fetch stopped before its end; the next one continues it. */
+  unfinished: boolean;
+}
+
+/**
+ * How fetching the Steam App List went, when nothing failed. The pages
+ * fetched before Steam stopped answering stay stored. Mirrors
+ * `SteamAppListFetch` in crates/core.
+ */
+export type SteamAppListFetch =
+  | { outcome: 'fetched'; /** Seconds since the Unix epoch. */ at: number }
+  | { outcome: 'noKey' }
+  | { outcome: 'keyRejected' }
+  | { outcome: 'steamUnreachable' };
+
+/**
+ * What happens in a fetch of the Steam App List the core starts on its own.
+ * Mirrors `AutomaticSteamAppListFetch` in crates/core; a round that fetches
+ * nothing never reaches the interface.
+ */
+export type AutomaticSteamAppListFetch =
+  | { state: 'started' }
+  | ({ state: 'finished' } & SteamAppListFetch)
+  | { state: 'failed'; reason: string };
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
@@ -114,8 +144,21 @@ export interface Operations {
    * the function that stops listening.
    */
   onAutomaticSync(listener: (event: AutomaticSync) => void): () => void;
+  /** What is stored of the Steam App List, the basis for Cover Matches. */
+  steamAppList(): Promise<SteamAppList>;
+  /**
+   * Fetches the Steam App List with the stored Steam Web API key, page by
+   * page. An unfinished fetch is continued where it stopped; otherwise the
+   * whole list is fetched anew while the stored one stays usable.
+   */
+  fetchSteamAppList(): Promise<SteamAppListFetch>;
+  /**
+   * Hears the fetches of the Steam App List the core runs on its own: a
+   * minute after the start, right after a key is stored, and whenever the
+   * list is a week old. Answers the function that stops listening.
+   */
+  onAutomaticSteamAppListFetch(listener: (event: AutomaticSteamAppListFetch) => void): () => void;
 }
-
 export const tauriOperations: Operations = {
   library: () => invoke<Game[]>('library'),
   readInstalledGames: () => invoke<Game[]>('read_installed_games'),
@@ -134,6 +177,17 @@ export const tauriOperations: Operations = {
   onAutomaticSync: (listener) => {
     // AUTOMATIC_SYNC_EVENT in src-tauri/src/lib.rs.
     const listening = listen<AutomaticSync>('automatic-sync', (event) => listener(event.payload));
+    return () => {
+      void listening.then((stop) => stop());
+    };
+  },
+  steamAppList: () => invoke<SteamAppList>('steam_app_list'),
+  fetchSteamAppList: () => invoke<SteamAppListFetch>('fetch_steam_app_list'),
+  onAutomaticSteamAppListFetch: (listener) => {
+    // AUTOMATIC_STEAM_APP_LIST_FETCH_EVENT in src-tauri/src/lib.rs.
+    const listening = listen<AutomaticSteamAppListFetch>('automatic-steam-app-list-fetch', (event) =>
+      listener(event.payload),
+    );
     return () => {
       void listening.then((stop) => stop());
     };

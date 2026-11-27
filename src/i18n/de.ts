@@ -77,4 +77,20 @@ export const de: Record<MessageKey, string> = {
   'key.dataTitle': 'Was NiceLibrary speichert',
   'key.data':
     'NiceLibrary speichert diese Steam-Daten nur auf diesem Computer: deine SteamID, die Spiele, die du besitzt, ihre Spielzeit und wann du sie zuletzt gespielt hast, deine Trophäen mit Freischaltdatum, Name, Beschreibung, Symbol und Seltenheit sowie die Cover der Spiele. Dein Schlüssel liegt in der Windows-Anmeldeinformationsverwaltung und geht an niemanden außer Steam.',
+  'settings.appList': 'Steam-App-Liste',
+  'appList.why':
+    'NiceLibrary sucht Spiele, die du selbst hinzufügst, in Steams Titelliste, um ihre Cover zu finden. Die Liste wird mit deinem Steam-Web-API-Schlüssel geladen und einmal pro Woche erneuert.',
+  'appList.never': 'Noch nicht geladen.',
+  'appList.fetched': '{count} Titel, geladen am {time}',
+  'appList.unfinished': 'Bisher {count} Titel. Das nächste Laden macht dort weiter, wo das letzte aufgehört hat.',
+  'appList.fetch': 'Jetzt laden',
+  'appList.fetching': 'Wird geladen …',
+  'appList.fetchingNote': 'Die App-Liste wird von Steam geladen …',
+  'appList.upToDate': 'Steams App-Liste ist auf dem neuesten Stand.',
+  'appList.noKey': 'Hinterlege oben deinen Steam-Web-API-Schlüssel, um die App-Liste zu laden.',
+  'appList.keyRejected': 'Steam hat deinen Steam-Web-API-Schlüssel abgelehnt. Ersetze ihn oben.',
+  'appList.steamUnreachable':
+    'Steam war nicht erreichbar. Die bisher geladenen Titel bleiben erhalten, und das nächste Laden macht dort weiter, wo dieses aufgehört hat.',
+  'appList.failed': 'Die App-Liste konnte nicht geladen werden.',
+  'appList.loadFailed': 'Der Stand der App-Liste konnte nicht geprüft werden.',
 };

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
+import { SteamAppListSettings } from './settings/SteamAppListSettings';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -294,6 +295,7 @@ function SettingsView({ operations, onAccountChosen }: { operations: Operations;
     <Page title="nav.settings">
       <SteamSettings operations={operations} onAccountChosen={onAccountChosen} />
       <SteamWebApiKeySettings operations={operations} />
+      <SteamAppListSettings operations={operations} />
     </Page>
   );
 }

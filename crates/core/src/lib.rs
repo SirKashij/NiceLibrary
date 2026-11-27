@@ -9,13 +9,14 @@ mod covers;
 pub mod keyvalues;
 mod launch;
 mod steam;
+mod steam_app_list;
 mod steam_web_api;
 mod store;
 mod sync;
 
 use std::fmt;
 use std::ops::ControlFlow;
-use std::sync::{Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use serde::{Serialize, Serializer};
 
@@ -23,6 +24,7 @@ pub use clock::{Clock, Wakeup};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
+pub use steam_app_list::{AutomaticSteamAppListFetch, SteamAppList, SteamAppListFetch, SteamTitle};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
 pub use sync::{AutomaticSync, SyncOutcome};
@@ -118,11 +120,26 @@ pub struct Core {
     syncing: Mutex<()>,
     /// Rung when a key is stored, so the automatic Syncs do not wait for their next round.
     sync_soon: Wakeup,
+    /// Held for the whole of a fetch of the Steam App List, so two never run at the same time.
+    fetching_steam_app_list: Mutex<()>,
+    /// Rung when a key is stored, so the automatic fetches of the Steam App List do not wait for their next round.
+    steam_app_list_soon: Wakeup,
+    /// The names lookups search, loaded from the store at the first lookup after a fetch.
+    steam_title_index: Mutex<Option<Arc<steam_app_list::TitleIndex>>>,
 }
 
 impl Core {
     pub fn new(ports: Ports, store: Store, covers: CoverCache) -> Self {
-        Self { ports, store, covers, syncing: Mutex::new(()), sync_soon: Wakeup::new() }
+        Self {
+            ports,
+            store,
+            covers,
+            syncing: Mutex::new(()),
+            sync_soon: Wakeup::new(),
+            fetching_steam_app_list: Mutex::new(()),
+            steam_app_list_soon: Wakeup::new(),
+            steam_title_index: Mutex::new(None),
+        }
     }
 
     /// All Games in the Library, as last stored, ordered by title. Answers
@@ -325,6 +342,7 @@ impl Core {
         if check == SteamWebApiKeyCheck::Stored {
             self.ports.secrets.write(steam_web_api::KEY_SECRET, &key).map_err(secret_store_error)?;
             self.sync_soon.ring();
+            self.steam_app_list_soon.ring();
         }
         Ok(check)
     }
@@ -341,6 +359,115 @@ impl Core {
             .opener
             .open_url(steam_web_api::KEY_PAGE)
             .map_err(|error| Error::new(format!("{} could not be opened: {error}", steam_web_api::KEY_PAGE)))
+    }
+
+    /// What is stored of the Steam App List: how many titles, and when it
+    /// was last fetched to its end.
+    pub fn steam_app_list(&self) -> Result<SteamAppList, Error> {
+        self.store.steam_app_list()
+    }
+
+    /// Fetches the Steam App List with the stored Steam Web API key, page by
+    /// page, and stores each page as it arrives. A fetch that stopped before
+    /// its end, in this run of the app or an earlier one, is resumed after
+    /// its last stored page; otherwise the whole list is fetched anew, and
+    /// the list stored before stays usable meanwhile. A fetch asked for while
+    /// another runs begins once that one ends.
+    pub fn fetch_steam_app_list(&self) -> Result<SteamAppListFetch, Error> {
+        let _fetching = self.wait_until_no_steam_app_list_fetch_runs();
+        self.fetch_steam_app_list_now()
+    }
+
+    fn wait_until_no_steam_app_list_fetch_runs(&self) -> MutexGuard<'_, ()> {
+        // The guard holds no data; what a panicking fetch stored is whole pages.
+        self.fetching_steam_app_list.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// One fetch; the caller holds [`Self::wait_until_no_steam_app_list_fetch_runs`].
+    fn fetch_steam_app_list_now(&self) -> Result<SteamAppListFetch, Error> {
+        let Some(key) = self.ports.secrets.read(steam_web_api::KEY_SECRET).map_err(secret_store_error)? else {
+            return Ok(SteamAppListFetch::NoKey);
+        };
+        let fetched = steam_app_list::fetch(self.ports.web_api.as_ref(), &self.store, &key, || {
+            clock::seconds_since_epoch(self.ports.clock.now())
+        });
+        // Pages may be stored whatever the outcome. Loaded here, not at the next keystroke.
+        let index = self.store.searchable_steam_titles().map(|titles| Arc::new(steam_app_list::TitleIndex::new(titles)));
+        // Unloaded, the next lookup tries again and tells what failed.
+        *self.steam_title_index.lock().unwrap_or_else(PoisonError::into_inner) = index.ok();
+        fetched
+    }
+
+    /// Fetches the Steam App List on its own while the app runs: a minute
+    /// after the start, then every hour, whenever it was never fetched to its
+    /// end, a fetch stopped before its end, or the last one ended a week ago
+    /// or longer. A round without a stored key fetches nothing; storing a key
+    /// starts the next round right away. `report` hears each round as it
+    /// happens; the rounds go on until it answers `Break`.
+    ///
+    /// Before the first round, the stored list is made ready for lookups, so
+    /// the first one answers as fast as the others.
+    pub fn fetch_steam_app_list_automatically(
+        &self,
+        mut report: impl FnMut(AutomaticSteamAppListFetch) -> ControlFlow<()>,
+    ) {
+        // A failure here shows at the first lookup, which tries again.
+        let _ = self.steam_title_index();
+        self.ports.clock.sleep(steam_app_list::FIRST_AUTOMATIC_FETCH_AFTER, &self.steam_app_list_soon);
+        loop {
+            if self.automatic_steam_app_list_round(&mut report).is_break() {
+                return;
+            }
+            self.ports.clock.sleep(steam_app_list::AUTOMATIC_FETCH_CHECK_EVERY, &self.steam_app_list_soon);
+        }
+    }
+
+    fn automatic_steam_app_list_round(
+        &self,
+        report: &mut impl FnMut(AutomaticSteamAppListFetch) -> ControlFlow<()>,
+    ) -> ControlFlow<()> {
+        match self.steam_web_api_key_stored() {
+            Ok(false) => return report(AutomaticSteamAppListFetch::Skipped),
+            Ok(true) => {}
+            Err(reason) => return report(AutomaticSteamAppListFetch::Failed { reason }),
+        }
+        let _fetching = self.wait_until_no_steam_app_list_fetch_runs();
+        let now = clock::seconds_since_epoch(self.ports.clock.now());
+        match self.store.steam_app_list() {
+            Ok(list) if !steam_app_list::due(&list, now) => return report(AutomaticSteamAppListFetch::Skipped),
+            Ok(_) => {}
+            Err(reason) => return report(AutomaticSteamAppListFetch::Failed { reason }),
+        }
+        report(AutomaticSteamAppListFetch::Started)?;
+        report(match self.fetch_steam_app_list_now() {
+            Ok(outcome) => AutomaticSteamAppListFetch::Finished(outcome),
+            Err(reason) => AutomaticSteamAppListFetch::Failed { reason },
+        })
+    }
+
+    /// Up to twenty titles of the stored Steam App List whose name contains
+    /// `typed`, whatever its case and punctuation: the same name first, then
+    /// names that begin with it, then names with a word that does, then the
+    /// rest. Answers from the store alone, fast enough to run as the user
+    /// types.
+    pub fn find_steam_titles(&self, typed: &str) -> Result<Vec<SteamTitle>, Error> {
+        let search = steam_app_list::searchable(typed);
+        if search.is_empty() {
+            return Ok(Vec::new());
+        }
+        let app_ids = self.steam_title_index()?.find(&search, steam_app_list::LOOKUP_LIMIT);
+        self.store.steam_titles(&app_ids)
+    }
+
+    /// The names lookups search, loaded from the store unless already held.
+    fn steam_title_index(&self) -> Result<Arc<steam_app_list::TitleIndex>, Error> {
+        let mut held = self.steam_title_index.lock().unwrap_or_else(PoisonError::into_inner);
+        if let Some(index) = &*held {
+            return Ok(Arc::clone(index));
+        }
+        let index = Arc::new(steam_app_list::TitleIndex::new(self.store.searchable_steam_titles()?));
+        *held = Some(Arc::clone(&index));
+        Ok(index)
     }
 }
 

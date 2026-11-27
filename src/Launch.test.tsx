@@ -25,6 +25,9 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
     launch: (game) => {
       requested.push(game.id);
       return launch(game);

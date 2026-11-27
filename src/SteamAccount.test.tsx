@@ -58,6 +58,9 @@ function fakeOperations(
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => (account && lastSyncs[account]) || null,
     onAutomaticSync: () => () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
     launch: async () => ({ outcome: 'launched' }),
   };
   return { operations, chosen };

@@ -79,6 +79,9 @@ function fakeOperations({
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
   };
   return { operations, calls, automaticSync, listeners };
 }

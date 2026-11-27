@@ -6,8 +6,8 @@ pub mod ports;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AutomaticSync, Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
-    SyncOutcome,
+    AutomaticSteamAppListFetch, AutomaticSync, Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamAppList,
+    SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -78,6 +78,17 @@ async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(),
     core.open_steam_web_api_key_page()
 }
 
+#[tauri::command]
+fn steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppList, Error> {
+    core.steam_app_list()
+}
+
+/// Async, so asking Steam for every page runs off the main thread.
+#[tauri::command]
+async fn fetch_steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppListFetch, Error> {
+    core.fetch_steam_app_list()
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -121,7 +132,9 @@ pub fn run() {
             remove_steam_web_api_key,
             open_steam_web_api_key_page,
             sync,
-            last_sync
+            last_sync,
+            steam_app_list,
+            fetch_steam_app_list
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
@@ -136,6 +149,7 @@ pub fn run() {
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
             app.manage(Core::new(ports::real_ports(), store, covers));
             start_automatic_syncs(app)?;
+            start_automatic_steam_app_list_fetches(app)?;
             create_main_window(app)
         })
         .run(tauri::generate_context!())
@@ -155,6 +169,27 @@ fn start_automatic_syncs(app: &App) -> std::io::Result<()> {
             if event != AutomaticSync::Skipped {
                 // No window to tell is no reason to stop syncing.
                 let _ = app.emit(AUTOMATIC_SYNC_EVENT, &event);
+            }
+            ControlFlow::Continue(())
+        });
+    })?;
+    Ok(())
+}
+
+/// The event the interface hears the automatic fetches of the Steam App List
+/// through (`onAutomaticSteamAppListFetch` in src/operations.ts). A round that
+/// fetches nothing tells the interface nothing.
+const AUTOMATIC_STEAM_APP_LIST_FETCH_EVENT: &str = "automatic-steam-app-list-fetch";
+
+/// Runs the core's automatic fetches of the Steam App List on a thread of
+/// their own for as long as the app runs.
+fn start_automatic_steam_app_list_fetches(app: &App) -> std::io::Result<()> {
+    let app = app.handle().clone();
+    std::thread::Builder::new().name("automatic-steam-app-list-fetch".into()).spawn(move || {
+        app.state::<Core>().fetch_steam_app_list_automatically(|event| {
+            if event != AutomaticSteamAppListFetch::Skipped {
+                // No window to tell is no reason to stop fetching.
+                let _ = app.emit(AUTOMATIC_STEAM_APP_LIST_FETCH_EVENT, &event);
             }
             ControlFlow::Continue(())
         });

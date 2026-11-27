@@ -75,6 +75,22 @@ export const en = {
   'key.dataTitle': 'What NiceLibrary stores',
   'key.data':
     'NiceLibrary keeps this Steam data only on this computer: your SteamID, the games you own, their playtime and when you last played them, your achievements with their unlock dates, names, descriptions, icons and rarity, and the games’ covers. Your key is kept in the Windows Credential Manager and is sent to no one but Steam.',
+  'settings.appList': 'Steam app list',
+  'appList.why':
+    'NiceLibrary looks up the games you add yourself in Steam’s list of titles to find their covers. It fetches the list with your Steam Web API key, and again once a week.',
+  'appList.never': 'Not fetched yet.',
+  'appList.fetched': '{count} titles, fetched {time}',
+  'appList.unfinished': '{count} titles so far. The next fetch continues where the last one stopped.',
+  'appList.fetch': 'Fetch now',
+  'appList.fetching': 'Fetching…',
+  'appList.fetchingNote': 'Fetching the app list from Steam…',
+  'appList.upToDate': 'Steam’s app list is up to date.',
+  'appList.noKey': 'Add your Steam Web API key above to fetch the app list.',
+  'appList.keyRejected': 'Steam rejected your Steam Web API key. Replace it above.',
+  'appList.steamUnreachable':
+    'Steam could not be reached. The titles fetched so far are kept, and the next fetch continues where this one stopped.',
+  'appList.failed': 'The app list could not be fetched.',
+  'appList.loadFailed': 'The app list could not be checked.',
 } as const;
 
 export type MessageKey = keyof typeof en;
