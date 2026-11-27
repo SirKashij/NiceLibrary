@@ -1,7 +1,7 @@
 //! Progress: how far a Game has been completed, in percent, worked out per
 //! Source and carried on [`Game::progress`](crate::Game::progress). A Local
-//! Game's Progress is its Manual Progress or nothing; a Steam Game's will be
-//! the share of its unlocked Achievements.
+//! Game's Progress is its Manual Progress or nothing; a Steam Game's is the
+//! share of its unlocked Achievements, or nothing while it has none.
 
 use serde::Serialize;
 
@@ -32,4 +32,16 @@ pub(crate) fn percent_in(percent: i64) -> Option<u8> {
 /// The Progress of a Local Game: its Manual Progress, or nothing.
 pub(crate) fn of_local_game(manual_progress: Option<u8>) -> Option<u8> {
     manual_progress
+}
+
+/// The Progress of a Steam Game with `unlocked` of its `total` Achievements
+/// unlocked: the share in whole percent, rounded down, so only a Game with
+/// every Achievement unlocked is complete. A Game without Achievements has
+/// no Progress, not 0 %.
+pub(crate) fn of_steam_game(unlocked: u32, total: u32) -> Option<u8> {
+    if total == 0 {
+        return None;
+    }
+    let percent = u64::from(unlocked.min(total)) * u64::from(COMPLETE) / u64::from(total);
+    u8::try_from(percent).ok()
 }

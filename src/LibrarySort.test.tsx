@@ -20,6 +20,8 @@ const ORDERED: Record<LibrarySort, string[]> = {
   recentlyPlayed: ['Hades', 'Portal 2', 'Half-Life 2'],
   name: ['Hades', 'Half-Life 2', 'Portal 2'],
   playtime: ['Portal 2', 'Hades', 'Half-Life 2'],
+  // None of them has Progress: by title.
+  progress: ['Hades', 'Half-Life 2', 'Portal 2'],
 };
 
 /**
@@ -104,7 +106,7 @@ describe('Sorting the Library', () => {
     expect(asked.at(-1)).toEqual({ search: '', source: null, installedOnly: false, status: null, sort: 'recentlyPlayed' });
   });
 
-  it('offers recently played, name and Playtime', async () => {
+  it('offers recently played, name, Playtime and Progress', async () => {
     const { operations } = fakeOperations();
     render(<App operations={operations} lang="en" />);
 
@@ -113,6 +115,7 @@ describe('Sorting the Library', () => {
       'Recently played',
       'Name',
       'Playtime',
+      'Progress',
     ]);
   });
 
@@ -186,6 +189,7 @@ describe('Sorting the Library', () => {
       'Zuletzt gespielt',
       'Name',
       'Spielzeit',
+      'Fortschritt',
     ]);
   });
 });

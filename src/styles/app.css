@@ -202,6 +202,9 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 /* Status: a quiet label under each Cover, a choice on the detail page, a select in the toolbar. */
 .status-badge { color: var(--color-text-muted); font-size: var(--text-size-label); }
 .status-badge[data-status='playing'] { color: var(--color-text); }
+/* Progress: a quiet label under each Cover and a value on the detail page; a complete Game, 100 %, in its own colour. */
+.game-progress { color: var(--color-text-muted); font-size: var(--text-size-label); }
+.game-progress[data-complete='true'], .progress-value[data-complete='true'] { color: var(--color-complete); }
 .game-facts .segmented { display: inline-flex; flex-wrap: wrap; }
 .toolbar-select {
   font: inherit; color: var(--color-text); background: var(--color-surface);

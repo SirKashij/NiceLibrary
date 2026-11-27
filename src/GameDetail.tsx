@@ -3,6 +3,7 @@ import { Achievements } from './Achievements';
 import { useFormat, useT, type MessageKey } from './i18n';
 import { LaunchOptionsForm } from './LaunchOptions';
 import { ManualProgressForm } from './ManualProgress';
+import { ProgressValue } from './library/Progress';
 import { StatusChoice } from './library/Status';
 import type { Game, Operations, Source, Status } from './operations';
 
@@ -26,7 +27,7 @@ export function GameDetail({
   cover,
   notice,
   onPlay,
-  onStatusSet,
+  onChanged,
   onBack,
 }: {
   operations: Operations;
@@ -38,8 +39,8 @@ export function GameDetail({
   /** Why the last Launch did not start, if it did not. */
   notice?: ReactNode;
   onPlay: (game: Game) => void;
-  /** Hears that the Game's Status was set, which changes the Library. */
-  onStatusSet: (game: Game) => void;
+  /** Hears that the Game's Status or Manual Progress was set, which changes the Library and its order. */
+  onChanged: (game: Game) => void;
   onBack: () => void;
 }) {
   const t = useT();
@@ -57,7 +58,7 @@ export function GameDetail({
       (answer) => {
         if (id !== latestStatus.current) return;
         setGame(answer);
-        onStatusSet(answer);
+        onChanged(answer);
       },
       () => id === latestStatus.current && setStatusFailed(true),
     );
@@ -135,7 +136,9 @@ export function GameDetail({
                 {game.progress !== null && (
                   <div>
                     <dt>{t('game.progress')}</dt>
-                    <dd>{format.percent(game.progress)}</dd>
+                    <dd>
+                      <ProgressValue progress={game.progress} />
+                    </dd>
                   </div>
                 )}
               </dl>
@@ -146,7 +149,14 @@ export function GameDetail({
               )}
               {game.source === 'local' && <LaunchOptionsForm operations={operations} game={game} />}
               {game.source === 'local' && (
-                <ManualProgressForm operations={operations} game={game} onSet={setGame} />
+                <ManualProgressForm
+                  operations={operations}
+                  game={game}
+                  onSet={(answer) => {
+                    setGame(answer);
+                    onChanged(answer);
+                  }}
+                />
               )}
             </>
           )}

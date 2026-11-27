@@ -238,6 +238,7 @@ fn an_order_arrives_from_the_interface_in_the_shape_the_interface_sends() {
         ("recentlyPlayed", LibrarySort::RecentlyPlayed),
         ("name", LibrarySort::Name),
         ("playtime", LibrarySort::Playtime),
+        ("progress", LibrarySort::Progress),
     ] {
         assert_eq!(serde_json::from_value::<LibrarySort>(serde_json::json!(sent)).unwrap(), sort);
         assert_eq!(serde_json::to_value(sort).unwrap(), serde_json::json!(sent));

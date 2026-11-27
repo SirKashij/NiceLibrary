@@ -24,7 +24,9 @@ export interface Game {
   lastPlayed: number | null;
   /**
    * Progress in percent, from 0 to 100, as the Game's Source works it out:
-   * for a Local Game its Manual Progress. `null` when the Game has none.
+   * for a Local Game its Manual Progress, for a Steam Game the share of its
+   * unlocked Achievements. `null` when the Game has none, such as a Steam Game
+   * without Achievements.
    */
   progress: number | null;
   /** Set by hand only, `unplayed` until then; no Sync changes it. */
@@ -164,7 +166,7 @@ export type AutomaticSteamAppListFetch =
  * Playtime (longest first). Games without a value come last, Games with the
  * same value by title. Mirrors `LibrarySort` in crates/core.
  */
-export type LibrarySort = 'recentlyPlayed' | 'name' | 'playtime';
+export type LibrarySort = 'recentlyPlayed' | 'name' | 'playtime' | 'progress';
 
 /**
  * What the Library is narrowed to, and in which order; every part that is set

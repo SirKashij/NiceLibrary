@@ -79,8 +79,9 @@ pub struct Game {
     /// not known.
     pub last_played: Option<u64>,
     /// Progress in percent, from 0 to 100, as its Source works it out (see
-    /// `progress`): for a Local Game its Manual Progress. `None` when the
-    /// Game has none.
+    /// `progress`): for a Local Game its Manual Progress, for a Steam Game
+    /// the share of its unlocked Achievements. `None` when the Game has none,
+    /// such as a Steam Game without Achievements.
     pub progress: Option<u8>,
     /// The person's own judgement of where they stand with the Game;
     /// Unplayed until they set it. No Sync changes it.
@@ -236,7 +237,16 @@ impl Core {
         // Until the user chooses, the account read last: it holds the Games.
         let account = self.chosen_steam_account_or(|| self.store.last_read_steam_account())?;
         let mut games = match account {
-            Some(account) => self.store.steam_games(&account)?,
+            Some(account) => {
+                let mut games = self.store.steam_games(&account)?;
+                let achievements = self.store.achievement_counts(&account)?;
+                for game in &mut games {
+                    game.progress = steam_app_id(&game.id)
+                        .and_then(|app_id| achievements.get(&app_id))
+                        .and_then(|&(unlocked, total)| progress::of_steam_game(unlocked, total));
+                }
+                games
+            }
             None => Vec::new(),
         };
         let played = self.store.local_games_played()?;

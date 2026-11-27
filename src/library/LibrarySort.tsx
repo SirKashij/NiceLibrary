@@ -12,6 +12,7 @@ const SORTS: { sort: LibrarySort; label: MessageKey }[] = [
   { sort: 'recentlyPlayed', label: 'sort.recentlyPlayed' },
   { sort: 'name', label: 'sort.name' },
   { sort: 'playtime', label: 'sort.playtime' },
+  { sort: 'progress', label: 'sort.progress' },
 ];
 
 /** The order the Library is shown in, and how the user changes it. */
