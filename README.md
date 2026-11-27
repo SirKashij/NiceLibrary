@@ -104,7 +104,7 @@ Stimmen beide überein, wähle **Weitere Informationen** und dann **Trotzdem aus
 
 ### Datenschutz
 
-NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Erfolge, mit den Bildservern von Steam für Cover und mit GitHub, um nach Updates zu suchen.
+NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Trophäen, mit den Bildservern von Steam für Cover und mit GitHub, um nach Updates zu suchen.
 
 Alles, was es speichert, bleibt nur auf diesem Computer: deine Bibliothek und Einstellungen in einer Datenbank in deinem Benutzerprofil, Cover in einem Cache-Ordner und dein Steam-Web-API-Schlüssel in der Windows-Anmeldeinformationsverwaltung.
 

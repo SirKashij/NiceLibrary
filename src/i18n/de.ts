@@ -282,7 +282,7 @@ export const de: Record<MessageKey, string> = {
   'about.openFailed': 'Die Seite konnte nicht geöffnet werden.',
   'about.privacy': 'Datenschutz',
   'about.privacyConnections':
-    'NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Erfolge, mit den Bildservern von Steam für Cover und mit GitHub, um nach Updates zu suchen.',
+    'NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Trophäen, mit den Bildservern von Steam für Cover und mit GitHub, um nach Updates zu suchen.',
   'about.privacyStorage':
     'Alles, was es speichert, bleibt nur auf diesem Computer: deine Bibliothek und Einstellungen in einer Datenbank in deinem Benutzerprofil, Cover in einem Cache-Ordner und dein Steam-Web-API-Schlüssel in der Windows-Anmeldeinformationsverwaltung.',
   'about.privacyNothingElse': 'Sonst verlässt nichts deinen Computer.',
