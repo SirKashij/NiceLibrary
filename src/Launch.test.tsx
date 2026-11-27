@@ -28,6 +28,10 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     chooseTheme: async () => {},
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'named', id: 1 }),
+    renameCollection: async (id) => ({ outcome: 'named', id }),
+    deleteCollection: async () => {},
     game: async () => null,
     launch: (game) => {
       requested.push(game.id);

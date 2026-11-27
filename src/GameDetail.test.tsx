@@ -55,6 +55,10 @@ function fakeOperations(
     theme: async () => 'system',
     chooseTheme: async () => {},
     onAutomaticSync: () => () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'named', id: 1 }),
+    renameCollection: async (id) => ({ outcome: 'named', id }),
+    deleteCollection: async () => {},
     filterLibrary: async () => games,
     game: async (gameId) => {
       calls.game.push(gameId);

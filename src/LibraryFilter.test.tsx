@@ -33,6 +33,10 @@ function fakeOperations() {
     theme: async () => 'system',
     chooseTheme: async () => {},
     onAutomaticSync: () => () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'named', id: 1 }),
+    renameCollection: async (id) => ({ outcome: 'named', id }),
+    deleteCollection: async () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);
       return LIBRARY.filter(

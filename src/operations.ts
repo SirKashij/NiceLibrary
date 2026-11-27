@@ -80,6 +80,18 @@ export type AddLocalGame =
 
 /** The theme the user chose; `system` follows the operating system's dark or light setting. Mirrors `Theme` in crates/core. */
 export type Theme = 'system' | 'dark' | 'light';
+
+/** A named group of Games the user created. Mirrors `Collection` in crates/core. */
+export interface Collection {
+  id: number;
+  name: string;
+  /** How many Games of the Library are in it. */
+  gameCount: number;
+}
+
+/** How naming a Collection went, when nothing failed. Every outcome but `named` changed nothing. Mirrors `CollectionNaming` in crates/core. */
+export type CollectionNaming = { outcome: 'named'; id: number } | { outcome: 'emptyName' } | { outcome: 'nameTaken' };
+
 /** What the Library is narrowed to; every part that is set must match. Mirrors `LibraryFilter` in crates/core. */
 export interface LibraryFilter {
   /** Text the title must contain, ignoring case; empty matches every title. */
@@ -161,6 +173,18 @@ export interface Operations {
   theme(): Promise<Theme>;
   /** Makes a theme the theme of the interface, also after a restart. */
   chooseTheme(theme: Theme): Promise<void>;
+  /** Every Collection with how many Games of the Library are in it, ordered by name. */
+  collections(): Promise<Collection[]>;
+  /**
+   * Creates a Collection; the name is saved without the spaces around it.
+   * An empty name, or one another Collection has in any case, is refused
+   * and creates nothing.
+   */
+  createCollection(name: string): Promise<CollectionNaming>;
+  /** Renames a Collection under the same rules as `createCollection`. Rejects when there is no such Collection. */
+  renameCollection(id: number, name: string): Promise<CollectionNaming>;
+  /** Deletes a Collection. Its Games stay in the Library. */
+  deleteCollection(id: number): Promise<void>;
   /** The Games in the stored Library that match the filter, ordered by title like `library`. */
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
@@ -193,6 +217,10 @@ export const tauriOperations: Operations = {
   addLocalGame: (executable, title) => invoke<AddLocalGame>('add_local_game', { executable, title }),
   theme: () => invoke<Theme>('theme'),
   chooseTheme: (theme) => invoke<void>('choose_theme', { theme }),
+  collections: () => invoke<Collection[]>('collections'),
+  createCollection: (name) => invoke<CollectionNaming>('create_collection', { name }),
+  renameCollection: (id, name) => invoke<CollectionNaming>('rename_collection', { id, name }),
+  deleteCollection: (id) => invoke<void>('delete_collection', { id }),
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
 };
