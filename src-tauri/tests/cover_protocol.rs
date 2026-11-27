@@ -100,6 +100,31 @@ fn a_cover_that_cannot_be_downloaded_is_unavailable() {
     assert_eq!(cover_response(&core, "/steam%3A620").status(), 503);
 }
 
+#[test]
+fn answers_with_an_achievement_icon_under_the_games_address() {
+    let (core, _profile) = core(true);
+
+    // `achievementIconUrl` in src/operations.ts encodes `steam:620/achievements/<icon>` as a whole.
+    let response = cover_response(&core, "/steam%3A620%2Fachievements%2F0123456789abcdef");
+
+    assert_eq!(response.status(), 200);
+    assert_eq!(response.body(), IMAGE);
+}
+
+#[test]
+fn an_achievement_icon_that_is_not_steams_is_not_found() {
+    let (core, _profile) = core(true);
+
+    assert_eq!(cover_response(&core, "/steam%3A620%2Fachievements%2F..%2F..%2Fevil").status(), 404);
+}
+
+#[test]
+fn an_achievement_icon_that_cannot_be_downloaded_is_unavailable() {
+    let (core, _profile) = core(false);
+
+    assert_eq!(cover_response(&core, "/steam%3A620%2Fachievements%2F0123456789abcdef").status(), 503);
+}
+
 /// A clock that stands still; these tests do not depend on the time.
 struct StoppedClock;
 

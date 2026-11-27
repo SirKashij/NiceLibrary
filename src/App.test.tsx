@@ -24,6 +24,8 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     launch: async () => ({ outcome: 'launched' }),
   };
 }

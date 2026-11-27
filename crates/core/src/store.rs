@@ -15,6 +15,8 @@ use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
 use crate::{Error, Game};
 
+mod achievements;
+
 /// The schema changes, oldest first. Never edit or reorder a released entry;
 /// append a new one instead.
 const MIGRATIONS: &[&str] = &[
@@ -37,6 +39,40 @@ const MIGRATIONS: &[&str] = &[
      CREATE TABLE steam_syncs (
          steam_account TEXT    PRIMARY KEY,
          synced_at     INTEGER NOT NULL
+     );",
+    // 3: Achievements: their definitions per Steam Game, which belong to no
+    // Steam Account, the account's state of each, when they were last
+    // fetched, and how many Web API calls were made each day.
+    "CREATE TABLE steam_achievement_definitions (
+         app_id      INTEGER NOT NULL,
+         api_name    TEXT    NOT NULL,
+         position    INTEGER NOT NULL,
+         name        TEXT    NOT NULL,
+         description TEXT,
+         secret      INTEGER NOT NULL,
+         icon        TEXT,
+         icon_locked TEXT,
+         PRIMARY KEY (app_id, api_name)
+     );
+     CREATE TABLE steam_achievements (
+         steam_account TEXT    NOT NULL,
+         app_id        INTEGER NOT NULL,
+         api_name      TEXT    NOT NULL,
+         unlocked      INTEGER NOT NULL,
+         unlocked_at   INTEGER,
+         PRIMARY KEY (steam_account, app_id, api_name)
+     );
+     CREATE TABLE steam_achievement_fetches (
+         steam_account    TEXT    NOT NULL,
+         app_id           INTEGER NOT NULL,
+         fetched_at       INTEGER NOT NULL,
+         playtime_minutes INTEGER,
+         last_played      INTEGER,
+         PRIMARY KEY (steam_account, app_id)
+     );
+     CREATE TABLE steam_web_api_calls (
+         day   INTEGER PRIMARY KEY,
+         calls INTEGER NOT NULL
      );",
 ];
 

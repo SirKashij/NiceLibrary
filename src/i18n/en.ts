@@ -99,6 +99,16 @@ export const en = {
   'game.never': 'Never',
   'game.notKnown': 'Not known yet',
   'game.gone': '{title} is no longer in your library.',
+  'achievements.title': 'Achievements',
+  'achievements.count': '{unlocked} / {total} unlocked',
+  'achievements.list': 'Achievements of {title}',
+  'achievements.unlockedOn': 'Unlocked {date}',
+  'achievements.unlocked': 'Unlocked',
+  'achievements.locked': 'Locked',
+  'achievements.localGame': 'Local games have no achievements.',
+  'achievements.none': '{title} has no achievements.',
+  'achievements.notFetchedYet': 'The achievements have not been fetched yet. They arrive with one of the next syncs.',
+  'achievements.loadFailed': 'The achievements could not be loaded.',
 } as const;
 
 export type MessageKey = keyof typeof en;

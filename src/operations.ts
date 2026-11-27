@@ -68,6 +68,32 @@ export interface LibraryFilter {
   installedOnly: boolean;
 }
 
+/** One Achievement of a Steam Game, with whether the Steam Account unlocked it. Mirrors `Achievement` in crates/core. */
+export interface Achievement {
+  /** Steam's name for it, unique within the Game. */
+  id: string;
+  name: string;
+  description: string | null;
+  unlocked: boolean;
+  /** Seconds since the Unix epoch; `null` while locked or when Steam does not know when. */
+  unlockedAt: number | null;
+  /** The icon as the Achievement looks now, for `achievementIconUrl`; `null` when Steam has none. */
+  icon: string | null;
+}
+
+/** The Achievements of one Game. Mirrors `GameAchievements` in crates/core. */
+export type GameAchievements =
+  | { state: 'localGame' }
+  | { state: 'notFetchedYet' }
+  | { state: 'noAchievements' }
+  | {
+      state: 'listed';
+      unlocked: number;
+      total: number;
+      /** Unlocked ones first, the most recently unlocked first, then the locked ones in Steam's order. */
+      achievements: Achievement[];
+    };
+
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
@@ -128,6 +154,13 @@ export interface Operations {
   filterLibrary(filter: LibraryFilter): Promise<Game[]>;
   /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
   game(gameId: string): Promise<Game | null>;
+  /** The Achievements of the Game as the last Syncs fetched them. Answers from the store at once. */
+  achievements(gameId: string): Promise<GameAchievements>;
+  /**
+   * The address an `<img>` loads an Achievement's icon from. The core
+   * downloads and caches it like a Cover; when there is none, the image fails to load.
+   */
+  achievementIconUrl(game: Game, icon: string): string;
 }
 
 export const tauriOperations: Operations = {
@@ -154,4 +187,7 @@ export const tauriOperations: Operations = {
   },
   filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
   game: (gameId) => invoke<Game | null>('game', { gameId }),
+  achievements: (gameId) => invoke<GameAchievements>('achievements', { gameId }),
+  // Under the Game's address in the `cover` URL scheme (`cover_response` in src-tauri/src/lib.rs).
+  achievementIconUrl: (game, icon) => convertFileSrc(`${game.id}/achievements/${icon}`, 'cover'),
 };

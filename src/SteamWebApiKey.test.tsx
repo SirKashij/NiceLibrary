@@ -44,6 +44,8 @@ function fakeOperations({ stored = false } = {}) {
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
   };
   return { operations, calls };
 }

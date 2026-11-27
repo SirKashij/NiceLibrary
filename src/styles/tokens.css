@@ -56,4 +56,8 @@
 
   /* Game detail page: the large Cover. */
   --detail-cover-width: 300px;
+
+  /* Achievements on the detail page: Steam's icons are 64 px squares. */
+  --achievement-icon-size: 48px;
+  --achievement-locked-opacity: 0.55;
 }

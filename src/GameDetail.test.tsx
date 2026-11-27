@@ -58,6 +58,8 @@ function fakeOperations(
       calls.game.push(gameId);
       return games.find((game) => game.id === gameId) ?? null;
     },
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
   };
   return { operations, calls, change: (next: Game[]) => (games = next) };
 }
