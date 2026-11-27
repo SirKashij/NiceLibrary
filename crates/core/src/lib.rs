@@ -11,6 +11,7 @@ pub mod keyvalues;
 mod launch;
 mod local_games;
 mod library_filter;
+mod status;
 mod steam;
 mod steam_app_list;
 mod steam_web_api;
@@ -31,6 +32,7 @@ pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
+pub use status::Status;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_app_list::{AutomaticSteamAppListFetch, SteamAppList, SteamAppListFetch, SteamTitle};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
@@ -64,6 +66,9 @@ pub struct Game {
     /// Last Played, in seconds since the Unix epoch; `None` for never or
     /// not known.
     pub last_played: Option<u64>,
+    /// The person's own judgement of where they stand with the Game;
+    /// Unplayed until they set it. No Sync changes it.
+    pub status: Status,
 }
 
 impl Game {
@@ -77,6 +82,7 @@ impl Game {
             installed,
             playtime_minutes: None,
             last_played: None,
+            status: Status::Unplayed,
         }
     }
 }
@@ -165,6 +171,10 @@ impl Core {
             None => Vec::new(),
         };
         games.extend(self.store.local_games()?.into_iter().map(|game| Game::local(game.id, game.title)));
+        let statuses = self.store.statuses()?;
+        for game in &mut games {
+            game.status = statuses.get(&game.id).copied().unwrap_or_default();
+        }
         games.sort_by(library_filter::by_title);
         Ok(games)
     }
@@ -195,6 +205,19 @@ impl Core {
     /// took it out.
     pub fn game(&self, game_id: &str) -> Result<Option<Game>, Error> {
         Ok(self.library()?.into_iter().find(|game| game.id == game_id))
+    }
+
+    /// Sets the Status of the Game `game_id` to `status`, from now on and
+    /// after every restart, and answers the Game as the Library now shows
+    /// it. Nothing else changes it, no Sync either. A Game that is not in
+    /// the Library is refused.
+    pub fn set_status(&self, game_id: &str, status: Status) -> Result<Game, Error> {
+        let not_in_library = || Error::new(format!("no such game in the library: {game_id}"));
+        if self.game(game_id)?.is_none() {
+            return Err(not_in_library());
+        }
+        self.store.set_status(game_id, status)?;
+        self.game(game_id)?.ok_or_else(not_in_library)
     }
 
     /// Reads which Steam Games are Installed from Steam's library folders,

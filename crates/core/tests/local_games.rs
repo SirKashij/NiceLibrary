@@ -9,7 +9,7 @@ use std::sync::{Arc, Mutex};
 
 use nicelibrary_core::{
     AddLocalGame, Core, CoverCache, Downloader, ExecutableChoice, ExecutablePicker, Game, OpenError, Opener, Ports,
-    Source, SteamLocator, Store,
+    Source, Status, SteamLocator, Store,
 };
 use tempfile::TempDir;
 
@@ -194,6 +194,7 @@ fn a_local_game_is_installed_belongs_to_the_local_source_and_has_not_been_played
             installed: true,
             playtime_minutes: Some(0),
             last_played: None,
+            status: Status::Unplayed,
         }
     );
     assert!(game.id.starts_with("local:"), "{}", game.id);

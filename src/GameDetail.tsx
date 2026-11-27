@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useFormat, useT, type MessageKey } from './i18n';
-import type { Game, Operations, Source } from './operations';
+import { StatusChoice } from './library/Status';
+import type { Game, Operations, Source, Status } from './operations';
 
 const SOURCES: Record<Source, MessageKey> = {
   steam: 'game.sourceSteam',
@@ -9,7 +10,7 @@ const SOURCES: Record<Source, MessageKey> = {
 
 /**
  * The detail page of one Game: its large Cover, title, Source, whether it is
- * Installed, Playtime, Last Played and the main action, and the way back to
+ * Installed, its Status to set, Playtime, Last Played and the main action, and the way back to
  * the Library. Shows the Game as opened at once and as the core answers it
  * then, again after each Sync.
  */
@@ -20,6 +21,7 @@ export function GameDetail({
   cover,
   notice,
   onPlay,
+  onStatusSet,
   onBack,
 }: {
   operations: Operations;
@@ -31,6 +33,8 @@ export function GameDetail({
   /** Why the last Launch did not start, if it did not. */
   notice?: ReactNode;
   onPlay: (game: Game) => void;
+  /** Hears that the Game's Status was set, which changes the Library. */
+  onStatusSet: (game: Game) => void;
   onBack: () => void;
 }) {
   const t = useT();
@@ -38,6 +42,21 @@ export function GameDetail({
   const headingId = useId();
   // `null` once the core answers that the Game is no longer in the Library.
   const [game, setGame] = useState<Game | null>(opened);
+  const [statusFailed, setStatusFailed] = useState(false);
+  // Only the answer to the latest choice counts; an earlier one may answer later.
+  const latestStatus = useRef(0);
+  const setStatus = (status: Status) => {
+    const id = ++latestStatus.current;
+    setStatusFailed(false);
+    operations.setStatus(opened.id, status).then(
+      (answer) => {
+        if (id !== latestStatus.current) return;
+        setGame(answer);
+        onStatusSet(answer);
+      },
+      () => id === latestStatus.current && setStatusFailed(true),
+    );
+  };
 
   useEffect(() => {
     let active = true;
@@ -95,6 +114,12 @@ export function GameDetail({
                   <dd>{t(game.installed ? 'game.yes' : 'game.no')}</dd>
                 </div>
                 <div>
+                  <dt>{t('game.status')}</dt>
+                  <dd>
+                    <StatusChoice title={game.title} status={game.status} onChoose={setStatus} />
+                  </dd>
+                </div>
+                <div>
                   <dt>{t('game.playtime')}</dt>
                   <dd>{playtime}</dd>
                 </div>
@@ -103,6 +128,11 @@ export function GameDetail({
                   <dd>{lastPlayed}</dd>
                 </div>
               </dl>
+              {statusFailed && (
+                <p className="note" role="alert">
+                  {t('status.setFailed', { title: game.title })}
+                </p>
+              )}
             </>
           )}
         </div>
