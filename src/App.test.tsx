@@ -23,6 +23,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     lastSync: async () => null,
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
+    onSession: () => () => {},
     game: async () => null,
     launch: async () => ({ outcome: 'launched' }),
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),

@@ -7,7 +7,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSync, Core, CoverCache, Error, ExecutableChoice, Game, Launch, LibraryFilter,
-    SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome,
+    SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Tracking,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -161,6 +161,7 @@ pub fn run() {
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
             app.manage(Core::new(ports::real_ports(), store, covers));
             start_automatic_syncs(app)?;
+            start_session_tracking(app)?;
             create_main_window(app)
         })
         .run(tauri::generate_context!())
@@ -180,6 +181,26 @@ fn start_automatic_syncs(app: &App) -> std::io::Result<()> {
             if event != AutomaticSync::Skipped {
                 // No window to tell is no reason to stop syncing.
                 let _ = app.emit(AUTOMATIC_SYNC_EVENT, &event);
+            }
+            ControlFlow::Continue(())
+        });
+    })?;
+    Ok(())
+}
+
+/// The event the interface hears Sessions begin and end through
+/// (`onSession` in src/operations.ts). A failed look tells the interface nothing.
+const SESSION_EVENT: &str = "session";
+
+/// Records the Sessions of Local Games on a thread of its own for as long as
+/// the app runs.
+fn start_session_tracking(app: &App) -> std::io::Result<()> {
+    let app = app.handle().clone();
+    std::thread::Builder::new().name("session-tracking".into()).spawn(move || {
+        app.state::<Core>().track_sessions(|event| {
+            if !matches!(event, Tracking::Failed { .. }) {
+                // No window to tell is no reason to stop tracking.
+                let _ = app.emit(SESSION_EVENT, &event);
             }
             ControlFlow::Continue(())
         });

@@ -43,6 +43,7 @@ function fakeOperations({ stored = false } = {}) {
     lastSync: async () => null,
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
+    onSession: () => () => {},
     game: async () => null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),

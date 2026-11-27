@@ -35,7 +35,7 @@ _Avoid_: User, profile
 ### Tracking
 
 **Session**:
-One uninterrupted period during which a Game's process was running, regardless of whether its window had focus.
+One uninterrupted period during which a Game's process was running, regardless of whether its window had focus. The app notices the process however the Game was started. When the app is closed or crashes while the Game runs, the Session ends at the last moment the app saw the process.
 _Avoid_: Play session, run
 
 **Playtime**:

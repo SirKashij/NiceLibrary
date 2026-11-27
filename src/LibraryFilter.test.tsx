@@ -31,6 +31,7 @@ function fakeOperations() {
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    onSession: () => () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);
       return LIBRARY.filter(

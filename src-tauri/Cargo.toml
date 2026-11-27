@@ -38,6 +38,9 @@ windows-sys = { version = "0.61", features = [
     # CredReadW and friends, for the Steam Web API key (src/ports/secrets_windows.rs).
     "Win32_Security_Credentials",
     "Win32_System_Com",
+    # CreateToolhelp32Snapshot and QueryFullProcessImageNameW, to see which Games run (src/ports/processes_windows.rs).
+    "Win32_System_Diagnostics_ToolHelp",
+    "Win32_System_Threading",
     "Win32_UI_Shell",
     "Win32_UI_WindowsAndMessaging",
 ] }

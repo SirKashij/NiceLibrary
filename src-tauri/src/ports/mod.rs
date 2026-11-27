@@ -10,6 +10,8 @@ mod http;
 #[cfg(windows)]
 mod opener_windows;
 #[cfg(windows)]
+mod processes_windows;
+#[cfg(windows)]
 mod secrets_windows;
 #[cfg(windows)]
 mod steam_windows;
@@ -21,11 +23,13 @@ pub use http::{HttpDownloader, HttpWebApi};
 #[cfg(windows)]
 pub use opener_windows::WindowsOpener;
 #[cfg(windows)]
+pub use processes_windows::WindowsProcessList;
+#[cfg(windows)]
 pub use secrets_windows::WindowsSecretStore;
 #[cfg(windows)]
 pub use steam_windows::{Hive, RegistryValue, WindowsSteamLocator};
 
-use nicelibrary_core::{ExecutablePicker, Opener, Ports, SecretStore, SteamLocator};
+use nicelibrary_core::{ExecutablePicker, Opener, Ports, ProcessList, SecretStore, SteamLocator};
 
 /// The ports of this machine.
 pub fn real_ports() -> Ports {
@@ -37,6 +41,7 @@ pub fn real_ports() -> Ports {
         web_api: Box::new(HttpWebApi::new()),
         clock: Box::new(SystemClock),
         executable_picker: executable_picker(),
+        processes: processes(),
     }
 }
 
@@ -123,4 +128,23 @@ fn opener() -> Box<dyn Opener> {
     }
 
     Box::new(NoOpener)
+}
+
+#[cfg(windows)]
+fn processes() -> Box<dyn ProcessList> {
+    Box::new(WindowsProcessList)
+}
+
+#[cfg(not(windows))]
+fn processes() -> Box<dyn ProcessList> {
+    /// Recording Sessions on Linux and macOS is not part of version 1.
+    struct NoProcessList;
+
+    impl ProcessList for NoProcessList {
+        fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
+            Err("listing processes is not supported on this system".into())
+        }
+    }
+
+    Box::new(NoProcessList)
 }

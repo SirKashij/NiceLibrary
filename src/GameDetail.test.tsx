@@ -53,6 +53,7 @@ function fakeOperations(
     sync: options.sync ?? (async () => ({ outcome: 'noKey' })),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    onSession: () => () => {},
     filterLibrary: async () => games,
     game: async (gameId) => {
       calls.game.push(gameId);

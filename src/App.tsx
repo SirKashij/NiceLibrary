@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import { AddLocalGameButton } from './library/AddLocalGame';
+import { useSessionChanges } from './library/Sessions';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
 
@@ -28,6 +29,8 @@ function Shell({ operations }: { operations: Operations }) {
   const [syncs, setSyncs] = useState(0);
   // How often the user chose a Steam Account while the app runs; each choice changes whose Sync and Library are shown.
   const [accountChoices, setAccountChoices] = useState(0);
+  // Each Session that begins or ends changes the stored Library, as a Sync does.
+  const changes = syncs + useSessionChanges(operations);
 
   return (
     <div className="shell">
@@ -52,7 +55,7 @@ function Shell({ operations }: { operations: Operations }) {
         <SyncStatus key={accountChoices} operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
       </aside>
       <main className="main">
-        {view === 'library' && <LibraryView operations={operations} syncs={syncs} />}
+        {view === 'library' && <LibraryView operations={operations} syncs={changes} />}
         {view === 'statistics' && <PlaceholderPage title="nav.statistics" note="statistics.empty" />}
         {view === 'settings' && (
           <SettingsView operations={operations} onAccountChosen={() => setAccountChoices((n) => n + 1)} />

@@ -152,6 +152,7 @@ impl App {
                 web_api: Box::new(SteamOwnsPortal2AndHalfLife2),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(NoExecutableChosen),
+                processes: Box::new(NothingRuns),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -227,4 +228,13 @@ fn a_game_that_is_not_in_the_library_has_no_detail_page() {
 
     assert_eq!(app.core.game("steam:400"), Ok(None));
     assert_eq!(app.core.game(r"C:\Windows\notepad.exe"), Ok(None));
+}
+
+/// A computer on which no process runs; these tests record no Sessions.
+struct NothingRuns;
+
+impl nicelibrary_core::ProcessList for NothingRuns {
+    fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
+        Ok(Vec::new())
+    }
 }

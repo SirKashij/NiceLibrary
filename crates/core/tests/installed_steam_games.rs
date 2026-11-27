@@ -152,7 +152,7 @@ impl Profile {
     /// Starts the app: a core over this profile's database.
     fn start(&self, steam: Option<&Path>) -> Core {
         Core::new(
-            Ports { steam_locator: Box::new(SteamAt(steam.map(Path::to_path_buf))), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen) },
+            Ports { steam_locator: Box::new(SteamAt(steam.map(Path::to_path_buf))), downloader: Box::new(Offline), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen), processes: Box::new(NothingRuns) },
             Store::open(&self.database()).expect("database opens"),
             CoverCache::new(self.0.path().join("covers")),
         )
@@ -415,5 +415,14 @@ struct NoExecutableChosen;
 impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
     fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
+    }
+}
+
+/// A computer on which no process runs; these tests record no Sessions.
+struct NothingRuns;
+
+impl nicelibrary_core::ProcessList for NothingRuns {
+    fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
+        Ok(Vec::new())
     }
 }
