@@ -139,7 +139,7 @@ impl Store {
             return Ok(None);
         }
         let mut statement = connection.prepare(
-            "SELECT a.api_name, d.name, d.description, a.unlocked, a.unlocked_at, d.icon, d.icon_locked
+            "SELECT a.api_name, d.name, d.description, a.unlocked, a.unlocked_at, d.icon, d.icon_locked, d.secret
              FROM steam_achievements a
              LEFT JOIN steam_achievement_definitions d ON d.app_id = a.app_id AND d.api_name = a.api_name
              WHERE a.steam_account = ?1 AND a.app_id = ?2
@@ -160,6 +160,8 @@ impl Store {
                     unlocked,
                     unlocked_at: unlocked_at.and_then(|seconds| u64::try_from(seconds).ok()),
                     icon,
+                    // Without a definition nothing is known to conceal.
+                    secret: row.get::<_, Option<bool>>(7)?.unwrap_or(false),
                 })
             })?
             .collect::<Result<_, _>>()?;

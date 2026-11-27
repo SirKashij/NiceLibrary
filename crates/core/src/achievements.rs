@@ -39,6 +39,9 @@ pub struct Achievement {
     /// when locked: Steam's name for the image (see
     /// [`crate::Core::achievement_icon`]); `None` when Steam has none.
     pub icon: Option<String>,
+    /// A Secret Achievement: the interface conceals its name and description
+    /// while it is locked, unless the person reveals them.
+    pub secret: bool,
 }
 
 /// At most this many Steam Games have their Achievements fetched in one Sync;
