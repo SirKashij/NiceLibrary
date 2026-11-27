@@ -154,6 +154,7 @@ export const en = {
   'steam.loadFailed': 'Steam could not be checked.',
   'steam.accounts': 'Steam accounts on this computer',
   'steam.noAccounts': 'No Steam account has logged in on this computer yet.',
+  'steam.accountsUnreadable': 'Steam was found, but its list of accounts could not be read.',
   'steam.mostRecent': 'Most recently used',
   'steam.chooseAccount': 'Account for your library',
   'steam.accountLoadFailed': 'The Steam account in use could not be loaded.',
