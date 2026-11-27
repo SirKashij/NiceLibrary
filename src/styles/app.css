@@ -245,6 +245,15 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
   border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
 }
 
+/* Playtime Adjustment of a Local Game on its detail page (src/library/PlaytimeAdjustment.tsx). */
+.playtime-adjustment { display: grid; gap: var(--space-2); min-width: min(100%, var(--note-max-width)); max-width: var(--note-max-width); padding-top: var(--space-3); border-top: var(--hairline) solid var(--color-line); }
+.playtime-adjustment h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.playtime-adjustment-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); }
+.playtime-adjustment-form label { display: grid; gap: var(--space-1); color: var(--color-text-muted); font-size: var(--text-size-label); }
+.playtime-adjustment-form input {
+  width: var(--adjustment-field-width); font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
 /* Achievements on the detail page: hairlines between them, locked ones dimmed and marked as locked. */
 .achievements { display: grid; gap: var(--space-3); padding-top: var(--space-7); max-width: var(--note-max-width); }
 .achievements-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }

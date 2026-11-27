@@ -48,6 +48,10 @@ function fakeOperations({
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game, revision) => `cover://localhost/${game.id}${revision ? `?revision=${revision}` : ''}`,

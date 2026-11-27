@@ -46,6 +46,10 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     unhideGame: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     filterLibrary: async () => [],
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},

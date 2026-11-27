@@ -29,6 +29,10 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     library: async () => LIBRARY,
     readInstalledGames: async () => LIBRARY,
     steamInstallation: async () => ({ state: 'notFound' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,

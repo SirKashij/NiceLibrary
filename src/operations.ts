@@ -424,6 +424,18 @@ export interface Operations {
    * function that stops listening.
    */
   onSession(listener: (event: SessionEvent) => void): () => void;
+  /**
+   * The Playtime Adjustment of a Game in minutes, negative when time was
+   * removed; `null` when it has none. Steam Games never have one.
+   */
+  playtimeAdjustment(gameId: string): Promise<number | null>;
+  /**
+   * Makes `minutes` the Playtime Adjustment of a Local Game and answers the
+   * Game as the Library now shows it: its Playtime is its Sessions plus the
+   * adjustment, never below zero. `null` or zero clears it. Steam Games are
+   * refused.
+   */
+  setPlaytimeAdjustment(gameId: string, minutes: number | null): Promise<Game>;
   /** The Achievements of the Game as the last Syncs fetched them. Answers from the store at once. */
   achievements(gameId: string): Promise<GameAchievements>;
   /**
@@ -589,6 +601,8 @@ export const tauriOperations: Operations = {
       void listening.then((stop) => stop());
     };
   },
+  playtimeAdjustment: (gameId) => invoke<number | null>('playtime_adjustment', { gameId }),
+  setPlaytimeAdjustment: (gameId, minutes) => invoke<Game>('set_playtime_adjustment', { gameId, minutes }),
   achievements: (gameId) => invoke<GameAchievements>('achievements', { gameId }),
   // Under the Game's address in the `cover` URL scheme (`cover_response` in src-tauri/src/lib.rs).
   achievementIconUrl: (game, icon) => convertFileSrc(`${game.id}/achievements/${icon}`, 'cover'),

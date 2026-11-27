@@ -55,6 +55,10 @@ function fakeOperations({ closeToTray = true } = {}) {
     },
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     openLogFolder: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');

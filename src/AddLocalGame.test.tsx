@@ -70,6 +70,10 @@ function fakeOperations({
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     filterLibrary: async () => [...games],
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},

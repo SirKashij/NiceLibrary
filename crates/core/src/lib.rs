@@ -20,6 +20,7 @@ mod library_filter;
 mod progress;
 mod library_layout;
 mod log;
+mod playtime_adjustment;
 mod sessions;
 mod statistics;
 mod status;
@@ -275,12 +276,17 @@ impl Core {
             None => Vec::new(),
         };
         let played = self.store.local_games_played()?;
+        let adjustments = self.store.playtime_adjustments()?;
         games.extend(self.store.local_games()?.into_iter().map(|game| {
             let id = game.id;
             let unplayed = Game::from_stored_local(game);
-            match played.get(&id) {
+            let played = match played.get(&id) {
                 Some(played) => played.into_game(unplayed),
                 None => unplayed,
+            };
+            match adjustments.get(&id) {
+                Some(&minutes) => playtime_adjustment::adjusted(played, minutes),
+                None => played,
             }
         }));
         let statuses = self.store.statuses()?;
@@ -1343,6 +1349,37 @@ impl Core {
         let opened =
             self.ports.opener.open_url(url).map_err(|error| Error::new(format!("{url} could not be opened: {error}")));
         self.logged("open_about_page", opened)
+    }
+
+    /// The Playtime Adjustment of the Game `game_id`, in minutes, negative
+    /// when time was removed; `None` when it has none. Steam Games never
+    /// have one.
+    pub fn playtime_adjustment(&self, game_id: &str) -> Result<Option<i32>, Error> {
+        let adjustment = match playtime_adjustment::local_game_number(game_id) {
+            Some(number) => self.store.playtime_adjustments().map(|adjustments| adjustments.get(&number).copied()),
+            None => Ok(None),
+        };
+        self.logged("playtime_adjustment", adjustment)
+    }
+
+    /// Makes `minutes` the Playtime Adjustment of the Local Game `game_id`,
+    /// from now on and after every restart, and answers the Game as the
+    /// Library now shows it: its Playtime is the sum of its Sessions plus
+    /// the adjustment, never below zero. `None` or zero clears it. A Steam
+    /// Game, or a Game that is not in the Library, is refused.
+    pub fn set_playtime_adjustment(&self, game_id: &str, minutes: Option<i32>) -> Result<Game, Error> {
+        self.logged("set_playtime_adjustment", self.record_playtime_adjustment(game_id, minutes))
+    }
+
+    fn record_playtime_adjustment(&self, game_id: &str, minutes: Option<i32>) -> Result<Game, Error> {
+        let not_in_library = || Error::new(format!("no such local game in the library: {game_id}"));
+        let number = playtime_adjustment::local_game_number(game_id).ok_or_else(not_in_library)?;
+        let in_library = |library: Vec<Game>| library.into_iter().find(|game| game.id == game_id);
+        if in_library(self.stored_library()?).is_none() {
+            return Err(not_in_library());
+        }
+        self.store.set_playtime_adjustment(number, playtime_adjustment::stored(minutes))?;
+        in_library(self.stored_library()?).ok_or_else(not_in_library)
     }
 }
 

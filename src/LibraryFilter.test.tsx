@@ -62,6 +62,10 @@ function fakeOperations() {
     hiddenGames: async () => [],
     hideGame: async () => {},
     unhideGame: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     filterLibrary: async (filter) => {
       asked.push(filter);
       return LIBRARY.filter(

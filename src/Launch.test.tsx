@@ -59,6 +59,10 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

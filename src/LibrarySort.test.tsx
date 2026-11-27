@@ -89,6 +89,10 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     closeToTray: async () => true,
     setCloseToTray: async () => {},
     closeWindow: async () => {},

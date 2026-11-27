@@ -81,6 +81,9 @@
   --chart-bar-thin: 4px;
   --radius-bar: 4px;
   --chart-title-width: 24ch;
+
+  /* Playtime Adjustment: an hours or minutes field, wide enough for four digits. */
+  --adjustment-field-width: 10ch;
 }
 
 /* The light theme: the same roles on warm paper surfaces. */

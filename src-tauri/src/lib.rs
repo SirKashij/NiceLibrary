@@ -123,6 +123,16 @@ fn set_start_with_windows(core: tauri::State<'_, Core>, on: bool) -> Result<(), 
     core.set_start_with_windows(on)
 }
 
+#[tauri::command]
+fn playtime_adjustment(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<i32>, Error> {
+    core.playtime_adjustment(&game_id)
+}
+
+#[tauri::command]
+fn set_playtime_adjustment(core: tauri::State<'_, Core>, game_id: String, minutes: Option<i32>) -> Result<Game, Error> {
+    core.set_playtime_adjustment(&game_id, minutes)
+}
+
 /// Async, so the window stays responsive while the file dialog is open.
 #[tauri::command]
 async fn choose_local_game_executable(core: tauri::State<'_, Core>) -> Result<ExecutableChoice, Error> {
@@ -461,7 +471,9 @@ pub fn run() {
             about,
             open_about_page,
             language,
-            choose_language
+            choose_language,
+            playtime_adjustment,
+            set_playtime_adjustment
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

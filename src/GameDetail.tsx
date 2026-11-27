@@ -6,6 +6,7 @@ import { LaunchOptionsForm } from './LaunchOptions';
 import { ManualProgressForm } from './ManualProgress';
 import { ProgressValue } from './library/Progress';
 import { HideGameButton } from './library/HiddenGames';
+import { PlaytimeAdjustment } from './library/PlaytimeAdjustment';
 import { StatusChoice } from './library/Status';
 import { LocalGameCoverChoice } from './LocalGameCover';
 import type { Game, Operations, Source, Status } from './operations';
@@ -51,7 +52,7 @@ export function GameDetail({
   /** Why the last Launch did not start, if it did not. */
   notice?: ReactNode;
   onPlay: (game: Game) => void;
-  /** Hears that the Game's Status or Manual Progress was set, which changes the Library and its order. */
+  /** Hears that the Game's Status, Manual Progress or Playtime Adjustment was set, which changes the Library and its order. */
   onChanged: (game: Game) => void;
   /** Marks the Game as a Favorite, or unmarks it. */
   onFavorite: (game: Game) => void;
@@ -179,6 +180,16 @@ export function GameDetail({
                   operations={operations}
                   game={game}
                   onSet={(answer) => {
+                    setGame(answer);
+                    onChanged(answer);
+                  }}
+                />
+              )}
+              {game.source === 'local' && (
+                <PlaytimeAdjustment
+                  operations={operations}
+                  game={game}
+                  onAdjusted={(answer) => {
                     setGame(answer);
                     onChanged(answer);
                   }}

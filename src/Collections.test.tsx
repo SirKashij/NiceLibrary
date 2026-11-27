@@ -64,6 +64,10 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     unhideGame: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     filterLibrary: async () => library,
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},

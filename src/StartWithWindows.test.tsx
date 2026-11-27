@@ -48,6 +48,10 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     setStatus: async () => {

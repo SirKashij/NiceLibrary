@@ -32,6 +32,10 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     library: async () => shown(),
     readInstalledGames: async () => shown(),
     steamInstallation: async () => ({ state: 'notFound' }),
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,

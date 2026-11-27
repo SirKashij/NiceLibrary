@@ -120,6 +120,10 @@ function fakeOperations(games: Game[], achievements: Record<string, GameAchievem
     openAboutPage: async () => {},
     language: async () => 'system',
     chooseLanguage: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
   };
   return { operations, asked };
 }

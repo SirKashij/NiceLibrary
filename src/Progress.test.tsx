@@ -40,6 +40,12 @@ function fakeOperations(initial: Game[], sort: LibrarySort = 'name') {
     library: async () => [...games].sort((a, b) => a.title.localeCompare(b.title)),
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
+    language: async () => 'system',
+    chooseLanguage: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,

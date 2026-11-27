@@ -32,6 +32,12 @@ function fakeOperations(initial: Game[], options: { setManualProgress?: Operatio
     library: async () => games,
     readInstalledGames: async () => games,
     steamInstallation: async () => ({ state: 'notFound' }),
+    language: async () => 'system',
+    chooseLanguage: async () => {},
+    playtimeAdjustment: async () => null,
+    setPlaytimeAdjustment: async () => {
+      throw new Error('this test adjusts no Playtime');
+    },
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
