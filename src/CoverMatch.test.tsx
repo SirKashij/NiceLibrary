@@ -120,6 +120,9 @@ function fakeOperations({
       if (title) matched.set(gameId, title);
       else matched.delete(gameId);
     },
+    coverHue: async () => null,
+    install: async () => ({ outcome: 'started' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
   };
   return { operations, calls };
 }

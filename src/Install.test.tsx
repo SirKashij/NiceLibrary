@@ -88,6 +88,10 @@ function fakeOperations(games: Game[], install: (game: Game) => Promise<InstallO
       installs.push(game.id);
       return install(game);
     },
+    findSteamTitles: async () => [],
+    proposeCoverMatch: async () => null,
+    coverMatch: async () => null,
+    setCoverMatch: async () => {},
   };
   return { operations, installs, launches };
 }

@@ -27,7 +27,8 @@ const GAMES_FOLDER: FolderSuggestions = {
 /**
  * Fake operations over a Library that starts empty. `folder` is what the
  * user does in the folder dialog; `add` answers each Local Game to add, by
- * default adding it. `added` records what was asked to be added.
+ * default adding it. `added` records what was asked to be added, `matched`
+ * each Cover Match saved.
  */
 function fakeOperations({
   folder = async () => GAMES_FOLDER,
@@ -38,6 +39,7 @@ function fakeOperations({
 } = {}) {
   const games: Game[] = [];
   const added: { executable: string; title: string }[] = [];
+  const matched: [string, number | null][] = [];
   const operations: Operations = {
     library: async () => [...games],
     readInstalledGames: async () => [...games],
@@ -114,8 +116,15 @@ function fakeOperations({
     openAboutPage: async () => {},
     coverHue: async () => null,
     install: async () => ({ outcome: 'started' }),
+    findSteamTitles: async () => [],
+    // Celeste matches a Steam title; Hades does not.
+    proposeCoverMatch: async (title) => (title === 'Celeste' ? { appId: 504230, name: 'Celeste' } : null),
+    coverMatch: async () => null,
+    setCoverMatch: async (gameId, appId) => {
+      matched.push([gameId, appId]);
+    },
   };
-  return { operations, added };
+  return { operations, added, matched };
 }
 
 /** The suggestions the app shows once the user chose a folder. */
@@ -124,6 +133,28 @@ async function suggestions() {
 }
 
 describe('Adding Local Games from a folder', () => {
+  it('proposes a Cover Match for each suggestion and saves it with the ticked Games', async () => {
+    const user = userEvent.setup();
+    const { operations, matched } = fakeOperations();
+    render(<App operations={operations} lang="en" />);
+
+    await user.click(await screen.findByRole('button', { name: 'Add games from a folder' }));
+    const form = await suggestions();
+    const [celeste, hades] = within(form).getAllByRole('listitem');
+    expect(await within(celeste).findByText('Cover from Steam: Celeste')).toBeInTheDocument();
+    expect(
+      await within(hades).findByText('No Steam title matches. The game shows its executable’s icon.'),
+    ).toBeInTheDocument();
+    expect(matched).toEqual([]);
+
+    await user.click(within(form).getByRole('checkbox', { name: 'Add Celeste' }));
+    await user.click(within(form).getByRole('checkbox', { name: 'Add Hades' }));
+    await user.click(within(form).getByRole('button', { name: 'Add ticked games' }));
+
+    expect(await screen.findByText('Games added to your library: 2')).toBeInTheDocument();
+    expect(matched).toEqual([['local:1', 504230]]);
+  });
+
   it('suggests the executables in the folder with their proposed titles, none ticked', async () => {
     const user = userEvent.setup();
     const { operations, added } = fakeOperations();

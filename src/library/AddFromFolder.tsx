@@ -1,12 +1,16 @@
 import { useState } from 'react';
+import { CoverMatchProposal } from '../CoverMatch';
 import { useT, type MessageKey } from '../i18n';
-import type { AddLocalGame, Operations, SuggestedExecutable } from '../operations';
+import type { AddLocalGame, Operations, SteamTitle, SuggestedExecutable } from '../operations';
 
 /** A message about adding: `status` for what went well, `alert` for what did not. */
 type Notice = { role: 'status' | 'alert'; message: MessageKey; values?: Record<string, string> };
 
-/** A suggested executable as the user ticks and corrects it; `problem` says why adding it was refused. */
-type Row = SuggestedExecutable & { ticked: boolean; problem?: MessageKey };
+/**
+ * A suggested executable as the user ticks and corrects it, with the Cover
+ * Match to save with it; `problem` says why adding it was refused.
+ */
+type Row = SuggestedExecutable & { ticked: boolean; match?: SteamTitle | null; problem?: MessageKey };
 
 /** The folder the user chose and what was found in it. */
 type Suggestions = { folder: string; rows: Row[] };
@@ -19,8 +23,9 @@ function problem(answer: Exclude<AddLocalGame, { outcome: 'added' | 'alreadyAdde
 /**
  * Adding several Local Games at once: the user chooses a folder, the app
  * suggests the executables in it with proposed titles, and the user ticks
- * the ones to add and corrects their titles. Nothing is added until they
- * confirm; executables already in the Library are marked and not offered.
+ * the ones to add and corrects their titles and proposed Cover Matches.
+ * Nothing is added until they confirm; executables already in the Library
+ * are marked and not offered.
  * `onAdded` hears that the core added Games.
  */
 export function AddFromFolderButton({ operations, onAdded }: { operations: Operations; onAdded: () => void }) {
@@ -29,6 +34,8 @@ export function AddFromFolderButton({ operations, onAdded }: { operations: Opera
   const [adding, setAdding] = useState(false);
   const [suggestions, setSuggestions] = useState<Suggestions>();
   const [notice, setNotice] = useState<Notice>();
+  // The titles of added Games whose Cover Match could not be saved.
+  const [matchesNotSaved, setMatchesNotSaved] = useState<string[]>([]);
 
   const choose = () => {
     if (choosing) return;
@@ -64,6 +71,8 @@ export function AddFromFolderButton({ operations, onAdded }: { operations: Opera
     if (adding) return;
     setAdding(true);
     setNotice(undefined);
+    setMatchesNotSaved([]);
+    const notSaved: string[] = [];
     let count = 0;
     const rows: Row[] = [];
     for (const row of current.rows) {
@@ -75,6 +84,11 @@ export function AddFromFolderButton({ operations, onAdded }: { operations: Opera
         const answer = await operations.addLocalGame(row.executable, row.title);
         if (answer.outcome === 'added') {
           count += 1;
+          if (row.match) {
+            // Saved before the Library loads the new Game's Cover.
+            const title = answer.game.title;
+            await operations.setCoverMatch(answer.game.id, row.match.appId).catch(() => notSaved.push(title));
+          }
           rows.push({ ...row, title: answer.game.title, alreadyAdded: true, ticked: false, problem: undefined });
         } else if (answer.outcome === 'alreadyAdded') {
           rows.push({ ...row, title: answer.title, alreadyAdded: true, ticked: false, problem: undefined });
@@ -86,6 +100,7 @@ export function AddFromFolderButton({ operations, onAdded }: { operations: Opera
       }
     }
     setAdding(false);
+    setMatchesNotSaved(notSaved);
     setSuggestions(rows.some((row) => row.problem) ? { ...current, rows } : undefined);
     if (count > 0) {
       setNotice({ role: 'status', message: 'addFromFolder.added', values: { count: String(count) } });
@@ -96,6 +111,7 @@ export function AddFromFolderButton({ operations, onAdded }: { operations: Opera
   const cancel = () => {
     setSuggestions(undefined);
     setNotice(undefined);
+    setMatchesNotSaved([]);
   };
 
   return (
@@ -146,6 +162,13 @@ export function AddFromFolderButton({ operations, onAdded }: { operations: Opera
                   </div>
                 )}
                 <span className="muted local-game-executable">{row.executable}</span>
+                {!row.alreadyAdded && (
+                  <CoverMatchProposal
+                    operations={operations}
+                    title={row.title}
+                    onChange={(match) => change(row.executable, { match })}
+                  />
+                )}
                 {row.problem && (
                   <p className="note" role="alert">
                     {t(row.problem)}
@@ -173,6 +196,11 @@ export function AddFromFolderButton({ operations, onAdded }: { operations: Opera
           {t(notice.message, notice.values)}
         </p>
       )}
+      {matchesNotSaved.map((title) => (
+        <p key={title} className="note" role="alert">
+          {t('coverMatch.notSaved', { title })}
+        </p>
+      ))}
     </div>
   );
 }

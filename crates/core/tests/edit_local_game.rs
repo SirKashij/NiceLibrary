@@ -500,7 +500,7 @@ fn removing_a_local_game_deletes_the_image_the_user_chose_as_its_cover() {
 }
 
 #[test]
-fn removing_a_local_game_deletes_its_sessions_status_and_hiding() {
+fn removing_a_local_game_deletes_its_sessions_status_hiding_and_cover_match() {
     let app = App::start();
     let game = app.add(&app.put("Games/Celeste/Celeste.exe"), "Celeste");
     let other = app.add(&app.put("Games/Zork/Zork.exe"), "Zork");
@@ -512,6 +512,9 @@ fn removing_a_local_game_deletes_its_sessions_status_and_hiding() {
                 "INSERT INTO local_game_sessions (local_game, started_at, ended_at) VALUES (?1, 1000, 2000)",
                 [number],
             )
+            .unwrap();
+        database
+            .execute("INSERT INTO cover_matches (local_game, app_id, name) VALUES (?1, 220, 'Half-Life 2')", [number])
             .unwrap();
         app.core.set_status(&game.id, Status::Playing).unwrap();
         app.core.hide_game(&game.id).unwrap();
@@ -526,6 +529,7 @@ fn removing_a_local_game_deletes_its_sessions_status_and_hiding() {
     assert_eq!(left("SELECT 'local:' || local_game FROM local_game_sessions"), [other.id.clone()]);
     assert_eq!(left("SELECT game_id FROM game_statuses"), [other.id.clone()]);
     assert_eq!(left("SELECT game_id FROM hidden_games"), [other.id.clone()]);
+    assert_eq!(left("SELECT 'local:' || local_game FROM cover_matches"), [other.id.clone()]);
     assert_eq!(app.core.hidden_games().unwrap().iter().map(|game| game.id.clone()).collect::<Vec<_>>(), [other.id]);
 }
 
