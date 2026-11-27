@@ -131,7 +131,7 @@ impl Profile {
     /// Starts the app over this profile, reaching Steam's artwork through `steam`.
     fn start(&self, steam: &FakeSteam) -> Core {
         Core::new(
-            Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(steam.clone()), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock) },
+            Ports { steam_locator: Box::new(NoSteam), downloader: Box::new(steam.clone()), opener: Box::new(NoUrls), secrets: Box::new(NoSecretsNoWebApi), web_api: Box::new(NoSecretsNoWebApi), clock: Box::new(StoppedClock), executable_picker: Box::new(NoExecutableChosen) },
             Store::open(&self.0.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(self.covers().join("covers")),
         )
@@ -277,4 +277,13 @@ impl nicelibrary_core::Clock for StoppedClock {
     }
 
     fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
+}
+
+/// A computer whose user chooses no executable; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

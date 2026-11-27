@@ -7,12 +7,15 @@ export type Source = 'steam' | 'local';
 
 /** One playable title in the Library. Mirrors `Game` in crates/core. */
 export interface Game {
-  /** Unique across Sources: `steam:<app id>` for a Steam Game. */
+  /** Unique across Sources: `steam:<app id>` for a Steam Game, `local:<number>` for a Local Game. */
   id: string;
   title: string;
   source: Source;
   installed: boolean;
-  /** Playtime in minutes; for a Steam Game Steam's figure. `null` while not known, before the first Sync. */
+  /**
+   * Playtime in minutes; for a Steam Game Steam's figure, for a Local Game the
+   * sum of its Sessions. `null` while not known, before the first Sync.
+   */
   playtimeMinutes: number | null;
   /** Last Played, in seconds since the Unix epoch; `null` for never or not known. */
   lastPlayed: number | null;
@@ -57,6 +60,23 @@ export type LaunchOutcome = { outcome: 'launched' } | { outcome: 'steamNotFound'
 
 /** How storing the Steam Web API key went, when nothing failed. Mirrors `SteamWebApiKeyCheck` in crates/core. */
 export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' } | { outcome: 'steamUnreachable' };
+
+/**
+ * What came of asking the user for a Local Game's executable, when nothing
+ * failed. `chosen` carries the title the app proposes. Mirrors
+ * `ExecutableChoice` in crates/core.
+ */
+export type ExecutableChoice =
+  | { outcome: 'cancelled' }
+  | { outcome: 'chosen'; executable: string; title: string }
+  | { outcome: 'alreadyAdded'; /** The title the Game has in the Library. */ title: string };
+
+/** How adding a Local Game went, when nothing failed. Every outcome but `added` changed nothing. Mirrors `AddLocalGame` in crates/core. */
+export type AddLocalGame =
+  | { outcome: 'added'; game: Game }
+  | { outcome: 'alreadyAdded'; /** The title the Game has in the Library. */ title: string }
+  | { outcome: 'noTitle' }
+  | { outcome: 'notFound' };
 
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
@@ -114,6 +134,17 @@ export interface Operations {
    * the function that stops listening.
    */
   onAutomaticSync(listener: (event: AutomaticSync) => void): () => void;
+  /**
+   * Asks the user to choose a Local Game's executable in the operating
+   * system's file dialog and proposes a title for it. Rejects when no dialog
+   * can be shown.
+   */
+  chooseLocalGameExecutable(): Promise<ExecutableChoice>;
+  /**
+   * Adds the executable to the Library as a Local Game with the title the
+   * user confirmed or corrected. The same executable is never added twice.
+   */
+  addLocalGame(executable: string, title: string): Promise<AddLocalGame>;
 }
 
 export const tauriOperations: Operations = {
@@ -138,4 +169,6 @@ export const tauriOperations: Operations = {
       void listening.then((stop) => stop());
     };
   },
+  chooseLocalGameExecutable: () => invoke<ExecutableChoice>('choose_local_game_executable'),
+  addLocalGame: (executable, title) => invoke<AddLocalGame>('add_local_game', { executable, title }),
 };

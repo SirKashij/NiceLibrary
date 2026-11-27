@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
+import { AddLocalGameButton } from './library/AddLocalGame';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 
 type View = 'library' | 'statistics' | 'settings';
@@ -158,6 +159,9 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
 
 function LibraryView({ operations, syncs }: { operations: Operations; syncs: number }) {
   const t = useT();
+  // How many Local Games were added here; each one changes the stored Library.
+  const [additions, setAdditions] = useState(0);
+  const changes = syncs + additions;
   // The stored Library answers at once; reading Steam again replaces it.
   const stored = useOperation(operations, (o) => o.library());
   const fromSteam = useOperation(operations, (o) => o.readInstalledGames());
@@ -167,7 +171,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     if (fromSteam.state === 'ready') setFresh(fromSteam.value);
   }, [fromSteam]);
   useEffect(() => {
-    if (syncs === 0) return;
+    if (changes === 0) return;
     let active = true;
     // A Library that cannot be loaded now stays as shown; the next answer replaces it.
     operations.library().then(
@@ -177,7 +181,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     return () => {
       active = false;
     };
-  }, [operations, syncs]);
+  }, [operations, changes]);
 
   const games = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
   const failure: MessageKey | undefined =
@@ -204,6 +208,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
 
   return (
     <Page title="nav.library">
+      <AddLocalGameButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
       {failure && (
         <p className="note" role="alert">
           {t(failure)}

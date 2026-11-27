@@ -6,8 +6,8 @@ pub mod ports;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AutomaticSync, Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
-    SyncOutcome,
+    AddLocalGame, AutomaticSync, Core, CoverCache, Error, ExecutableChoice, Game, Launch, SteamAccountChoice,
+    SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -78,6 +78,17 @@ async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(),
     core.open_steam_web_api_key_page()
 }
 
+/// Async, so the window stays responsive while the file dialog is open.
+#[tauri::command]
+async fn choose_local_game_executable(core: tauri::State<'_, Core>) -> Result<ExecutableChoice, Error> {
+    core.choose_local_game_executable()
+}
+
+#[tauri::command]
+fn add_local_game(core: tauri::State<'_, Core>, executable: String, title: String) -> Result<AddLocalGame, Error> {
+    core.add_local_game(&executable, &title)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -121,7 +132,9 @@ pub fn run() {
             remove_steam_web_api_key,
             open_steam_web_api_key_page,
             sync,
-            last_sync
+            last_sync,
+            choose_local_game_executable,
+            add_local_game
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

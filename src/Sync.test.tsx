@@ -79,6 +79,8 @@ function fakeOperations({
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, calls, automaticSync, listeners };
 }

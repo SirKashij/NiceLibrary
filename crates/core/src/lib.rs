@@ -8,6 +8,7 @@ mod clock;
 mod covers;
 pub mod keyvalues;
 mod launch;
+mod local_games;
 mod steam;
 mod steam_web_api;
 mod store;
@@ -22,6 +23,7 @@ use serde::{Serialize, Serializer};
 pub use clock::{Clock, Wakeup};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
+pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
@@ -39,13 +41,15 @@ pub enum Source {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Game {
-    /// Unique across Sources: `steam:<app id>` for a Steam Game.
+    /// Unique across Sources: `steam:<app id>` for a Steam Game,
+    /// `local:<number>` for a Local Game.
     pub id: String,
     pub title: String,
     pub source: Source,
     pub installed: bool,
-    /// Playtime in minutes; for a Steam Game Steam's figure. `None` while
-    /// it is not known, before the first Sync.
+    /// Playtime in minutes; for a Steam Game Steam's figure, for a Local
+    /// Game the sum of its Sessions. `None` while it is not known, before
+    /// the first Sync.
     pub playtime_minutes: Option<u32>,
     /// Last Played, in seconds since the Unix epoch; `None` for never or
     /// not known.
@@ -107,6 +111,7 @@ pub struct Ports {
     pub secrets: Box<dyn SecretStore>,
     pub web_api: Box<dyn WebApi>,
     pub clock: Box<dyn Clock>,
+    pub executable_picker: Box<dyn ExecutablePicker>,
 }
 
 /// The application core. Each public method is one operation.
@@ -134,6 +139,7 @@ impl Core {
             Some(account) => self.store.steam_games(&account)?,
             None => Vec::new(),
         };
+        games.extend(self.store.local_games()?.into_iter().map(|game| Game::local(game.id, game.title)));
         games.sort_by(|a, b| a.title.to_lowercase().cmp(&b.title.to_lowercase()).then_with(|| a.id.cmp(&b.id)));
         Ok(games)
     }
@@ -332,6 +338,46 @@ impl Core {
     /// Removes the stored Steam Web API key, if there is one.
     pub fn remove_steam_web_api_key(&self) -> Result<(), Error> {
         self.ports.secrets.delete(steam_web_api::KEY_SECRET).map_err(secret_store_error)
+    }
+
+    /// Asks the user to choose the executable of a Local Game to add and
+    /// proposes its title (see [`Self::add_local_game`]). An executable
+    /// already in the Library is answered with the title it has there.
+    pub fn choose_local_game_executable(&self) -> Result<ExecutableChoice, Error> {
+        let chosen = self
+            .ports
+            .executable_picker
+            .choose_executable()
+            .map_err(|reason| Error::new(format!("file dialog: {reason}")))?;
+        let Some(path) = chosen else {
+            return Ok(ExecutableChoice::Cancelled);
+        };
+        let Some(executable) = path.to_str() else {
+            return Err(Error::new(format!("not a path that can be stored: {}", path.display())));
+        };
+        if let Some(game) = local_games::already_added(&self.store.local_games()?, executable) {
+            return Ok(ExecutableChoice::AlreadyAdded { title: game.title.clone() });
+        }
+        Ok(ExecutableChoice::Chosen { executable: executable.to_owned(), title: local_games::proposed_title(&path) })
+    }
+
+    /// Adds the executable at `executable` to the Library as a Local Game
+    /// titled `title`, which the user may have corrected. The path is kept as
+    /// given. An empty title, a path with no file, and an executable already
+    /// in the Library by any spelling of its path are refused.
+    pub fn add_local_game(&self, executable: &str, title: &str) -> Result<AddLocalGame, Error> {
+        let title = title.trim();
+        if title.is_empty() {
+            return Ok(AddLocalGame::NoTitle);
+        }
+        if !std::path::Path::new(executable).is_file() {
+            return Ok(AddLocalGame::NotFound);
+        }
+        if let Some(game) = local_games::already_added(&self.store.local_games()?, executable) {
+            return Ok(AddLocalGame::AlreadyAdded { title: game.title.clone() });
+        }
+        let id = self.store.add_local_game(title, executable)?;
+        Ok(AddLocalGame::Added { game: Game::local(id, title.to_owned()) })
     }
 
     /// Opens the Steam page where the user creates their Steam Web API key,

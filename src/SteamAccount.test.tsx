@@ -59,6 +59,8 @@ function fakeOperations(
     lastSync: async () => (account && lastSyncs[account]) || null,
     onAutomaticSync: () => () => {},
     launch: async () => ({ outcome: 'launched' }),
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, chosen };
 }

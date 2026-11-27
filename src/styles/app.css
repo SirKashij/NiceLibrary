@@ -114,3 +114,8 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 }
 .game:hover .play, .game:focus-within .play { opacity: 1; }
 .game[data-installed='false'] .game-title { color: var(--color-text-muted); }
+
+/* Adding a Local Game: a button above the Library, then the proposal as a form. */
+.add-local-game { display: grid; gap: var(--space-2); justify-items: start; }
+.local-game-form { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); }
+.local-game-form > label { color: var(--color-text-muted); font-size: var(--text-size-label); }
