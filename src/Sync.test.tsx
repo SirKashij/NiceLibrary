@@ -107,6 +107,8 @@ function fakeOperations({
     },
     onSession: () => () => {},
     sessions: async () => [],
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
   };
   return { operations, calls, automaticSync, listeners };
 }

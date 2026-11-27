@@ -4,6 +4,7 @@
 //! about Tauri; the desktop shell is a thin adapter over these operations, and
 //! everything that varies by machine or OS reaches the core through ports.
 
+mod achievements;
 mod autostart;
 mod clock;
 mod collections;
@@ -31,6 +32,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use log::Level;
 
+pub use achievements::{Achievement, GameAchievements};
 pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
@@ -406,7 +408,11 @@ impl Core {
     /// Syncs: fetches every Steam Game the Steam Account owns, Installed or
     /// not, with Steam's Playtime and Last Played, and merges it into the
     /// store. A Steam Game the account no longer owns leaves the Library
-    /// unless it is Installed.
+    /// unless it is Installed. Then fetches the Achievements of the Steam
+    /// Games played since they were last fetched, or never fetched, the most
+    /// recently played first, as many as this Sync's and this day's share of
+    /// Steam's calls allows; the others follow with the next Syncs. When
+    /// Steam does not give them, the stored Achievements stay as they were.
     ///
     /// Every outcome but `Synced`, and every error, leaves the stored data as
     /// it was. A Sync asked for while another runs begins once that one ends.
@@ -436,6 +442,8 @@ impl Core {
         };
         let at = clock::seconds_since_epoch(self.ports.clock.now());
         self.store.record_steam_sync(&account, &games, at)?;
+        // One call so far: the owned games.
+        achievements::fetch(self.ports.web_api.as_ref(), &self.store, &key, &account, at, 1)?;
         Ok(SyncOutcome::Synced { at })
     }
 
@@ -516,6 +524,45 @@ impl Core {
             self.steam_app_list_soon.ring();
         }
         Ok(check)
+    }
+
+    /// The Achievements of the Game `game_id` for the Steam Account whose
+    /// Library is shown, as the last Syncs fetched them. Answers from the
+    /// store alone.
+    pub fn achievements(&self, game_id: &str) -> Result<GameAchievements, Error> {
+        self.logged("achievements", self.stored_achievements(game_id))
+    }
+
+    fn stored_achievements(&self, game_id: &str) -> Result<GameAchievements, Error> {
+        let Some(app_id) = steam_app_id(game_id) else {
+            return Ok(GameAchievements::LocalGame);
+        };
+        let Some(account) = self.chosen_steam_account_or(|| self.store.last_read_steam_account())? else {
+            return Ok(GameAchievements::NotFetchedYet);
+        };
+        Ok(match self.store.achievements(&account, app_id)? {
+            None => GameAchievements::NotFetchedYet,
+            Some(achievements) if achievements.is_empty() => GameAchievements::NoAchievements,
+            Some(achievements) => GameAchievements::Listed {
+                unlocked: u32::try_from(achievements.iter().filter(|a| a.unlocked).count()).unwrap_or(u32::MAX),
+                total: u32::try_from(achievements.len()).unwrap_or(u32::MAX),
+                achievements,
+            },
+        })
+    }
+
+    /// The image of the Achievement icon `icon` (see [`Achievement::icon`])
+    /// of the Game `game_id`: from the cache of Covers when it is there, else
+    /// downloaded from Steam and kept. `None` when Steam has no such image,
+    /// or `icon` is not one of Steam's names for an icon.
+    pub fn achievement_icon(&self, game_id: &str, icon: &str) -> Result<Option<Cover>, Error> {
+        let Some(app_id) = steam_app_id(game_id) else {
+            return Ok(None);
+        };
+        if !achievements::is_icon_name(icon) {
+            return Ok(None);
+        }
+        self.covers.achievement_icon(self.ports.downloader.as_ref(), app_id, icon)
     }
 
     /// Removes the stored Steam Web API key, if there is one.

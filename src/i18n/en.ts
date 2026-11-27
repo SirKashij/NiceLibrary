@@ -200,6 +200,16 @@ export const en = {
   'sessions.hoursMinutes': '{hours} h {minutes} min',
   'sessions.underAMinute': 'under 1 min',
   'sessions.loadFailed': 'The sessions of {title} could not be read.',
+  'achievements.title': 'Achievements',
+  'achievements.count': '{unlocked} / {total} unlocked',
+  'achievements.list': 'Achievements of {title}',
+  'achievements.unlockedOn': 'Unlocked {date}',
+  'achievements.unlocked': 'Unlocked',
+  'achievements.locked': 'Locked',
+  'achievements.localGame': 'Local games have no achievements.',
+  'achievements.none': '{title} has no achievements.',
+  'achievements.notFetchedYet': 'The achievements have not been fetched yet. They arrive with one of the next syncs.',
+  'achievements.loadFailed': 'The achievements could not be loaded.',
 } as const;
 
 export type MessageKey = keyof typeof en;

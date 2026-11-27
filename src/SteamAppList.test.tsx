@@ -54,6 +54,8 @@ function fakeOperations({
     onAutomaticSync: () => () => {},
     filterLibrary: async () => [],
     game: async () => null,
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     theme: async () => 'system',
     chooseTheme: async () => {},
     closeToTray: async () => true,

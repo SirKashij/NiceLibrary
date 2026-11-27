@@ -8,8 +8,8 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
-    ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
-    Session, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking,
+    ExecutableChoice, Game, GameAchievements, Launch, LibraryFilter, LibrarySort, Log, Status, SteamAccountChoice,
+    SteamAppList, SteamAppListFetch, Session, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking,
     started_with_windows,
 };
 use percent_encoding::percent_decode_str;
@@ -99,6 +99,11 @@ fn choose_library_sort(core: tauri::State<'_, Core>, sort: LibrarySort) -> Resul
 #[tauri::command]
 fn set_status(core: tauri::State<'_, Core>, game_id: String, status: Status) -> Result<Game, Error> {
     core.set_status(&game_id, status)
+}
+
+#[tauri::command]
+fn achievements(core: tauri::State<'_, Core>, game_id: String) -> Result<GameAchievements, Error> {
+    core.achievements(&game_id)
 }
 
 /// Async, so a slow start of the browser does not block the window.
@@ -204,14 +209,21 @@ fn sessions(core: tauri::State<'_, Core>, game_id: String) -> Result<Vec<Session
 
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
+/// Achievement icons come from `<game id>/achievements/<icon>` under the same scheme
+/// (see `achievementIconUrl` there).
 pub const COVER_PROTOCOL: &str = "cover";
 
-/// Answers a request for `cover://localhost/<game id>` with the Game's Cover:
-/// the image, 404 when the Game has none, 503 when it could not be fetched.
-/// The interface shows a placeholder for both.
+/// Answers a request for `cover://localhost/<game id>` with the Game's Cover,
+/// or for `cover://localhost/<game id>/achievements/<icon>` with that
+/// Achievement icon: the image, 404 when there is none, 503 when it could
+/// not be fetched. The interface shows a placeholder for both.
 pub fn cover_response(core: &Core, uri_path: &str) -> Response<Vec<u8>> {
-    let game_id = percent_decode_str(uri_path.trim_start_matches('/')).decode_utf8_lossy();
-    let (status, media_type, body) = match core.cover(&game_id) {
+    let path = percent_decode_str(uri_path.trim_start_matches('/')).decode_utf8_lossy();
+    let image = match path.split_once("/achievements/") {
+        Some((game_id, icon)) => core.achievement_icon(game_id, icon),
+        None => core.cover(&path),
+    };
+    let (status, media_type, body) = match image {
         Ok(Some(cover)) => (StatusCode::OK, cover.media_type, cover.bytes),
         Ok(None) => (StatusCode::NOT_FOUND, "text/plain", Vec::new()),
         Err(error) => (StatusCode::SERVICE_UNAVAILABLE, "text/plain", error.to_string().into_bytes()),
@@ -287,6 +299,7 @@ pub fn run() {
             open_log_folder,
             starts_with_windows,
             set_start_with_windows,
+            achievements,
             sessions
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {

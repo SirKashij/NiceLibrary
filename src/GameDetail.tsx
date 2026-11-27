@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { Achievements } from './Achievements';
 import { useFormat, useT, type MessageKey } from './i18n';
 import { SessionList } from './library/SessionList';
 import { StatusChoice } from './library/Status';
@@ -11,8 +12,9 @@ const SOURCES: Record<Source, MessageKey> = {
 
 /**
  * The detail page of one Game: its large Cover, title, Source, whether it is
- * Installed, its Status to set, Playtime, Last Played, its Sessions and the main action, and the way back to
- * the Library. Shows the Game as opened at once and as the core answers it
+ * Installed, its Status to set, Playtime, Last Played and the main action, its
+ * Sessions and Achievements, and the way back to the Library. Shows the Game as
+ * opened at once and as the core answers it
  * then, again after each Sync.
  */
 export function GameDetail({
@@ -134,11 +136,12 @@ export function GameDetail({
                   {t('status.setFailed', { title: game.title })}
                 </p>
               )}
-              <SessionList operations={operations} game={game} changes={syncs} />
             </>
           )}
         </div>
       </div>
+      {game !== null && <SessionList operations={operations} game={game} changes={syncs} />}
+      {game !== null && <Achievements operations={operations} game={game} syncs={syncs} />}
     </section>
   );
 }

@@ -83,6 +83,11 @@ impl SteamWebApi {
     fn asked(&self) -> Vec<String> {
         self.asked.lock().unwrap().clone()
     }
+
+    /// The URLs asked for the owned games; a Sync asks for Achievements too.
+    fn asked_for_owned_games(&self) -> Vec<String> {
+        self.asked().into_iter().filter(|url| url.contains("/GetOwnedGames/")).collect()
+    }
 }
 
 /// The value of `name` in the query of `url`.
@@ -435,8 +440,8 @@ fn the_sync_asks_steam_over_https_for_the_chosen_steam_account() {
 
     assert_eq!(core.library().unwrap(), [steam_game(70, "Half-Life", false, 30, Some(LAST_WEEK))]);
     let asked = steam.asked();
-    assert_eq!(asked.len(), 1, "{asked:?}");
-    assert!(asked[0].starts_with("https://api.steampowered.com/"), "{}", asked[0]);
+    assert_eq!(steam.asked_for_owned_games().len(), 1, "{asked:?}");
+    assert!(asked.iter().all(|url| url.starts_with("https://api.steampowered.com/")), "{asked:?}");
 }
 
 #[test]
@@ -745,7 +750,7 @@ fn an_automatic_sync_reports_that_it_starts_before_it_asks_steam() {
     });
 
     assert_eq!(asked_when_started, Some(0));
-    assert_eq!(steam.asked().len(), 1);
+    assert_eq!(steam.asked_for_owned_games().len(), 1);
 }
 
 #[test]
@@ -765,7 +770,7 @@ fn two_syncs_never_run_at_the_same_time() {
         }
     });
 
-    assert_eq!(steam.asked().len(), 3);
+    assert_eq!(steam.asked_for_owned_games().len(), 3);
     assert_eq!(*slow.most_at_once.lock().unwrap(), 1);
 }
 

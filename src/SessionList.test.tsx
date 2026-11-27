@@ -73,6 +73,8 @@ function fakeOperations(games: Game[], initial: Record<string, Session[]> = {}) 
       asked.push(gameId);
       return sessions[gameId] ?? [];
     },
+    achievements: async () => ({ state: 'localGame' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
   };
   const send = (event: SessionEvent) => act(() => listeners.forEach((listener) => listener(event)));
   return { operations, asked, send, change: (next: Record<string, Session[]>) => (sessions = next) };

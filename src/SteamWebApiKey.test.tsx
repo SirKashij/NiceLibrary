@@ -70,6 +70,8 @@ function fakeOperations({ stored = false } = {}) {
       throw new Error('this test sets no Status');
     },
     openLogFolder: async () => {},
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
   };
   return { operations, calls };
 }
