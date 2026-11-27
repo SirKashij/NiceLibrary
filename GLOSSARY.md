@@ -60,7 +60,7 @@ _Avoid_: Hidden achievement (clashes with Hidden Game)
 The share of all players worldwide who have unlocked an Achievement, in percent.
 
 **Progress**:
-How far a Game has been completed, in percent. For a Steam Game it is the share of unlocked Achievements; for a Local Game it is a Manual Progress value or nothing.
+How far a Game has been completed, in percent. For a Steam Game it is the share of unlocked Achievements, rounded down, so only a Game with every Achievement unlocked is complete at 100 %; a Steam Game without Achievements has no Progress rather than 0 %. For a Local Game it is a Manual Progress value or nothing.
 _Avoid_: Completion, story progress
 
 **Manual Progress**:
@@ -84,7 +84,7 @@ A named group of Games created by the person. A Game can be in several Collectio
 _Avoid_: Category, tag, folder, list
 
 **Detail Page**:
-The page of one Game, opened from the Library: its large Cover, Source, whether it is Installed, its Status, Playtime, Last Played, its Launch and its Achievements. Going back returns to the Library as it was left.
+The page of one Game, opened from the Library: its large Cover, Source, whether it is Installed, its Status, Playtime, Last Played, Progress, its Launch and its Achievements. Going back returns to the Library as it was left.
 _Avoid_: Game page, info screen, dialog
 
 **Sort Order**:

@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Achievements } from './Achievements';
 import { useFormat, useT, type MessageKey } from './i18n';
 import { LaunchOptionsForm } from './LaunchOptions';
+import { ManualProgressForm } from './ManualProgress';
+import { ProgressValue } from './library/Progress';
 import { HideGameButton } from './library/HiddenGames';
 import { StatusChoice } from './library/Status';
 import { LocalGameCoverChoice } from './LocalGameCover';
@@ -14,10 +16,11 @@ const SOURCES: Record<Source, MessageKey> = {
 
 /**
  * The detail page of one Game: its large Cover, title, Source, whether it is
- * Installed, its Status to set, Playtime, Last Played and the main action, its
- * Achievements, and the way back to the Library. Shows the Game as opened at
- * once and as the core answers it
- * then, again after each Sync.
+ * Installed, its Status to set, Playtime, Last Played, Progress when it has
+ * one, the main action, for a Local Game its Launch Options and Manual
+ * Progress, its Achievements, and the way back to the Library. Shows the Game
+ * as opened at once and as the core answers it then, again after each Sync
+ * and after each change of its Manual Progress.
  */
 export function GameDetail({
   operations,
@@ -26,7 +29,7 @@ export function GameDetail({
   cover,
   notice,
   onPlay,
-  onStatusSet,
+  onChanged,
   onBack,
   onHidden,
   onCoverChanged,
@@ -43,8 +46,8 @@ export function GameDetail({
   /** Why the last Launch did not start, if it did not. */
   notice?: ReactNode;
   onPlay: (game: Game) => void;
-  /** Hears that the Game's Status was set, which changes the Library. */
-  onStatusSet: (game: Game) => void;
+  /** Hears that the Game's Status or Manual Progress was set, which changes the Library and its order. */
+  onChanged: (game: Game) => void;
   onBack: () => void;
   /** Hears the Game once the user hid it. */
   onHidden: (game: Game) => void;
@@ -66,7 +69,7 @@ export function GameDetail({
       (answer) => {
         if (id !== latestStatus.current) return;
         setGame(answer);
-        onStatusSet(answer);
+        onChanged(answer);
       },
       () => id === latestStatus.current && setStatusFailed(true),
     );
@@ -146,6 +149,14 @@ export function GameDetail({
                   <dt>{t('game.lastPlayed')}</dt>
                   <dd>{lastPlayed}</dd>
                 </div>
+                {game.progress !== null && (
+                  <div>
+                    <dt>{t('game.progress')}</dt>
+                    <dd>
+                      <ProgressValue progress={game.progress} />
+                    </dd>
+                  </div>
+                )}
               </dl>
               {statusFailed && (
                 <p className="note" role="alert">
@@ -154,6 +165,16 @@ export function GameDetail({
               )}
               <HideGameButton operations={operations} game={game} onHidden={onHidden} />
               {game.source === 'local' && <LaunchOptionsForm operations={operations} game={game} />}
+              {game.source === 'local' && (
+                <ManualProgressForm
+                  operations={operations}
+                  game={game}
+                  onSet={(answer) => {
+                    setGame(answer);
+                    onChanged(answer);
+                  }}
+                />
+              )}
               {actions?.(game)}
             </>
           )}

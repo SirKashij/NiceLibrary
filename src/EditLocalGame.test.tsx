@@ -12,6 +12,7 @@ const CELESTE: Game = {
   playtimeMinutes: 0,
   lastPlayed: null,
   status: 'unplayed',
+  progress: null,
 };
 
 const PORTAL_2: Game = {
@@ -22,6 +23,7 @@ const PORTAL_2: Game = {
   playtimeMinutes: 1_260,
   lastPlayed: null,
   status: 'unplayed',
+  progress: null,
 };
 
 const CELESTE_EXE = 'C:\\Games\\Celeste\\Celeste.exe';
@@ -103,6 +105,7 @@ function fakeOperations(
     hideGame: async () => {},
     unhideGame: async () => {},
     startsWithWindows: async () => false,
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     setStartWithWindows: async () => {},
     onSession: () => () => {},
     librarySort: async () => 'name',

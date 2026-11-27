@@ -40,6 +40,7 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     unhideGame: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},

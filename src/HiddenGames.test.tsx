@@ -12,6 +12,7 @@ function steamGame(appId: number, title: string): Game {
     installed: true,
     playtimeMinutes: null,
     lastPlayed: null,
+    progress: null,
     status: 'unplayed',
   };
 }
@@ -87,6 +88,7 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
   };
   return { operations, hidden };
 }

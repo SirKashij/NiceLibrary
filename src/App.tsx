@@ -16,6 +16,7 @@ import { WindowSettings } from './settings/WindowSettings';
 import { Tray } from './Tray';
 import { SortChoice, useLibrarySort } from './library/LibrarySort';
 import { StatusBadge } from './library/Status';
+import { ProgressBadge } from './library/Progress';
 import { LogSettings } from './settings/LogSettings';
 
 type View = 'library' | 'statistics' | 'settings';
@@ -182,11 +183,11 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
   const t = useT();
   // How many Local Games were added, edited or removed here; each one changes the stored Library.
   const [additions, setAdditions] = useState(0);
-  // How often the user set a Status while the app runs; each one changes the stored Library.
-  const [statusChanges, setStatusChanges] = useState(0);
+  // How often the user set a Status or a Manual Progress while the app runs; each one changes the stored Library.
+  const [gameChanges, setGameChanges] = useState(0);
   // How often a Game was hidden or unhidden here; each time changes the Library.
   const [hidings, setHidings] = useState(0);
-  const changes = syncs + additions + statusChanges + hidings;
+  const changes = syncs + additions + gameChanges + hidings;
   const changed = () => setAdditions((n) => n + 1);
   // The title of the Local Game removed last, which the Library then confirms.
   const [removed, setRemoved] = useState<string>();
@@ -356,7 +357,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           cover={(game) => <Cover key={game.id} title={game.title} src={coverUrl(game)} />}
           notice={launchNotice}
           onPlay={launch}
-          onStatusSet={() => setStatusChanges((count) => count + 1)}
+          onChanged={() => setGameChanges((count) => count + 1)}
           onBack={back}
           onHidden={hidden}
           onCoverChanged={coverChanged}
@@ -426,6 +427,7 @@ function CoverGrid({
           </div>
           <h2 className="game-title">{game.title}</h2>
           <StatusBadge status={game.status} />
+          <ProgressBadge progress={game.progress} />
           <Played game={game} />
           {!game.installed && <span className="muted">{t('library.notInstalled')}</span>}
         </li>

@@ -19,6 +19,8 @@
   --color-accent-ink: var(--color-bg);
   /* Behind a dialog: the window dimmed. */
   --color-backdrop: rgb(0 0 0 / 0.6);
+  /* A complete Progress, 100 %: the colour of having completed a Game (ADR-0007). */
+  --color-complete: #7fc99a;
 
   /* Type */
   --font-display: 'Bricolage Grotesque Variable', sans-serif;
@@ -85,4 +87,5 @@
   --color-accent: var(--color-text);
   --color-accent-ink: var(--color-bg);
   --color-backdrop: rgb(26 27 28 / 0.4);
+  --color-complete: #256a3f;
 }
