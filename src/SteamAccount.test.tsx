@@ -76,6 +76,7 @@ function fakeOperations(
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    coverHue: async () => null,
     launch: async () => ({ outcome: 'launched' }),
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),

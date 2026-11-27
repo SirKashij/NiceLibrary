@@ -100,6 +100,10 @@ _Avoid_: Box art, poster, artwork, thumbnail
 **Cover Match**:
 The link between a Local Game and the Steam title whose Cover it borrows. The person confirms or changes it when adding the Game.
 
+**Tint**:
+The background and accent colour a Detail Page takes from the dominant hue of its Game's Cover, the hue most of the Cover's colourful pixels share. A Game without a Cover, a Cover without colour, or a Tint that would miss the contrast rules of the shown Theme leaves the page neutral.
+_Avoid_: Theme (that is dark or light), accent colour (alone), palette
+
 **Steam App List**:
 Steam's list of the titles it offers, each with its app id and name, fetched with the Steam Web API key and kept on this computer as the basis for Cover Matches. It is fetched, not synced: it belongs to no Steam Account.
 _Avoid_: App database, catalogue, Sync (for fetching it)

@@ -267,6 +267,19 @@ export interface Operations {
   librarySort(): Promise<LibrarySort>;
   /** Makes `sort` the order of the Library, also after a restart. */
   chooseLibrarySort(sort: LibrarySort): Promise<void>;
+  /**
+   * The dominant hue of the Game's Cover, from which its Detail Page takes
+   * its Tint; `null` when it has no Cover or one without colour to speak of.
+   */
+  coverHue(gameId: string): Promise<CoverHue | null>;
+}
+
+/** The hue most of a Cover's colourful pixels share. Mirrors `CoverHue` in crates/core. */
+export interface CoverHue {
+  /** Degrees on the colour wheel, from 0 (red) up to 360. */
+  hue: number;
+  /** How vivid the Cover's pixels of that hue are, from 0 (grey) to 1. */
+  saturation: number;
 }
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
@@ -333,4 +346,5 @@ export const tauriOperations: Operations = {
   showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
   librarySort: () => invoke<LibrarySort>('library_sort'),
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
+  coverHue: (gameId) => invoke<CoverHue | null>('cover_hue', { gameId }),
 };

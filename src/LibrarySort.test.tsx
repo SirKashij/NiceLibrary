@@ -72,6 +72,7 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
       chosen.push(sort);
       stored = sort;
     },
+    coverHue: async () => null,
   };
   return { operations, asked, chosen };
 }

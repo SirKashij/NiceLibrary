@@ -6,6 +6,7 @@
 
 mod clock;
 mod collections;
+mod cover_hue;
 mod covers;
 pub mod keyvalues;
 mod launch;
@@ -27,6 +28,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
+pub use cover_hue::CoverHue;
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
 pub use library_filter::{LibraryFilter, LibrarySort};
@@ -624,6 +626,14 @@ impl Core {
         let index = Arc::new(steam_app_list::TitleIndex::new(self.store.searchable_steam_titles()?));
         *held = Some(Arc::clone(&index));
         Ok(index)
+    }
+
+    /// The dominant hue of the Game `game_id`'s Cover, from which its Detail
+    /// Page takes its Tint; `None` when the Game has no Cover or a Cover
+    /// without colour to speak of. Reads the cached Cover, downloading it
+    /// first like [`Core::cover`] when it is not cached yet.
+    pub fn cover_hue(&self, game_id: &str) -> Result<Option<CoverHue>, Error> {
+        Ok(self.cover(game_id)?.as_ref().and_then(cover_hue::dominant_hue))
     }
 }
 

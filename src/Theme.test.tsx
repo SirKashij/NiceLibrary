@@ -37,6 +37,7 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     filterLibrary: async () => [],
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    coverHue: async () => null,
     game: async () => null,
     theme: async () => theme,
     chooseTheme: async (chosen) => {

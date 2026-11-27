@@ -6,10 +6,13 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+png = "0.18"
 rusqlite = { version = "0.43", features = ["bundled"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
+zune-core = "0.5.3"
+zune-jpeg = "0.5.15"
 
 [dev-dependencies]
-png = "0.18"
+jpeg-encoder = "0.7.1"
 tempfile = { workspace = true }

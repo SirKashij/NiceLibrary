@@ -7,9 +7,9 @@ mod tray;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
-    ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, SteamAccountChoice, SteamAppList, SteamAppListFetch,
-    SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
+    AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, CoverHue,
+    Error, ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, SteamAccountChoice, SteamAppList,
+    SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -175,6 +175,12 @@ async fn fetch_steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppLi
     core.fetch_steam_app_list()
 }
 
+/// Async: the Cover may have to be downloaded, and its image is decoded.
+#[tauri::command]
+async fn cover_hue(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<CoverHue>, Error> {
+    core.cover_hue(&game_id)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -246,7 +252,8 @@ pub fn run() {
             close_to_tray,
             set_close_to_tray,
             close_window,
-            show_tray_menu
+            show_tray_menu,
+            cover_hue
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

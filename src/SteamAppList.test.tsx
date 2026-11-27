@@ -69,6 +69,7 @@ function fakeOperations({
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    coverHue: async () => null,
     steamAppList: async () => list,
     fetchSteamAppList: () => {
       calls.fetches += 1;

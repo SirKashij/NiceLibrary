@@ -43,6 +43,7 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    coverHue: async () => null,
     launch: (game) => {
       requested.push(game.id);
       return launch(game);
