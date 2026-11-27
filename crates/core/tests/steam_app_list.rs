@@ -11,8 +11,8 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
-    AutomaticSteamAppListFetch, Clock, Core, CoverCache, Downloader, OpenError, Opener, Ports, SecretStore, SteamAppList,
-    SteamAppListFetch, SteamLocator, SteamTitle, Store, Wakeup, WebAnswer, WebApi,
+    AutomaticSteamAppListFetch, Clock, Core, CoverCache, Downloader, ExecutablePicker, OpenError, Opener, Ports,
+    SecretStore, SteamAppList, SteamAppListFetch, SteamLocator, SteamTitle, Store, Wakeup, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
 
@@ -241,6 +241,7 @@ impl Computer {
                 secrets: Box::new(self.secrets.clone()),
                 web_api: Box::new(api.clone()),
                 clock: Box::new(self.clock.clone()),
+                executable_picker: Box::new(NoExecutableChosen),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -525,4 +526,13 @@ fn without_a_key_the_automatic_rounds_fetch_nothing_and_a_stored_key_starts_one_
 
     // The waiting before the first round ends at once: the key was stored.
     assert_eq!(events, vec![AutomaticSteamAppListFetch::Started, AutomaticSteamAppListFetch::Finished(SteamAppListFetch::Fetched { at: before })]);
+}
+
+/// A computer whose user chooses no executable; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
+    }
 }
