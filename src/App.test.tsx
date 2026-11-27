@@ -20,6 +20,8 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     theme: async () => 'system',

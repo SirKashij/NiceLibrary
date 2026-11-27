@@ -152,6 +152,14 @@ export interface LibraryFilter {
   status: Status | null;
 }
 
+/** Whether the app runs in Limited Mode, and why. Mirrors `LimitedMode` in crates/core. */
+export type LimitedMode =
+  | { outcome: 'off' }
+  | { outcome: 'noKey' }
+  | { outcome: 'keyRejected' }
+  | { outcome: 'gameDetailsPrivate' }
+  | { outcome: 'steamUnreachable' };
+
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
@@ -285,6 +293,13 @@ export interface Operations {
    * the folder could not be shown.
    */
   openLogFolder(): Promise<void>;
+  /**
+   * Whether the app runs in Limited Mode, and why: no key stored, or what the
+   * last Sync of the Steam Account found. A successful Sync ends it.
+   */
+  limitedMode(): Promise<LimitedMode>;
+  /** Opens Steam's privacy settings of the signed-in profile in the browser. Rejects when it could not be opened. */
+  openSteamPrivacySettings(): Promise<void>;
 }
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
@@ -353,4 +368,6 @@ export const tauriOperations: Operations = {
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
   setStatus: (gameId, status) => invoke<Game>('set_status', { gameId, status }),
   openLogFolder: () => invoke<void>('open_log_folder'),
+  limitedMode: () => invoke<LimitedMode>('limited_mode'),
+  openSteamPrivacySettings: () => invoke<void>('open_steam_privacy_settings'),
 };

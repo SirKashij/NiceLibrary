@@ -191,4 +191,19 @@ export const de: Record<MessageKey, string> = {
   'log.private': 'Nichts wird gesendet. Dein Schlüssel und deine SteamIDs landen nie im Protokoll.',
   'log.openFolder': 'Protokollordner öffnen',
   'log.openFailed': 'Der Protokollordner konnte nicht geöffnet werden.',
+  'limited.title': 'Eingeschränkter Modus',
+  'limited.noKey':
+    'Ohne Steam-Web-API-Schlüssel zeigt die App nur deine installierten Steam-Spiele, mit der Spielzeit, die Steam auf diesem Computer speichert. Hinterlege einen Schlüssel, um alle deine Spiele zu sehen.',
+  'limited.keyRejected':
+    'Steam hat deinen Steam-Web-API-Schlüssel abgelehnt. Deshalb zeigt die App nur deine installierten Steam-Spiele, mit der Spielzeit, die Steam auf diesem Computer speichert. Ersetze den Schlüssel in den Einstellungen.',
+  'limited.gameDetailsPrivate':
+    'Steam gibt deine Spiele nicht heraus, weil deine Spieldetails privat sind. „Spieldetails“ ist eine Privatsphäre-Einstellung deines Steam-Profils: Sie legt fest, wer sehen darf, welche Spiele du besitzt und wie lange du sie gespielt hast. Stelle sie in deinen Steam-Privatsphäre-Einstellungen auf „Öffentlich“ und synchronisiere dann erneut. Bis dahin zeigt die App nur deine installierten Steam-Spiele, mit der Spielzeit, die Steam auf diesem Computer speichert.',
+  'limited.steamUnreachable':
+    'Steam war nicht erreichbar. Deshalb zeigt die App nur deine installierten Steam-Spiele, mit der Spielzeit, die Steam auf diesem Computer speichert.',
+  'limited.setUp': 'Schlüssel einrichten',
+  'limited.openSettings': 'Einstellungen öffnen',
+  'limited.openPrivacySettings': 'Privatsphäre-Einstellungen öffnen',
+  'limited.syncAgain': 'Erneut synchronisieren',
+  'limited.retry': 'Erneut versuchen',
+  'limited.privacyFailed': 'Deine Steam-Privatsphäre-Einstellungen konnten nicht geöffnet werden.',
 };

@@ -48,6 +48,8 @@ function fakeOperations() {
     openLogFolder: async () => {
       calls.logFolderOpened += 1;
     },
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
   };
   return { operations, calls };
 }

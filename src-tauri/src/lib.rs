@@ -8,7 +8,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
-    ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
+    ExecutableChoice, Game, Launch, LibraryFilter, LimitedMode, LibrarySort, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
     SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
@@ -186,6 +186,17 @@ async fn open_log_folder(core: tauri::State<'_, Core>) -> Result<(), Error> {
     core.open_log_folder()
 }
 
+#[tauri::command]
+fn limited_mode(core: tauri::State<'_, Core>) -> Result<LimitedMode, Error> {
+    core.limited_mode()
+}
+
+/// Async, so a slow start of the browser does not block the window.
+#[tauri::command]
+async fn open_steam_privacy_settings(core: tauri::State<'_, Core>) -> Result<(), Error> {
+    core.open_steam_privacy_settings()
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -263,7 +274,9 @@ pub fn run() {
             close_window,
             show_tray_menu,
             set_status,
-            open_log_folder
+            open_log_folder,
+            limited_mode,
+            open_steam_privacy_settings
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

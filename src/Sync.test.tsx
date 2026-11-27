@@ -67,6 +67,8 @@ function fakeOperations({
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     sync: async () => {
       calls.syncs += 1;
       if (outcome.outcome === 'synced') {

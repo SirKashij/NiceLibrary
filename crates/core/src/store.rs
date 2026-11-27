@@ -7,7 +7,7 @@
 
 mod steam_app_list;
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fs;
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard};
@@ -16,7 +16,7 @@ use rusqlite::{Connection, params};
 
 use crate::collections::{self, CollectionNaming};
 use crate::local_games::StoredLocalGame;
-use crate::steam::InstalledApp;
+use crate::steam::{InstalledApp, LocalPlaytime};
 use crate::sync::OwnedGame;
 use crate::theme::Theme;
 use crate::{Error, Game, Status};
@@ -71,6 +71,9 @@ const MIGRATIONS: &[&str] = &[
          game_id TEXT PRIMARY KEY,
          status  TEXT NOT NULL
      );",
+    // 7: The fallback Playtime and Last Played of Installed Steam Games, from Steam's local files.
+    "ALTER TABLE steam_games ADD COLUMN local_playtime_minutes INTEGER;
+     ALTER TABLE steam_games ADD COLUMN local_last_played INTEGER;",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
@@ -86,6 +89,10 @@ const LIBRARY_SORT: &str = "library_sort";
 
 /// The setting that holds the theme the user chose.
 const THEME: &str = "theme";
+
+/// The start of the settings that hold, per Steam Account, why its last
+/// Sync left the app in Limited Mode; the SteamID follows.
+const LIMITED_MODE_PREFIX: &str = "limited_mode:";
 
 /// The local store.
 pub struct Store {
@@ -181,10 +188,44 @@ impl Store {
         Ok(())
     }
 
+    /// The name of the reason the last Sync of `account` left the app in
+    /// Limited Mode, if it did.
+    pub(crate) fn limited_mode_reason(&self, account: &str) -> Result<Option<String>, Error> {
+        self.setting(&format!("{LIMITED_MODE_PREFIX}{account}"))
+    }
+
+    /// Remembers `reason` as why the last Sync of `account` left the app in
+    /// Limited Mode; `None` forgets it.
+    pub(crate) fn record_limited_mode_reason(&self, account: &str, reason: Option<&str>) -> Result<(), Error> {
+        let key = format!("{LIMITED_MODE_PREFIX}{account}");
+        match reason {
+            Some(reason) => self.set_setting(&key, reason),
+            None => {
+                self.connection().execute("DELETE FROM settings WHERE key = ?1", [key])?;
+                Ok(())
+            }
+        }
+    }
+
+    /// Forgets why any Sync left the app in Limited Mode, for every Steam Account.
+    pub(crate) fn forget_limited_mode_reasons(&self) -> Result<(), Error> {
+        self.connection().execute(
+            "DELETE FROM settings WHERE substr(key, 1, length(?1)) = ?1",
+            [LIMITED_MODE_PREFIX],
+        )?;
+        Ok(())
+    }
+
     /// Records which Steam apps are Installed for `account`, all at once:
-    /// the given apps are Installed with their titles, every other Steam Game
-    /// of the account is not. `account` becomes the account read last.
-    pub(crate) fn record_installed_steam_games(&self, account: &str, apps: &[InstalledApp]) -> Result<(), Error> {
+    /// the given apps are Installed with their titles and the fallback
+    /// Playtime `local` holds for them, every other Steam Game of the account
+    /// is not. `account` becomes the account read last.
+    pub(crate) fn record_installed_steam_games(
+        &self,
+        account: &str,
+        apps: &[InstalledApp],
+        local: &BTreeMap<u32, LocalPlaytime>,
+    ) -> Result<(), Error> {
         let mut connection = self.connection();
         let transaction = connection.transaction()?;
         transaction.execute(
@@ -194,10 +235,15 @@ impl Store {
         )?;
         transaction.execute("UPDATE steam_games SET installed = 0 WHERE steam_account = ?1", [account])?;
         for app in apps {
+            let local = local.get(&app.app_id);
+            let last_played = local.and_then(|local| local.last_played).map(seconds_column).transpose()?;
             transaction.execute(
-                "INSERT INTO steam_games (steam_account, app_id, title, installed) VALUES (?1, ?2, ?3, 1)
-                 ON CONFLICT (steam_account, app_id) DO UPDATE SET title = excluded.title, installed = 1",
-                params![account, app.app_id, app.title],
+                "INSERT INTO steam_games (steam_account, app_id, title, installed, local_playtime_minutes, local_last_played)
+                 VALUES (?1, ?2, ?3, 1, ?4, ?5)
+                 ON CONFLICT (steam_account, app_id) DO UPDATE SET title = excluded.title, installed = 1,
+                     local_playtime_minutes = excluded.local_playtime_minutes,
+                     local_last_played = excluded.local_last_played",
+                params![account, app.app_id, app.title, local.map(|local| local.minutes), last_played],
             )?;
         }
         transaction.commit()?;
@@ -254,11 +300,15 @@ impl Store {
         Ok(rows.next().transpose()?.and_then(|seconds| u64::try_from(seconds).ok()))
     }
 
-    /// The Steam Games of `account`.
+    /// The Steam Games of `account`, with Steam's Playtime and Last Played
+    /// from a Sync, or else the fallback ones from Steam's local files.
     pub(crate) fn steam_games(&self, account: &str) -> Result<Vec<Game>, Error> {
         let connection = self.connection();
         let mut statement = connection.prepare(
-            "SELECT app_id, title, installed, playtime_minutes, last_played FROM steam_games WHERE steam_account = ?1",
+            "SELECT app_id, title, installed,
+                    COALESCE(playtime_minutes, local_playtime_minutes),
+                    CASE WHEN playtime_minutes IS NULL THEN local_last_played ELSE last_played END
+             FROM steam_games WHERE steam_account = ?1",
         )?;
         let games = statement
             .query_map([account], |row| {

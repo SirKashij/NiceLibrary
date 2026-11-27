@@ -115,8 +115,11 @@ The person's own key for Steam's Web API, which the app needs to read the Steam 
 _Avoid_: API key (alone), token, password
 
 **Limited Mode**:
-How the app runs when it cannot read the Steam Account's data from Steam: Installed Steam Games and launching work, Achievements are missing.
+How the app runs when it cannot read the Steam Account's data from Steam: Installed Steam Games and launching work, with the Fallback Playtime, and Achievements are missing. It has one of four reasons, which the app names: no key, key rejected, game details private, or Steam unreachable. It ends when a Sync succeeds.
 _Avoid_: Offline mode, basic mode
+
+**Fallback Playtime**:
+The Playtime and Last Played that Steam keeps in its local files on this computer, shown for an Installed Steam Game until a Sync brings Steam's own figures.
 
 **Launch**:
 Starting a Game from the app.

@@ -68,6 +68,8 @@ function fakeOperations({
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },

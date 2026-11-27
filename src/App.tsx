@@ -13,6 +13,7 @@ import { Tray } from './Tray';
 import { SortChoice, useLibrarySort } from './library/LibrarySort';
 import { StatusBadge } from './library/Status';
 import { LogSettings } from './settings/LogSettings';
+import { LimitedModeHint } from './LimitedModeHint';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -39,6 +40,16 @@ function Shell({ operations }: { operations: Operations }) {
   const [syncs, setSyncs] = useState(0);
   // How often the user chose a Steam Account while the app runs; each choice changes whose Sync and Library are shown.
   const [accountChoices, setAccountChoices] = useState(0);
+  // How many Syncs ended while the app runs, successful or not; each one may end or change Limited Mode.
+  const [syncsEnded, setSyncsEnded] = useState(0);
+  // How often a Sync was asked for outside the sidebar; Sync now runs it.
+  const [syncRequests, setSyncRequests] = useState(0);
+  // Whether the settings open at the section of the Steam Web API key.
+  const [toKeySettings, setToKeySettings] = useState(false);
+  const show = (next: View) => {
+    setToKeySettings(false);
+    setView(next);
+  };
 
   return (
     <div className="shell">
@@ -53,7 +64,7 @@ function Shell({ operations }: { operations: Operations }) {
               key={v.view}
               type="button"
               aria-current={view === v.view ? 'page' : undefined}
-              onClick={() => setView(v.view)}
+              onClick={() => show(v.view)}
             >
               {t(v.label)}
             </button>
@@ -61,13 +72,40 @@ function Shell({ operations }: { operations: Operations }) {
         </nav>
         <Collections operations={operations} />
         {/* Starts over for each chosen account: shows its last Sync, never one of the account chosen before. */}
-        <SyncStatus key={accountChoices} operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
+        <SyncStatus
+          key={accountChoices}
+          operations={operations}
+          requests={syncRequests}
+          onSynced={() => setSyncs((n) => n + 1)}
+          onEnded={() => setSyncsEnded((n) => n + 1)}
+        />
       </aside>
       <main className="main">
-        {view === 'library' && <LibraryView operations={operations} syncs={syncs} />}
+        {view === 'library' && (
+          <LibraryView
+            operations={operations}
+            syncs={syncs}
+            hint={
+              <LimitedModeHint
+                key={accountChoices}
+                operations={operations}
+                syncsEnded={syncsEnded}
+                onOpenKeySettings={() => {
+                  setView('settings');
+                  setToKeySettings(true);
+                }}
+                onSync={() => setSyncRequests((n) => n + 1)}
+              />
+            }
+          />
+        )}
         {view === 'statistics' && <PlaceholderPage title="nav.statistics" note="statistics.empty" />}
         {view === 'settings' && (
-          <SettingsView operations={operations} onAccountChosen={() => setAccountChoices((n) => n + 1)} />
+          <SettingsView
+            operations={operations}
+            toKeySettings={toKeySettings}
+            onAccountChosen={() => setAccountChoices((n) => n + 1)}
+          />
         )}
       </main>
       <Tray operations={operations} />
@@ -106,7 +144,19 @@ const SYNC_PROBLEMS: Record<Exclude<SyncOutcome['outcome'], 'synced'>, MessageKe
 };
 
 /** At the bottom of the sidebar: when the last successful Sync happened, and Sync now. */
-function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced: () => void }) {
+function SyncStatus({
+  operations,
+  requests,
+  onSynced,
+  onEnded,
+}: {
+  operations: Operations;
+  /** How often a Sync was asked for elsewhere; each new one runs as Sync now does. */
+  requests: number;
+  onSynced: () => void;
+  /** Hears each Sync shown here end, successful or not. */
+  onEnded: () => void;
+}) {
   const t = useT();
   const format = useFormat();
   const loaded = useOperation(operations, (o) => o.lastSync());
@@ -137,6 +187,7 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
     } else {
       setProblem(SYNC_PROBLEMS[answer.outcome]);
     }
+    onEnded();
   };
   // The latest render's handlers, for the listener that lives as long as the view.
   const handlers = useRef({ begin, settle });
@@ -157,6 +208,14 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
     operations.sync().then(settle, () => settle('failed'));
   };
 
+  // The requests this view has answered; one made before it appeared is not its to run.
+  const answered = useRef(requests);
+  useEffect(() => {
+    if (requests === answered.current) return;
+    answered.current = requests;
+    sync();
+  });
+
   return (
     <section className="sync" aria-label={t('sync.title')}>
       <p className="muted">{last === null ? t('sync.never') : t('sync.last', { time: format.dateTime(last) })}</p>
@@ -172,7 +231,7 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
   );
 }
 
-function LibraryView({ operations, syncs }: { operations: Operations; syncs: number }) {
+function LibraryView({ operations, syncs, hint }: { operations: Operations; syncs: number; hint: ReactNode }) {
   const t = useT();
   // How many Local Games were added here; each one changes the stored Library.
   const [additions, setAdditions] = useState(0);
@@ -264,6 +323,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     <>
       <div ref={libraryView} hidden={opened !== undefined}>
         <Page title="nav.library">
+          {hint}
           <AddLocalGameButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
           <LibraryToolbar filter={filter} onChange={setFilter}>
             <SortChoice sort={librarySort.sort} choose={librarySort.choose} />
@@ -390,7 +450,19 @@ function Cover({ title, src }: { title: string; src: string }) {
   );
 }
 
-function SettingsView({ operations, onAccountChosen }: { operations: Operations; onAccountChosen: () => void }) {
+function SettingsView({
+  operations,
+  toKeySettings,
+  onAccountChosen,
+}: {
+  operations: Operations;
+  /** Whether to open at the section of the Steam Web API key. */
+  toKeySettings: boolean;
+  onAccountChosen: () => void;
+}) {
+  useEffect(() => {
+    if (toKeySettings) document.getElementById('settings-key')?.scrollIntoView?.({ block: 'start' });
+  }, [toKeySettings]);
   return (
     <Page title="nav.settings">
       <SteamSettings operations={operations} onAccountChosen={onAccountChosen} />

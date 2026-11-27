@@ -189,6 +189,21 @@ export const en = {
   'log.private': 'Nothing is sent. Your key and your SteamIDs are never written to the log.',
   'log.openFolder': 'Open log folder',
   'log.openFailed': 'The log folder could not be opened.',
+  'limited.title': 'Limited mode',
+  'limited.noKey':
+    'Without a Steam Web API key, the app shows only your installed Steam games, with the playtime Steam keeps on this computer. Add a key to see all your games.',
+  'limited.keyRejected':
+    'Steam rejected your Steam Web API key, so the app shows only your installed Steam games, with the playtime Steam keeps on this computer. Replace the key in the settings.',
+  'limited.gameDetailsPrivate':
+    'Steam does not share your games because your game details are private. "Game details" is a privacy setting of your Steam profile: it decides who may see which games you own and how long you played them. Set it to "Public" in your Steam privacy settings, then sync again. Until then the app shows only your installed Steam games, with the playtime Steam keeps on this computer.',
+  'limited.steamUnreachable':
+    'Steam could not be reached, so the app shows only your installed Steam games, with the playtime Steam keeps on this computer.',
+  'limited.setUp': 'Set up key',
+  'limited.openSettings': 'Open settings',
+  'limited.openPrivacySettings': 'Open privacy settings',
+  'limited.syncAgain': 'Sync again',
+  'limited.retry': 'Try again',
+  'limited.privacyFailed': 'Your Steam privacy settings could not be opened.',
 } as const;
 
 export type MessageKey = keyof typeof en;
