@@ -162,6 +162,20 @@ fn the_unreadable_database_state_shows_the_database_folder() {
 }
 
 #[test]
+fn a_database_folder_that_cannot_be_shown_fails_and_is_written_to_the_log() {
+    let profile = Profile::new();
+    written_by_a_newer_version(&profile.database());
+    let unreadable = Store::open(&profile.database()).err().expect("refused");
+    // The stand-in opener shows no folder.
+    let core = UnreadableCore::new(stand_ins::ports(), unreadable, Log::new(profile.logs()));
+
+    let error = core.open_database_folder().unwrap_err();
+
+    assert!(error.to_string().contains("could not be opened"), "{error}");
+    assert!(profile.log_text().contains("open_database_folder"), "{}", profile.log_text());
+}
+
+#[test]
 fn the_failed_open_is_written_to_the_log() {
     let profile = Profile::new();
 

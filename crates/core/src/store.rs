@@ -864,11 +864,19 @@ impl From<rusqlite::Error> for Migration {
 }
 
 /// The reason a failure of SQLite to open or migrate the database stands for.
-/// A failure that points neither to the folder nor to permissions counts as damage.
+/// A failure to reach, lock or write the file (permissions, another program
+/// holding it, a full disk) is the folder's; a file SQLite cannot read as a
+/// database, or whose schema the migrations do not fit, is damaged.
 fn reason_for(error: &rusqlite::Error) -> UnreadableReason {
-    use rusqlite::ErrorCode::{CannotOpen, PermissionDenied, ReadOnly};
+    use rusqlite::ErrorCode::{
+        CannotOpen, DatabaseBusy, DatabaseLocked, DiskFull, FileLockingProtocolFailed, PermissionDenied, ReadOnly,
+        SystemIoFailure,
+    };
     match error.sqlite_error_code() {
-        Some(CannotOpen | PermissionDenied | ReadOnly) => UnreadableReason::FolderNotWritable,
+        Some(
+            CannotOpen | PermissionDenied | ReadOnly | DatabaseBusy | DatabaseLocked | DiskFull
+            | FileLockingProtocolFailed | SystemIoFailure,
+        ) => UnreadableReason::FolderNotWritable,
         _ => UnreadableReason::Damaged,
     }
 }

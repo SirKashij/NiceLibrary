@@ -72,14 +72,20 @@ pub enum Database {
 pub struct UnreadableCore {
     ports: Ports,
     database: UnreadableDatabase,
+    log: Log,
 }
 
 impl UnreadableCore {
     /// Writes the failure to `log` (or does without, when the Log cannot be
     /// written) and keeps what the interface needs to tell.
     pub fn new(ports: Ports, database: UnreadableDatabase, log: Log) -> Self {
-        log.write(ports.clock.now(), Level::Error, &format!("open database: {database}"));
-        Self { ports, database }
+        let core = Self { ports, database, log };
+        core.log_error(&format!("open database: {}", core.database));
+        core
+    }
+
+    fn log_error(&self, message: &str) {
+        self.log.write(self.ports.clock.now(), Level::Error, message);
     }
 
     /// The reason and the path of the database that could not be opened.
@@ -89,14 +95,20 @@ impl UnreadableCore {
 
     /// Shows the database's folder in the file manager.
     pub fn open_database_folder(&self) -> Result<(), Error> {
-        let folder = self
+        let opened = self
             .database
             .path
             .parent()
-            .ok_or_else(|| Error::new(format!("{} lies in no folder", self.database.path.display())))?;
-        self.ports
-            .opener
-            .open_folder(folder)
-            .map_err(|error| Error::new(format!("the database folder could not be opened: {error}")))
+            .ok_or_else(|| Error::new(format!("{} lies in no folder", self.database.path.display())))
+            .and_then(|folder| {
+                self.ports
+                    .opener
+                    .open_folder(folder)
+                    .map_err(|error| Error::new(format!("the database folder could not be opened: {error}")))
+            });
+        if let Err(error) = &opened {
+            self.log_error(&format!("open_database_folder: {error}"));
+        }
+        opened
     }
 }
