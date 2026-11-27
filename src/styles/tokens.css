@@ -80,4 +80,5 @@
   --color-text-muted: #5c5d59;
   --color-accent: var(--color-text);
   --color-accent-ink: var(--color-bg);
+  --color-backdrop: rgb(26 27 28 / 0.4);
 }

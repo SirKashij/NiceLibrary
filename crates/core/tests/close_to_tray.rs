@@ -15,6 +15,12 @@ use tempfile::TempDir;
 /// window needs none of them.
 struct Nothing;
 
+impl nicelibrary_core::ExecutablePicker for Nothing {
+    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
+    }
+}
+
 impl SteamLocator for Nothing {
     fn steam_folder(&self) -> Option<PathBuf> {
         None
@@ -82,6 +88,7 @@ impl Profile {
             secrets: Box::new(Nothing),
             web_api: Box::new(Nothing),
             clock: Box::new(Nothing),
+            executable_picker: Box::new(Nothing),
         };
         let store = Store::open(&self.path().join("nicelibrary.db")).unwrap();
         Core::new(ports, store, CoverCache::new(self.path().join("covers")))
