@@ -4,6 +4,7 @@
 //! about Tauri; the desktop shell is a thin adapter over these operations, and
 //! everything that varies by machine or OS reaches the core through ports.
 
+mod about;
 mod clock;
 mod collections;
 mod covers;
@@ -25,6 +26,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use serde::{Deserialize, Serialize, Serializer};
 
+pub use about::{About, AboutPage};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
@@ -624,6 +626,17 @@ impl Core {
         let index = Arc::new(steam_app_list::TitleIndex::new(self.store.searchable_steam_titles()?));
         *held = Some(Arc::clone(&index));
         Ok(index)
+    }
+
+    /// The version of the app that runs and its license, for the About dialog.
+    pub fn about(&self) -> About {
+        about::about()
+    }
+
+    /// Opens `page`, the project page or the license, in the browser.
+    pub fn open_about_page(&self, page: AboutPage) -> Result<(), Error> {
+        let url = page.url();
+        self.ports.opener.open_url(url).map_err(|error| Error::new(format!("{url} could not be opened: {error}")))
     }
 }
 

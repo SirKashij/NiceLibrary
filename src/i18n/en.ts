@@ -174,6 +174,24 @@ export const en = {
   'tray.notice':
     'When you close the window, NiceLibrary keeps running in the tray so it can go on tracking your playtime. Click its tray icon to open it again, or quit it from the icon’s menu. You can change this in the Settings under Window.',
   'tray.ok': 'OK',
+  'about.title': 'About NiceLibrary',
+  'about.version': 'Version {version}',
+  'about.license': '{license} License',
+  'about.versionFailed': 'The version could not be read.',
+  'about.projectPage': 'Project page',
+  'about.licensePage': 'License',
+  'about.openFailed': 'The page could not be opened.',
+  'about.privacy': 'Privacy',
+  'about.privacyConnections':
+    'NiceLibrary connects only to the Steam Web API, for your games, playtime and achievements; to Steam’s image servers, for covers; and to GitHub, to check for updates.',
+  'about.privacyStorage':
+    'Everything it stores stays only on this computer: your library and settings in a database in your user profile, covers in a cache folder, and your Steam Web API key in the Windows Credential Manager.',
+  'about.privacyNothingElse': 'Nothing else leaves your computer.',
+  'about.trademarks': 'Trademarks',
+  'about.trademarkNotice':
+    'Steam and the Steam logo are trademarks and/or registered trademarks of Valve Corporation in the U.S. and/or other countries.',
+  'about.notAffiliated': 'NiceLibrary is not affiliated with, endorsed or sponsored by Valve Corporation.',
+  'about.close': 'Close',
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -53,6 +53,8 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     filterLibrary: async () => library,
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
     collections: async () => [...collections].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())),

@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { AboutButton } from './About';
 import { Collections } from './Collections';
 import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
@@ -60,6 +61,7 @@ function Shell({ operations }: { operations: Operations }) {
         <Collections operations={operations} />
         {/* Starts over for each chosen account: shows its last Sync, never one of the account chosen before. */}
         <SyncStatus key={accountChoices} operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
+        <AboutButton operations={operations} />
       </aside>
       <main className="main">
         {view === 'library' && <LibraryView operations={operations} syncs={syncs} />}

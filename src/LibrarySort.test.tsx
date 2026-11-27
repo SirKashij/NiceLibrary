@@ -67,6 +67,8 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     librarySort: async () => stored,
     chooseLibrarySort: async (sort) => {
       chosen.push(sort);

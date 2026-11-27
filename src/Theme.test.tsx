@@ -34,6 +34,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     filterLibrary: async () => [],
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

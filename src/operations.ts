@@ -267,7 +267,22 @@ export interface Operations {
   librarySort(): Promise<LibrarySort>;
   /** Makes `sort` the order of the Library, also after a restart. */
   chooseLibrarySort(sort: LibrarySort): Promise<void>;
+  /** The version of the app that runs and its license, for the About dialog. */
+  about(): Promise<About>;
+  /** Opens the project page or the license in the browser. */
+  openAboutPage(page: AboutPage): Promise<void>;
 }
+
+/** What the About dialog tells of the app itself. Mirrors `About` in crates/core. */
+export interface About {
+  /** Such as `0.1.0`. */
+  version: string;
+  /** The SPDX identifier of the license, such as `MIT`. */
+  license: string;
+}
+
+/** A page the About dialog links to. Mirrors `AboutPage` in crates/core. */
+export type AboutPage = 'project' | 'license';
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
 export interface TrayMenuTexts {
@@ -333,4 +348,6 @@ export const tauriOperations: Operations = {
   showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
   librarySort: () => invoke<LibrarySort>('library_sort'),
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
+  about: () => invoke<About>('about'),
+  openAboutPage: (page) => invoke<void>('open_about_page', { page }),
 };

@@ -176,4 +176,23 @@ export const de: Record<MessageKey, string> = {
   'tray.notice':
     'Wenn du das Fenster schließt, läuft NiceLibrary im Infobereich der Taskleiste weiter und erfasst weiter deine Spielzeit. Ein Klick auf das Symbol dort öffnet es wieder, über sein Menü beendest du es. Ändern kannst du das in den Einstellungen unter Fenster.',
   'tray.ok': 'OK',
+  'about.title': 'Über NiceLibrary',
+  'about.version': 'Version {version}',
+  'about.license': '{license}-Lizenz',
+  'about.versionFailed': 'Die Version konnte nicht gelesen werden.',
+  'about.projectPage': 'Projektseite',
+  'about.licensePage': 'Lizenz',
+  'about.openFailed': 'Die Seite konnte nicht geöffnet werden.',
+  'about.privacy': 'Datenschutz',
+  'about.privacyConnections':
+    'NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Erfolge, mit den Bildservern von Steam für Cover und mit GitHub, um nach Updates zu suchen.',
+  'about.privacyStorage':
+    'Alles, was es speichert, bleibt nur auf diesem Computer: deine Bibliothek und Einstellungen in einer Datenbank in deinem Benutzerprofil, Cover in einem Cache-Ordner und dein Steam-Web-API-Schlüssel in der Windows-Anmeldeinformationsverwaltung.',
+  'about.privacyNothingElse': 'Sonst verlässt nichts deinen Computer.',
+  'about.trademarks': 'Marken',
+  'about.trademarkNotice':
+    'Steam und das Steam-Logo sind Marken und/oder eingetragene Marken der Valve Corporation in den USA und/oder anderen Ländern.',
+  'about.notAffiliated':
+    'NiceLibrary steht in keiner Verbindung zur Valve Corporation und wird von ihr weder unterstützt noch gesponsert.',
+  'about.close': 'Schließen',
 };
