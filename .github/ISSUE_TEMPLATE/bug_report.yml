@@ -52,4 +52,4 @@ body:
     id: more
     attributes:
       label: Anything else
-      description: Screenshots or error messages. Check them for personal data and game artwork you do not want to share before you attach them.
+      description: Screenshots, error messages or the log file (Settings, Log file, Open log folder). The log leaves out your key and SteamIDs, but read it and any screenshot for personal data and game artwork you do not want to share before you attach it.
