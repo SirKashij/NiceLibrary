@@ -87,6 +87,8 @@ export const de: Record<MessageKey, string> = {
   'sort.notKept': 'Die Sortierung konnte nicht für den nächsten Start gespeichert werden.',
   'format.minutes': '{n} Min.',
   'format.hours': '{n} Std.',
+  'format.hoursMinutes': '{hours} Std. {minutes} Min.',
+  'format.below': '< {n}',
   'sync.title': 'Synchronisierung',
   'sync.now': 'Jetzt synchronisieren',
   'sync.syncing': 'Wird synchronisiert …',
@@ -300,8 +302,8 @@ export const de: Record<MessageKey, string> = {
   'adjustment.heading': 'Spielzeit-Korrektur',
   'adjustment.none':
     'Keine Korrektur. Trag Zeit nach, die du gespielt hast, bevor NiceLibrary dieses Spiel erfasst hat, oder zieh Zeit ab, die nicht zählen soll.',
-  'adjustment.added': '{amount} zur Zeit aus Sitzungen hinzugefügt',
-  'adjustment.removed': '{amount} von der Zeit aus Sitzungen abgezogen',
+  'adjustment.added': '{amount} zur Zeit aus Spielsitzungen hinzugefügt',
+  'adjustment.removed': '{amount} von der Zeit aus Spielsitzungen abgezogen',
   'adjustment.direction': 'Zeit für {title} hinzufügen oder abziehen',
   'adjustment.add': 'Zeit hinzufügen',
   'adjustment.remove': 'Zeit abziehen',
@@ -316,7 +318,6 @@ export const de: Record<MessageKey, string> = {
   'sessions.of': 'Spielsitzungen von {title}',
   'sessions.none': 'Noch keine Spielsitzungen. Eine Spielsitzung wird aufgezeichnet, sobald {title} läuft, egal wie du es startest.',
   'sessions.running': 'Läuft',
-  'sessions.hoursMinutes': '{hours} Std. {minutes} Min.',
   'sessions.underAMinute': 'unter 1 Min.',
   'sessions.loadFailed': 'Die Spielsitzungen von {title} konnten nicht gelesen werden.',
   'achievements.title': 'Trophäen',
@@ -372,7 +373,7 @@ export const de: Record<MessageKey, string> = {
   'about.openFailed': 'Die Seite konnte nicht geöffnet werden.',
   'about.privacy': 'Datenschutz',
   'about.privacyConnections':
-    'NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Trophäen, mit den Bildservern von Steam für Cover und mit GitHub, um nach Updates zu suchen.',
+    'NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Trophäen und mit den Bildservern von Steam für Cover.',
   'about.privacyStorage':
     'Alles, was es speichert, bleibt nur auf diesem Computer: deine Bibliothek und Einstellungen in einer Datenbank in deinem Benutzerprofil, Cover in einem Cache-Ordner und dein Steam-Web-API-Schlüssel in der Windows-Anmeldeinformationsverwaltung.',
   'about.privacyNothingElse': 'Sonst verlässt nichts deinen Computer.',
@@ -399,7 +400,7 @@ export const de: Record<MessageKey, string> = {
   'coverMatch.notSaved': '{title} wurde hinzugefügt, aber sein Steam-Cover konnte nicht gespeichert werden. Wähle es auf seiner Seite.',
   'settings.export': 'Datensicherung',
   'export.what':
-    'Exportiere deine Daten in eine Datei, als Sicherung oder für den Umzug auf einen anderen Computer: deine lokalen Spiele mit ihren Startoptionen und den Coverbildern, die du gewählt hast, Sitzungen, Spielzeit-Korrekturen, Fortschritt, Status, Favoriten, ausgeblendete Spiele, Sammlungen und Einstellungen. Was von Steam stammt, holt die App wieder von Steam.',
+    'Exportiere deine Daten in eine Datei, als Sicherung oder für den Umzug auf einen anderen Computer: deine lokalen Spiele mit ihren Startoptionen und den Coverbildern, die du gewählt hast, Spielsitzungen, Spielzeit-Korrekturen, Fortschritt, Status, Favoriten, ausgeblendete Spiele, Sammlungen und Einstellungen. Was von Steam stammt, holt die App wieder von Steam.',
   'export.noKey': 'Dein Steam-Web-API-Schlüssel wird nie exportiert.',
   'export.button': 'Daten exportieren …',
   'export.running': 'Wird exportiert …',
@@ -409,7 +410,7 @@ export const de: Record<MessageKey, string> = {
   'import.button': 'Daten importieren …',
   'import.question': 'Deine Daten durch eine Exportdatei ersetzen?',
   'import.replaces':
-    'Der Import ersetzt deine lokalen Spiele mit ihren Startoptionen, Coverbildern und ihrem Fortschritt, deine Sitzungen, Spielzeit-Korrekturen, Status, Favoriten, ausgeblendeten Spiele, Sammlungen und Einstellungen durch die aus der Datei.',
+    'Der Import ersetzt deine lokalen Spiele mit ihren Startoptionen, Coverbildern und ihrem Fortschritt, deine Spielsitzungen, Spielzeit-Korrekturen, Status, Favoriten, ausgeblendeten Spiele, Sammlungen und Einstellungen durch die aus der Datei.',
   'import.lost': 'Was jetzt hier ist, geht verloren. Exportiere es vorher, wenn du es behalten willst.',
   'import.keeps': 'Deine Steam-Spiele bleiben, denn sie kommen von Steam, und dein Steam-Web-API-Schlüssel bleibt unberührt.',
   'import.confirm': 'Datei wählen und ersetzen',

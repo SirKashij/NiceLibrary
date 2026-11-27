@@ -267,7 +267,7 @@ describe('Favorites', () => {
 
     await user.click(within(await card('Portal 2')).getByRole('button', { name: 'Details for Portal 2' }));
     const detail = await screen.findByRole('region', { name: 'Portal 2' });
-    await user.click(within(detail).getByRole('button', { name: 'Favorite Portal 2', pressed: false }));
+    await user.click(await within(detail).findByRole('button', { name: 'Favorite Portal 2', pressed: false }));
 
     await within(detail).findByRole('button', { name: 'Favorite Portal 2', pressed: true });
     await expect.poll(() => favoritesEntry()).toHaveAccessibleName('Favorites, 1 game');
@@ -282,6 +282,32 @@ describe('Favorites', () => {
 
     await user.click(screen.getByRole('button', { name: 'Back to the library' }));
     expect(within(await card('Portal 2')).getByRole('button', { name: 'Favorite Portal 2' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('is not offered on the detail page of a Hidden Game, which cannot be marked', async () => {
+    const user = userEvent.setup();
+    const { operations, marks } = fakeOperations();
+    // The core answers which Game the detail page shows only when the test lets it.
+    let answer = () => {};
+    const answered = new Promise<void>((resolve) => (answer = resolve));
+    const game = operations.game;
+    operations.game = async (gameId) => {
+      await answered;
+      return game(gameId);
+    };
+    render(<App operations={operations} lang="en" />);
+    const portal = await card('Portal 2');
+    // Hidden after the Library was shown, so its card is still there.
+    await operations.hideGame('steam:620');
+
+    await user.click(within(portal).getByRole('button', { name: 'Details for Portal 2' }));
+    const detail = await screen.findByRole('region', { name: 'Portal 2' });
+
+    expect(within(detail).queryByRole('button', { name: 'Favorite Portal 2' })).not.toBeInTheDocument();
+    answer();
+    await within(detail).findByText('Portal 2 is no longer in your library.');
+    expect(within(detail).queryByRole('button', { name: 'Favorite Portal 2' })).not.toBeInTheDocument();
+    expect(marks).toEqual([]);
   });
 
   it('says so when a Game could not be marked, and keeps it as it was', async () => {

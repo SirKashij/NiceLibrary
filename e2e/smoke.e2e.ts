@@ -13,13 +13,21 @@ describe('the built app', () => {
 
     expect(await app.text('main h1')).toBe(t['nav.library']);
     // The note appears only once `read_installed_games` answered with no
-    // Games; a machine with Steam Games shows the list instead.
-    const library = await app.text('main .note, main .games');
+    // Games; a machine with Steam Games shows the list instead. Both stand
+    // directly in the Library, below any Limited Mode hint with its own note.
+    const library = await app.textIn('library-title', ':scope > .note, :scope > .games, :scope > .game-list');
     const games = await app.execute<string[]>(
       'return Array.from(document.querySelectorAll("main .game-title")).map((h) => h.textContent)',
     );
     if (games.length === 0) expect(library).toBe(t['library.empty']);
     else expect(games.every((title) => title.trim() !== ''), games.join(', ')).toBe(true);
+    // Without a Steam Web API key, as on CI, the hint says why the app runs in Limited Mode.
+    const hint = await app.execute<string | null>(
+      'return document.querySelector(\'[aria-labelledby="limited-mode-title"] > .note\')?.textContent ?? null',
+    );
+    if (hint !== null) {
+      expect([t['limited.noKey'], t['limited.keyRejected'], t['limited.gameDetailsPrivate'], t['limited.steamUnreachable']]).toContain(hint);
+    }
   });
 
   it('keeps its database in the user profile', () => {

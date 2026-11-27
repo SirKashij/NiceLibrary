@@ -76,6 +76,9 @@ export function GameDetail({
   const headingId = useId();
   // `null` once the core answers that the Game is no longer in the Library.
   const [game, setGame] = useState<Game | null>(opened);
+  // Whether the core answered that the Game is in the Library. Only then can
+  // it be marked as a Favorite: a Hidden Game, for one, cannot.
+  const [inLibrary, setInLibrary] = useState(false);
   const [statusFailed, setStatusFailed] = useState(false);
   // Only the answer to the latest choice counts; an earlier one may answer later.
   const latestStatus = useRef(0);
@@ -96,7 +99,11 @@ export function GameDetail({
     let active = true;
     // A Game that cannot be read now stays as shown; the next answer replaces it.
     operations.game(opened.id).then(
-      (answer) => active && setGame(answer),
+      (answer) => {
+        if (!active) return;
+        setGame(answer);
+        setInLibrary(answer !== null);
+      },
       () => {},
     );
     return () => {
@@ -150,7 +157,7 @@ export function GameDetail({
               <CoverMatchChoice operations={operations} game={game} onCoverChanged={coverChanged} />
             </>
           )}
-          {game && <FavoriteToggle game={game} onToggle={onFavorite} />}
+          {game && inLibrary && <FavoriteToggle game={game} onToggle={onFavorite} />}
         </div>
         <div className="game-detail-info">
           <h1 id={headingId} ref={heading} tabIndex={-1}>

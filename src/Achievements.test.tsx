@@ -288,15 +288,17 @@ describe('The Rarity of each Achievement', () => {
 
     expect(finish).toHaveTextContent('Unlocked by 41.0% of players');
     expect(speedRun).toHaveTextContent('Unlocked by 8.1% of players');
-    expect(partner).toHaveTextContent('Unlocked by 0.0% of players');
+    // Below 0.05 % it would round to 0.0 %, as if nobody had unlocked it.
+    expect(partner).toHaveTextContent('Unlocked by <0.1% of players');
   });
 
   it('is written the German way for a German interface', async () => {
-    const [finish, speedRun] = await items('de');
+    const [finish, speedRun, partner] = await items('de');
 
     // German puts a space before the percent sign and writes a decimal comma.
     expect(finish).toHaveTextContent(/Von 41,0\s%\sder Spieler freigeschaltet/);
     expect(speedRun).toHaveTextContent(/Von 8,1\s%\sder Spieler freigeschaltet/);
+    expect(partner).toHaveTextContent(/Von < 0,1\s%\sder Spieler freigeschaltet/);
   });
 
   it('is not shown, not even as zero, when it is not known', async () => {

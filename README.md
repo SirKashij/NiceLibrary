@@ -20,9 +20,9 @@ The app is in early development; there is no release yet.
 
 ## Installing
 
-Releases will be published on [GitHub Releases](https://github.com/SirKashij/NiceLibrary/releases) as an installer for Windows 10 (22H2) and 11, 64-bit. Each release lists the SHA-256 checksum of its installer.
+Releases will be published on [GitHub Releases](https://github.com/SirKashij/NiceLibrary/releases) as an installer for Windows 10 (22H2) and 11, 64-bit. Listing the SHA-256 checksum of the installer with each release is planned, but the release process that publishes it is not set up yet.
 
-The first release is not code-signed (see [ADR-0006](docs/adr/0006-unsigned-first-release-then-signpath.md)), so Windows SmartScreen will probably warn with "Windows protected your PC" when you start the installer. To check that you have the genuine file, compare its checksum with the one on the release page:
+The first release is not code-signed (see [ADR-0006](docs/adr/0006-unsigned-first-release-then-signpath.md)), so Windows SmartScreen will probably warn with "Windows protected your PC" when you start the installer. Once a release page lists the checksum, you can check that you have the genuine file by comparing it with the checksum of your download:
 
 ```powershell
 Get-FileHash .\NiceLibrary_0.1.0_x64-setup.exe -Algorithm SHA256
@@ -32,7 +32,7 @@ If the two match, choose **More info**, then **Run anyway**. If they do not matc
 
 ## Privacy
 
-NiceLibrary connects only to the Steam Web API, for your games, playtime and achievements; to Steam’s image servers, for covers; and to GitHub, to check for updates.
+NiceLibrary connects only to the Steam Web API, for your games, playtime and achievements, and to Steam’s image servers, for covers.
 
 Everything it stores stays only on this computer: your library and settings in a database in your user profile, covers in a cache folder, and your Steam Web API key in the Windows Credential Manager.
 
@@ -44,7 +44,6 @@ In detail:
 | --- | --- |
 | `api.steampowered.com` | The Steam Web API, with your own key: your Games, Playtime and Achievements during a Sync, a check of a newly entered key, and Steam's app list for Cover Matches |
 | `shared.steamstatic.com` | Steam's image servers: the Covers of your Games |
-| `github.com` | The update check (not built yet) |
 
 The page where you create a Steam Web API key opens in your own browser; the app does not load it. Covers are downloaded at runtime and kept only in the cache on your computer; no game artwork is part of this repo or the installer.
 
@@ -94,9 +93,9 @@ Die App ist in früher Entwicklung; es gibt noch kein Release.
 
 ### Installieren
 
-Releases erscheinen auf [GitHub Releases](https://github.com/SirKashij/NiceLibrary/releases) als Installer für Windows 10 (22H2) und 11, 64 Bit. Zu jedem Release steht die SHA-256-Prüfsumme seines Installers.
+Releases erscheinen auf [GitHub Releases](https://github.com/SirKashij/NiceLibrary/releases) als Installer für Windows 10 (22H2) und 11, 64 Bit. Geplant ist, zu jedem Release die SHA-256-Prüfsumme seines Installers anzugeben; der Release-Ablauf, der sie veröffentlicht, ist aber noch nicht eingerichtet.
 
-Das erste Release ist nicht codesigniert (siehe [ADR-0006](docs/adr/0006-unsigned-first-release-then-signpath.md)), deshalb warnt Windows SmartScreen beim Start des Installers wahrscheinlich mit „Der Computer wurde durch Windows geschützt“. Um zu prüfen, dass du die echte Datei hast, vergleiche ihre Prüfsumme mit der auf der Release-Seite:
+Das erste Release ist nicht codesigniert (siehe [ADR-0006](docs/adr/0006-unsigned-first-release-then-signpath.md)), deshalb warnt Windows SmartScreen beim Start des Installers wahrscheinlich mit „Der Computer wurde durch Windows geschützt“. Sobald die Release-Seite die Prüfsumme angibt, kannst du prüfen, ob du die echte Datei hast, indem du sie mit der Prüfsumme deines Downloads vergleichst:
 
 ```powershell
 Get-FileHash .\NiceLibrary_0.1.0_x64-setup.exe -Algorithm SHA256
@@ -106,7 +105,7 @@ Stimmen beide überein, wähle **Weitere Informationen** und dann **Trotzdem aus
 
 ### Datenschutz
 
-NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Trophäen, mit den Bildservern von Steam für Cover und mit GitHub, um nach Updates zu suchen.
+NiceLibrary verbindet sich nur mit der Steam Web API für deine Spiele, Spielzeit und Trophäen und mit den Bildservern von Steam für Cover.
 
 Alles, was es speichert, bleibt nur auf diesem Computer: deine Bibliothek und Einstellungen in einer Datenbank in deinem Benutzerprofil, Cover in einem Cache-Ordner und dein Steam-Web-API-Schlüssel in der Windows-Anmeldeinformationsverwaltung.
 
@@ -118,7 +117,6 @@ Im Einzelnen:
 | --- | --- |
 | `api.steampowered.com` | Die Steam Web API mit deinem eigenen Schlüssel: deine Spiele, Spielzeit und Trophäen bei einer Synchronisierung, die Prüfung eines neu eingegebenen Schlüssels und Steams App-Liste für die Cover-Zuordnung |
 | `shared.steamstatic.com` | Die Bildserver von Steam: die Cover deiner Spiele |
-| `github.com` | Die Suche nach Updates (noch nicht gebaut) |
 
 Die Seite, auf der du einen Steam-Web-API-Schlüssel anlegst, öffnet sich in deinem eigenen Browser; die App lädt sie nicht. Cover werden zur Laufzeit heruntergeladen und nur im Cache auf deinem Rechner abgelegt; kein Spielbild ist Teil dieses Repos oder des Installers.
 

@@ -179,7 +179,7 @@ describe('The Playtime Adjustment of a Local Game', () => {
     await user.type(within(adjustment).getByLabelText('Hours'), '10');
     await user.click(within(adjustment).getByRole('button', { name: 'Save adjustment' }));
 
-    expect(await within(adjustment).findByText('10 h added to the time from sessions')).toBeInTheDocument();
+    expect(await within(adjustment).findByText('10 h 0 min added to the time from sessions')).toBeInTheDocument();
     expect(calls.adjusted).toEqual([['local:1', 600]]);
     expect(within(page).getByLabelText('About Celeste')).toHaveTextContent('Playtime10.8 h');
   });
@@ -206,7 +206,7 @@ describe('The Playtime Adjustment of a Local Game', () => {
     const { user, page } = await openDetail('Celeste');
     const adjustment = within(page).getByRole('region', { name: 'Playtime adjustment' });
 
-    expect(await within(adjustment).findByText('2.5 h added to the time from sessions')).toBeInTheDocument();
+    expect(await within(adjustment).findByText('2 h 30 min added to the time from sessions')).toBeInTheDocument();
     expect(within(adjustment).getByLabelText('Hours')).toHaveValue(2);
     expect(within(adjustment).getByLabelText('Minutes')).toHaveValue(30);
     expect(within(adjustment).getByRole('button', { name: 'Add time' })).toHaveAttribute('aria-pressed', 'true');
@@ -215,7 +215,7 @@ describe('The Playtime Adjustment of a Local Game', () => {
     await user.type(within(adjustment).getByLabelText('Hours'), '3');
     await user.click(within(adjustment).getByRole('button', { name: 'Save adjustment' }));
 
-    expect(await within(adjustment).findByText('3.5 h added to the time from sessions')).toBeInTheDocument();
+    expect(await within(adjustment).findByText('3 h 30 min added to the time from sessions')).toBeInTheDocument();
     expect(calls.adjusted).toEqual([['local:1', 210]]);
   });
 
@@ -224,7 +224,7 @@ describe('The Playtime Adjustment of a Local Game', () => {
     render(<App operations={operations} lang="en" />);
     const { user, page } = await openDetail('Celeste');
     const adjustment = within(page).getByRole('region', { name: 'Playtime adjustment' });
-    await within(adjustment).findByText('2 h added to the time from sessions');
+    await within(adjustment).findByText('2 h 0 min added to the time from sessions');
 
     await user.click(within(adjustment).getByRole('button', { name: 'Clear adjustment' }));
 
@@ -290,14 +290,14 @@ describe('The Playtime Adjustment of a Local Game', () => {
     const { user, page } = await openDetail('Celeste', 'Details zu Celeste');
     const adjustment = within(page).getByRole('region', { name: 'Spielzeit-Korrektur' });
 
-    expect(await within(adjustment).findByText('1,5 Std. zur Zeit aus Sitzungen hinzugefügt')).toBeInTheDocument();
+    expect(await within(adjustment).findByText('1 Std. 30 Min. zur Zeit aus Spielsitzungen hinzugefügt')).toBeInTheDocument();
     await user.click(within(adjustment).getByRole('button', { name: 'Zeit abziehen' }));
     await user.clear(within(adjustment).getByLabelText('Stunden'));
     await user.clear(within(adjustment).getByLabelText('Minuten'));
     await user.type(within(adjustment).getByLabelText('Minuten'), '10');
     await user.click(within(adjustment).getByRole('button', { name: 'Korrektur speichern' }));
 
-    expect(await within(adjustment).findByText('10 Min. von der Zeit aus Sitzungen abgezogen')).toBeInTheDocument();
+    expect(await within(adjustment).findByText('10 Min. von der Zeit aus Spielsitzungen abgezogen')).toBeInTheDocument();
     expect(calls.adjusted).toEqual([['local:1', -10]]);
     expect(within(adjustment).getByRole('button', { name: 'Korrektur entfernen' })).toBeInTheDocument();
   });

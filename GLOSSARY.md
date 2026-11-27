@@ -75,11 +75,11 @@ _Avoid_: State
 
 **Statistics**:
 Figures over the Library that the core works out: total Playtime, unlocked Achievements of all and their share, the number of Games at 100 % Progress, the number of Games per Status, the Weekly Playtime and the five most played Games by Playtime. Hidden Games count in none of them.
+_Avoid_: Stats, analytics
 
 **Weekly Playtime**:
 How long recorded Sessions ran in each of the last eight weeks, each week being the seven days up to a moment, so the latest ends now. A Session across the end of a week counts in both with its share. It counts only Sessions the app recorded, never Steam's Playtime figure or a Playtime Adjustment, since those do not say when a Game was played.
 _Avoid_: Weekly stats, activity
-_Avoid_: Stats, analytics
 
 ### Organising
 

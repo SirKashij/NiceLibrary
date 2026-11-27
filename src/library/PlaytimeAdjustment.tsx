@@ -102,7 +102,7 @@ export function PlaytimeAdjustment({
       : adjustment === null
         ? t('adjustment.none')
         : t(adjustment > 0 ? 'adjustment.added' : 'adjustment.removed', {
-            amount: format.playtime(Math.abs(adjustment)),
+            amount: format.duration(Math.abs(adjustment)),
           });
 
   return (

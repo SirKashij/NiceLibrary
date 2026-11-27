@@ -477,7 +477,7 @@ function LibraryView({
   return (
     <>
       <div ref={libraryView} hidden={opened !== undefined || showingHidden}>
-        <Page title={favoritesOnly ? 'favorites.title' : 'nav.library'} heading={collection?.name}>
+        <Page title={favoritesOnly ? 'favorites.title' : 'nav.library'} heading={collection?.name} labelId="library-title">
           {hint}
           <div className="library-actions">
             <AddLocalGameButton operations={operations} onAdded={changed} />
@@ -1018,12 +1018,26 @@ function SteamWebApiKeySettings({ operations }: { operations: Operations }) {
   );
 }
 
-/** A page under its title; `heading`, when given, is shown in place of the title's text. */
-function Page({ title, heading, children }: { title: MessageKey; heading?: string; children: ReactNode }) {
+/**
+ * A page under its title; `heading`, when given, is shown in place of the
+ * title's text. With `labelId` the page is a region named by its heading,
+ * whose id is `labelId`.
+ */
+function Page({
+  title,
+  heading,
+  labelId,
+  children,
+}: {
+  title: MessageKey;
+  heading?: string;
+  labelId?: string;
+  children: ReactNode;
+}) {
   const t = useT();
   return (
-    <section className="page">
-      <h1>{heading ?? t(title)}</h1>
+    <section className="page" aria-labelledby={labelId}>
+      <h1 id={labelId}>{heading ?? t(title)}</h1>
       {children}
     </section>
   );

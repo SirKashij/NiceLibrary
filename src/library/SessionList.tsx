@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react';
-import { useFormat, useT } from '../i18n';
+import { useFormat, useT, type Format } from '../i18n';
 import type { Game, Operations, Session } from '../operations';
 
 /** How often the list is read again while one of its Sessions runs, so its length keeps growing. */
@@ -58,7 +58,7 @@ export function SessionList({ operations, game, changes }: { operations: Operati
           {sessions.map((session) => (
             <li key={session.startedAt} data-running={session.running}>
               <time dateTime={new Date(session.startedAt * 1000).toISOString()}>{format.dateTime(session.startedAt)}</time>
-              <span className="session-length">{sessionLength(t, format.count, session.seconds)}</span>
+              <span className="session-length">{sessionLength(t, format, session.seconds)}</span>
               {session.running && <span className="session-running">{t('sessions.running')}</span>}
             </li>
           ))}
@@ -69,9 +69,7 @@ export function SessionList({ operations, game, changes }: { operations: Operati
 }
 
 /** A Session's length in hours and minutes, or minutes alone below an hour. */
-function sessionLength(t: Translate, count: (n: number) => string, seconds: number): string {
+function sessionLength(t: Translate, format: Format, seconds: number): string {
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 1) return t('sessions.underAMinute');
-  if (minutes < 60) return t('format.minutes', { n: count(minutes) });
-  return t('sessions.hoursMinutes', { hours: count(Math.floor(minutes / 60)), minutes: count(minutes % 60) });
+  return minutes < 1 ? t('sessions.underAMinute') : format.duration(minutes);
 }

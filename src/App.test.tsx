@@ -155,6 +155,14 @@ describe('Installed Steam Games in the Library', () => {
     expect(screen.queryByText(/Your library is empty/)).not.toBeInTheDocument();
   });
 
+  it('is a region named after its heading, holding its Games or the note that it is empty', async () => {
+    render(<App operations={{ ...fakeOperations([]), limitedMode: async () => ({ outcome: 'noKey' }) }} lang="en" />);
+
+    const library = await screen.findByRole('region', { name: 'Library' });
+
+    expect(await within(library).findByText(/Your library is empty/)).toBeInTheDocument();
+  });
+
   it('keeps the stored Library and says so when Steam cannot be read again', async () => {
     render(
       <App

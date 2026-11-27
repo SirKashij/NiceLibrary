@@ -85,6 +85,8 @@ export const en = {
   'sort.notKept': 'The sort order could not be saved for the next start.',
   'format.minutes': '{n} min',
   'format.hours': '{n} h',
+  'format.hoursMinutes': '{hours} h {minutes} min',
+  'format.below': '<{n}',
   'sync.title': 'Sync',
   'sync.now': 'Sync now',
   'sync.syncing': 'Syncing…',
@@ -314,7 +316,6 @@ export const en = {
   'sessions.of': 'Sessions of {title}',
   'sessions.none': 'No sessions yet. A session is recorded whenever {title} runs, however you start it.',
   'sessions.running': 'Running',
-  'sessions.hoursMinutes': '{hours} h {minutes} min',
   'sessions.underAMinute': 'under 1 min',
   'sessions.loadFailed': 'The sessions of {title} could not be read.',
   'achievements.title': 'Achievements',
@@ -369,7 +370,7 @@ export const en = {
   'about.openFailed': 'The page could not be opened.',
   'about.privacy': 'Privacy',
   'about.privacyConnections':
-    'NiceLibrary connects only to the Steam Web API, for your games, playtime and achievements; to Steam’s image servers, for covers; and to GitHub, to check for updates.',
+    'NiceLibrary connects only to the Steam Web API, for your games, playtime and achievements, and to Steam’s image servers, for covers.',
   'about.privacyStorage':
     'Everything it stores stays only on this computer: your library and settings in a database in your user profile, covers in a cache folder, and your Steam Web API key in the Windows Credential Manager.',
   'about.privacyNothingElse': 'Nothing else leaves your computer.',
