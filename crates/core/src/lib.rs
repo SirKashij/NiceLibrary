@@ -4,6 +4,7 @@
 //! about Tauri; the desktop shell is a thin adapter over these operations, and
 //! everything that varies by machine or OS reaches the core through ports.
 
+mod autostart;
 mod clock;
 mod collections;
 mod covers;
@@ -12,6 +13,8 @@ mod launch;
 mod local_covers;
 mod local_games;
 mod library_filter;
+mod log;
+mod status;
 mod steam;
 mod steam_app_list;
 mod steam_web_api;
@@ -26,6 +29,9 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 
 use serde::{Deserialize, Serialize, Serializer};
 
+use log::Level;
+
+pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
@@ -33,6 +39,8 @@ pub use launch::{Launch, OpenError, Opener};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
+pub use log::Log;
+pub use status::Status;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_app_list::{AutomaticSteamAppListFetch, SteamAppList, SteamAppListFetch, SteamTitle};
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
@@ -66,6 +74,9 @@ pub struct Game {
     /// Last Played, in seconds since the Unix epoch; `None` for never or
     /// not known.
     pub last_played: Option<u64>,
+    /// The person's own judgement of where they stand with the Game;
+    /// Unplayed until they set it. No Sync changes it.
+    pub status: Status,
 }
 
 impl Game {
@@ -79,6 +90,7 @@ impl Game {
             installed,
             playtime_minutes: None,
             last_played: None,
+            status: Status::Unplayed,
         }
     }
 }
@@ -123,6 +135,7 @@ pub struct Ports {
     pub secrets: Box<dyn SecretStore>,
     pub web_api: Box<dyn WebApi>,
     pub clock: Box<dyn Clock>,
+    pub autostart: Box<dyn Autostart>,
     pub executable_picker: Box<dyn ExecutablePicker>,
     pub icon_extractor: Box<dyn IconExtractor>,
     pub image_picker: Box<dyn ImagePicker>,
@@ -143,6 +156,8 @@ pub struct Core {
     steam_app_list_soon: Wakeup,
     /// The names lookups search, loaded from the store at the first lookup after a fetch.
     steam_title_index: Mutex<Option<Arc<steam_app_list::TitleIndex>>>,
+    /// Where errors and notable events are written.
+    log: Log,
 }
 
 impl Core {
@@ -156,12 +171,59 @@ impl Core {
             fetching_steam_app_list: Mutex::new(()),
             steam_app_list_soon: Wakeup::new(),
             steam_title_index: Mutex::new(None),
+            log: Log::none(),
         }
+    }
+
+    /// This core, writing errors and notable events to `log`; without it,
+    /// the core keeps no Log.
+    pub fn with_log(mut self, log: Log) -> Self {
+        self.log = log;
+        self
+    }
+
+    /// Writes the error of `operation` to the Log, if it failed, and answers `result`.
+    fn logged<T>(&self, operation: &str, result: Result<T, Error>) -> Result<T, Error> {
+        if let Err(error) = &result {
+            self.log.write(self.ports.clock.now(), Level::Error, &format!("{operation}: {error}"));
+        }
+        result
+    }
+
+    /// Like [`Self::logged`], and writes the outcome as a notable event when nothing failed.
+    fn logged_outcome<T: Serialize>(&self, operation: &str, result: Result<T, Error>) -> Result<T, Error> {
+        if let Ok(outcome) = &result {
+            self.note(&format!("{operation}: {}", outcome_name(outcome)));
+        }
+        self.logged(operation, result)
+    }
+
+    /// Writes a notable event to the Log.
+    fn note(&self, event: &str) {
+        self.log.write(self.ports.clock.now(), Level::Info, event);
+    }
+
+    /// Shows the folder of the Log in the file manager, so the user can
+    /// attach a log file to a bug report themselves. Nothing in the Log is
+    /// ever sent by the app.
+    pub fn open_log_folder(&self) -> Result<(), Error> {
+        let opened = self.log.folder().and_then(|folder| {
+            self.ports
+                .opener
+                .open_folder(folder)
+                .map_err(|error| Error::new(format!("the log folder could not be opened: {error}")))
+        });
+        self.logged("open_log_folder", opened)
     }
 
     /// All Games in the Library, as last stored, ordered by title. Answers
     /// from the store alone, so a start shows the Library at once.
     pub fn library(&self) -> Result<Vec<Game>, Error> {
+        self.logged("library", self.stored_library())
+    }
+
+    /// [`Self::library`], without writing to the Log.
+    fn stored_library(&self) -> Result<Vec<Game>, Error> {
         // Until the user chooses, the account read last: it holds the Games.
         let account = self.chosen_steam_account_or(|| self.store.last_read_steam_account())?;
         let mut games = match account {
@@ -169,6 +231,10 @@ impl Core {
             None => Vec::new(),
         };
         games.extend(self.store.local_games()?.into_iter().map(|game| Game::local(game.id, game.title)));
+        let statuses = self.store.statuses()?;
+        for game in &mut games {
+            game.status = statuses.get(&game.id).copied().unwrap_or_default();
+        }
         games.sort_by(library_filter::by_title);
         Ok(games)
     }
@@ -176,29 +242,53 @@ impl Core {
     /// The Games in the Library that match `filter`, as last stored, in the
     /// order `filter` asks for.
     pub fn filter_library(&self, filter: &LibraryFilter) -> Result<Vec<Game>, Error> {
-        let mut games = self.library()?;
-        games.retain(|game| filter.matches(game));
-        filter.sort.sort(&mut games);
-        Ok(games)
+        let games = self.stored_library().map(|mut games| {
+            games.retain(|game| filter.matches(game));
+            filter.sort.sort(&mut games);
+            games
+        });
+        self.logged("filter_library", games)
     }
 
     /// The order the user chose for the Library; recently played until they
     /// choose.
     pub fn library_sort(&self) -> Result<LibrarySort, Error> {
-        Ok(self.store.library_sort()?.and_then(|name| LibrarySort::from_stored_name(&name)).unwrap_or_default())
+        let sort = self.store.library_sort().map(|stored| {
+            stored.and_then(|name| LibrarySort::from_stored_name(&name)).unwrap_or_default()
+        });
+        self.logged("library_sort", sort)
     }
 
     /// Makes `sort` the order of the Library, from now on and after every
     /// restart.
     pub fn choose_library_sort(&self, sort: LibrarySort) -> Result<(), Error> {
-        self.store.choose_library_sort(sort.stored_name())
+        self.logged("choose_library_sort", self.store.choose_library_sort(sort.stored_name()))
     }
 
     /// The Game `game_id` as the Library shows it, for its detail page;
     /// `None` when it is not in the Library, for instance after a Sync
     /// took it out.
     pub fn game(&self, game_id: &str) -> Result<Option<Game>, Error> {
-        Ok(self.library()?.into_iter().find(|game| game.id == game_id))
+        let game = self.stored_library().map(|games| games.into_iter().find(|game| game.id == game_id));
+        self.logged("game", game)
+    }
+
+    /// Sets the Status of the Game `game_id` to `status`, from now on and
+    /// after every restart, and answers the Game as the Library now shows
+    /// it. Nothing else changes it, no Sync either. A Game that is not in
+    /// the Library is refused.
+    pub fn set_status(&self, game_id: &str, status: Status) -> Result<Game, Error> {
+        self.logged("set_status", self.record_status(game_id, status))
+    }
+
+    fn record_status(&self, game_id: &str, status: Status) -> Result<Game, Error> {
+        let not_in_library = || Error::new(format!("no such game in the library: {game_id}"));
+        let in_library = |library: Vec<Game>| library.into_iter().find(|game| game.id == game_id);
+        if in_library(self.stored_library()?).is_none() {
+            return Err(not_in_library());
+        }
+        self.store.set_status(game_id, status)?;
+        in_library(self.stored_library()?).ok_or_else(not_in_library)
     }
 
     /// Reads which Steam Games are Installed from Steam's library folders,
@@ -208,19 +298,28 @@ impl Core {
     /// When Steam, a Steam Account or its list of library folders cannot be
     /// found or read, the stored Library is left as it is.
     pub fn read_installed_games(&self) -> Result<Vec<Game>, Error> {
+        self.logged("read_installed_games", self.read_and_record_installed_games())
+    }
+
+    fn read_and_record_installed_games(&self) -> Result<Vec<Game>, Error> {
         if let Some(folder) = self.ports.steam_locator.steam_folder()
             && let Some(account) = self.chosen_steam_account_or(|| Ok(most_recent_account(&folder)))?
             && let Some(apps) = steam::installed_apps(&folder)
         {
             self.store.record_installed_steam_games(&account, &apps)?;
         }
-        self.library()
+        self.stored_library()
     }
 
     /// The SteamID of the Steam Account the app works with: the one the user
     /// chose; until then the one that logged in most recently on this
     /// computer, or else the one whose Games were read last.
     pub fn steam_account(&self) -> Result<Option<String>, Error> {
+        self.logged("steam_account", self.current_steam_account())
+    }
+
+    /// [`Self::steam_account`], without writing to the Log.
+    fn current_steam_account(&self) -> Result<Option<String>, Error> {
         self.chosen_steam_account_or(|| {
             match self.ports.steam_locator.steam_folder().and_then(|folder| most_recent_account(&folder)) {
                 Some(detected) => Ok(Some(detected)),
@@ -246,11 +345,11 @@ impl Core {
     /// SteamID64 the user entered by hand. Anything that is not a SteamID64
     /// of a personal account is refused and changes nothing.
     pub fn choose_steam_account(&self, steam_id: &str) -> Result<SteamAccountChoice, Error> {
-        let Some(steam_id) = steam::personal_steam_id(steam_id) else {
-            return Ok(SteamAccountChoice::InvalidSteamId);
+        let choice = match steam::personal_steam_id(steam_id) {
+            Some(steam_id) => self.store.choose_steam_account(steam_id).map(|()| SteamAccountChoice::Chosen),
+            None => Ok(SteamAccountChoice::InvalidSteamId),
         };
-        self.store.choose_steam_account(steam_id)?;
-        Ok(SteamAccountChoice::Chosen)
+        self.logged_outcome("choose_steam_account", choice)
     }
 
     /// The Steam installation on this computer and its Steam Accounts.
@@ -276,7 +375,11 @@ impl Core {
     /// opening its `steam://rungameid/` URL; the app never starts a Steam
     /// Game's executable itself (ADR-0002).
     pub fn launch(&self, game_id: &str) -> Result<Launch, Error> {
-        let Some(game) = self.library()?.into_iter().find(|game| game.id == game_id) else {
+        self.logged_outcome("launch", self.launch_game(game_id))
+    }
+
+    fn launch_game(&self, game_id: &str) -> Result<Launch, Error> {
+        let Some(game) = self.stored_library()?.into_iter().find(|game| game.id == game_id) else {
             return Err(Error::new(format!("no such game in the library: {game_id}")));
         };
         if !game.installed {
@@ -304,7 +407,7 @@ impl Core {
     /// it was. A Sync asked for while another runs begins once that one ends.
     pub fn sync(&self) -> Result<SyncOutcome, Error> {
         let _syncing = self.wait_until_no_sync_runs();
-        self.sync_now()
+        self.logged_outcome("sync", self.sync_now())
     }
 
     /// Blocks until no other Sync runs; no other begins until the answer is dropped.
@@ -319,7 +422,7 @@ impl Core {
             return Ok(SyncOutcome::NoKey);
         };
         // Only a SteamID64 may reach the URL.
-        let Some(account) = self.steam_account()?.filter(|id| steam::personal_steam_id(id).is_some()) else {
+        let Some(account) = self.current_steam_account()?.filter(|id| steam::personal_steam_id(id).is_some()) else {
             return Ok(SyncOutcome::NoSteamAccount);
         };
         let games = match sync::owned_games(self.ports.web_api.as_ref(), &key, &account) {
@@ -349,7 +452,7 @@ impl Core {
     }
 
     fn automatic_sync_round(&self, report: &mut impl FnMut(AutomaticSync) -> ControlFlow<()>) -> ControlFlow<()> {
-        match self.steam_web_api_key_stored() {
+        match self.logged("automatic_sync", self.key_stored()) {
             Ok(false) => return report(AutomaticSync::Skipped),
             Ok(true) => {}
             Err(reason) => return report(AutomaticSync::Failed { reason }),
@@ -357,7 +460,7 @@ impl Core {
         // Started only once a Sync begun elsewhere has ended, so the interface shows the one that runs.
         let _syncing = self.wait_until_no_sync_runs();
         report(AutomaticSync::Started)?;
-        report(match self.sync_now() {
+        report(match self.logged_outcome("automatic_sync", self.sync_now()) {
             Ok(outcome) => AutomaticSync::Finished(outcome),
             Err(reason) => AutomaticSync::Failed { reason },
         })
@@ -367,15 +470,23 @@ impl Core {
     /// shown happened, in seconds since the Unix epoch; `None` before the
     /// first.
     pub fn last_sync(&self) -> Result<Option<u64>, Error> {
-        match self.chosen_steam_account_or(|| self.store.last_read_steam_account())? {
-            Some(account) => self.store.last_steam_sync(&account),
-            None => Ok(None),
-        }
+        let last = self.chosen_steam_account_or(|| self.store.last_read_steam_account()).and_then(|account| {
+            match account {
+                Some(account) => self.store.last_steam_sync(&account),
+                None => Ok(None),
+            }
+        });
+        self.logged("last_sync", last)
     }
 
     /// Whether a Steam Web API key is stored. The key itself never leaves
     /// the core.
     pub fn steam_web_api_key_stored(&self) -> Result<bool, Error> {
+        self.logged("steam_web_api_key_stored", self.key_stored())
+    }
+
+    /// [`Self::steam_web_api_key_stored`], without writing to the Log.
+    fn key_stored(&self) -> Result<bool, Error> {
         let stored = self.ports.secrets.read(steam_web_api::KEY_SECRET).map_err(secret_store_error)?;
         Ok(stored.is_some())
     }
@@ -386,6 +497,10 @@ impl Core {
     /// (see [`Self::sync_automatically`]). A key that is refused or cannot
     /// be checked changes nothing.
     pub fn store_steam_web_api_key(&self, key: &str) -> Result<SteamWebApiKeyCheck, Error> {
+        self.logged_outcome("store_steam_web_api_key", self.check_and_store_key(key))
+    }
+
+    fn check_and_store_key(&self, key: &str) -> Result<SteamWebApiKeyCheck, Error> {
         let Some(key) = steam_web_api::key_in(key) else {
             return Ok(SteamWebApiKeyCheck::Invalid);
         };
@@ -400,13 +515,21 @@ impl Core {
 
     /// Removes the stored Steam Web API key, if there is one.
     pub fn remove_steam_web_api_key(&self) -> Result<(), Error> {
-        self.ports.secrets.delete(steam_web_api::KEY_SECRET).map_err(secret_store_error)
+        let removed = self.ports.secrets.delete(steam_web_api::KEY_SECRET).map_err(secret_store_error);
+        if removed.is_ok() {
+            self.note("remove_steam_web_api_key: removed");
+        }
+        self.logged("remove_steam_web_api_key", removed)
     }
 
     /// Asks the user to choose the executable of a Local Game to add and
     /// proposes its title (see [`Self::add_local_game`]). An executable
     /// already in the Library is answered with the title it has there.
     pub fn choose_local_game_executable(&self) -> Result<ExecutableChoice, Error> {
+        self.logged_outcome("choose_local_game_executable", self.pick_local_game_executable())
+    }
+
+    fn pick_local_game_executable(&self) -> Result<ExecutableChoice, Error> {
         let chosen = self
             .ports
             .executable_picker
@@ -429,6 +552,10 @@ impl Core {
     /// given. An empty title, a path with no file, and an executable already
     /// in the Library by any spelling of its path are refused.
     pub fn add_local_game(&self, executable: &str, title: &str) -> Result<AddLocalGame, Error> {
+        self.logged_outcome("add_local_game", self.record_local_game(executable, title))
+    }
+
+    fn record_local_game(&self, executable: &str, title: &str) -> Result<AddLocalGame, Error> {
         let title = title.trim();
         if title.is_empty() {
             return Ok(AddLocalGame::NoTitle);
@@ -446,28 +573,49 @@ impl Core {
     /// Opens the Steam page where the user creates their Steam Web API key,
     /// in the browser.
     pub fn open_steam_web_api_key_page(&self) -> Result<(), Error> {
-        self.ports
+        let opened = self
+            .ports
             .opener
             .open_url(steam_web_api::KEY_PAGE)
-            .map_err(|error| Error::new(format!("{} could not be opened: {error}", steam_web_api::KEY_PAGE)))
+            .map_err(|error| Error::new(format!("{} could not be opened: {error}", steam_web_api::KEY_PAGE)));
+        self.logged("open_steam_web_api_key_page", opened)
+    }
+
+    /// Whether the app starts with Windows, hidden in the Tray, when the
+    /// user signs in: what the current user's autostart entry says, also
+    /// after it was changed outside the app. Off until the user turns it on.
+    pub fn starts_with_windows(&self) -> Result<bool, Error> {
+        self.logged("starts_with_windows", autostart::starts_with_windows(self.ports.autostart.as_ref()))
+    }
+
+    /// Adds or removes the current user's autostart entry, which starts the
+    /// app hidden in the Tray (see [`started_with_windows`]).
+    pub fn set_start_with_windows(&self, on: bool) -> Result<(), Error> {
+        self.logged("set_start_with_windows", autostart::set_start_with_windows(self.ports.autostart.as_ref(), on))
     }
 
     /// The theme the user chose; until they choose, [`Theme::System`]: the
     /// interface follows the operating system's dark or light setting.
     pub fn theme(&self) -> Result<Theme, Error> {
-        self.store.theme()
+        self.logged("theme", self.store.theme())
     }
 
     /// Makes `theme` the theme of the interface, from now on and after every
     /// restart.
     pub fn choose_theme(&self, theme: Theme) -> Result<(), Error> {
-        self.store.choose_theme(theme)
+        self.logged("choose_theme", self.store.choose_theme(theme))
     }
 
     /// Every Collection with how many Games of the Library are in it,
     /// ordered by name whatever its case.
     pub fn collections(&self) -> Result<Vec<Collection>, Error> {
-        let library: std::collections::HashSet<String> = self.library()?.into_iter().map(|game| game.id).collect();
+        self.logged("collections", self.stored_collections())
+    }
+
+    /// [`Self::collections`], without writing to the Log.
+    fn stored_collections(&self) -> Result<Vec<Collection>, Error> {
+        let library: std::collections::HashSet<String> =
+            self.stored_library()?.into_iter().map(|game| game.id).collect();
         let members = self.store.collection_games()?;
         let mut collections: Vec<Collection> = self
             .store
@@ -486,50 +634,56 @@ impl Core {
     /// empty name, or one another Collection has in any case, is refused and
     /// creates nothing.
     pub fn create_collection(&self, name: &str) -> Result<CollectionNaming, Error> {
-        match collections::name_in(name) {
+        let naming = match collections::name_in(name) {
             Some(name) => self.store.name_collection(None, name),
             None => Ok(CollectionNaming::EmptyName),
-        }
+        };
+        self.logged_outcome("create_collection", naming)
     }
 
     /// Renames the Collection `id` to `name`, without the spaces around it,
     /// under the same rules as [`Self::create_collection`]. Fails when there
     /// is no such Collection.
     pub fn rename_collection(&self, id: i64, name: &str) -> Result<CollectionNaming, Error> {
-        match collections::name_in(name) {
+        let naming = match collections::name_in(name) {
             Some(name) => self.store.name_collection(Some(id), name),
             None => Ok(CollectionNaming::EmptyName),
-        }
+        };
+        self.logged_outcome("rename_collection", naming)
     }
 
     /// Deletes the Collection `id`. Its Games stay in the Library. Deleting
     /// a Collection that is gone already changes nothing.
     pub fn delete_collection(&self, id: i64) -> Result<(), Error> {
-        self.store.delete_collection(id)
+        let deleted = self.store.delete_collection(id);
+        if deleted.is_ok() {
+            self.note("delete_collection: deleted");
+        }
+        self.logged("delete_collection", deleted)
     }
 
     /// Whether closing the window keeps the app running in the Tray, so
     /// tracking goes on. On until the user turns it off.
     pub fn close_to_tray(&self) -> Result<bool, Error> {
-        window::close_to_tray(&self.store)
+        self.logged("close_to_tray", window::close_to_tray(&self.store))
     }
 
     /// Turns close-to-tray on or off, from now on and after every restart.
     pub fn set_close_to_tray(&self, on: bool) -> Result<(), Error> {
-        window::set_close_to_tray(&self.store, on)
+        self.logged("set_close_to_tray", window::set_close_to_tray(&self.store, on))
     }
 
     /// What closing the window does: with close-to-tray on the app keeps
     /// running in the Tray, and the very first time the window explains this
     /// instead; with close-to-tray off the app quits.
     pub fn close_window(&self) -> Result<WindowClose, Error> {
-        window::close_window(&self.store)
+        self.logged_outcome("close_window", window::close_window(&self.store))
     }
 
     /// What is stored of the Steam App List: how many titles, and when it
     /// was last fetched to its end.
     pub fn steam_app_list(&self) -> Result<SteamAppList, Error> {
-        self.store.steam_app_list()
+        self.logged("steam_app_list", self.store.steam_app_list())
     }
 
     /// Fetches the Steam App List with the stored Steam Web API key, page by
@@ -540,7 +694,7 @@ impl Core {
     /// another runs begins once that one ends.
     pub fn fetch_steam_app_list(&self) -> Result<SteamAppListFetch, Error> {
         let _fetching = self.wait_until_no_steam_app_list_fetch_runs();
-        self.fetch_steam_app_list_now()
+        self.logged_outcome("fetch_steam_app_list", self.fetch_steam_app_list_now())
     }
 
     fn wait_until_no_steam_app_list_fetch_runs(&self) -> MutexGuard<'_, ()> {
@@ -591,20 +745,20 @@ impl Core {
         &self,
         report: &mut impl FnMut(AutomaticSteamAppListFetch) -> ControlFlow<()>,
     ) -> ControlFlow<()> {
-        match self.steam_web_api_key_stored() {
+        match self.logged("automatic_steam_app_list_fetch", self.key_stored()) {
             Ok(false) => return report(AutomaticSteamAppListFetch::Skipped),
             Ok(true) => {}
             Err(reason) => return report(AutomaticSteamAppListFetch::Failed { reason }),
         }
         let _fetching = self.wait_until_no_steam_app_list_fetch_runs();
         let now = clock::seconds_since_epoch(self.ports.clock.now());
-        match self.store.steam_app_list() {
+        match self.logged("automatic_steam_app_list_fetch", self.store.steam_app_list()) {
             Ok(list) if !steam_app_list::due(&list, now) => return report(AutomaticSteamAppListFetch::Skipped),
             Ok(_) => {}
             Err(reason) => return report(AutomaticSteamAppListFetch::Failed { reason }),
         }
         report(AutomaticSteamAppListFetch::Started)?;
-        report(match self.fetch_steam_app_list_now() {
+        report(match self.logged_outcome("automatic_steam_app_list_fetch", self.fetch_steam_app_list_now()) {
             Ok(outcome) => AutomaticSteamAppListFetch::Finished(outcome),
             Err(reason) => AutomaticSteamAppListFetch::Failed { reason },
         })
@@ -620,8 +774,10 @@ impl Core {
         if search.is_empty() {
             return Ok(Vec::new());
         }
-        let app_ids = self.steam_title_index()?.find(&search, steam_app_list::LOOKUP_LIMIT);
-        self.store.steam_titles(&app_ids)
+        let titles = self
+            .steam_title_index()
+            .and_then(|index| self.store.steam_titles(&index.find(&search, steam_app_list::LOOKUP_LIMIT)));
+        self.logged("find_steam_titles", titles)
     }
 
     /// Asks the user to choose an image and makes it the Cover of the Local
@@ -631,6 +787,10 @@ impl Core {
     /// PNG or JPEG image is refused and changes nothing. Fails for a Game
     /// that is not a Local Game in the Library.
     pub fn choose_cover_image(&self, game_id: &str) -> Result<CoverImageChoice, Error> {
+        self.logged_outcome("choose_cover_image", self.pick_cover_image(game_id))
+    }
+
+    fn pick_cover_image(&self, game_id: &str) -> Result<CoverImageChoice, Error> {
         let Some(game) = self.stored_local_game(game_id)? else {
             return Err(Error::new(format!("not a Local Game in the library: {game_id}")));
         };
@@ -648,20 +808,22 @@ impl Core {
     /// Whether the user chose an image as the Cover of the Local Game
     /// `game_id` (see [`Self::choose_cover_image`]).
     pub fn cover_image_chosen(&self, game_id: &str) -> Result<bool, Error> {
-        match self.stored_local_game(game_id)? {
+        let chosen = self.stored_local_game(game_id).and_then(|game| match game {
             Some(game) => Ok(local_covers::chosen_image(&self.covers, game.id)?.is_some()),
             None => Ok(false),
-        }
+        });
+        self.logged("cover_image_chosen", chosen)
     }
 
     /// Forgets the image the user chose as the Cover of the Local Game
     /// `game_id`: the Game shows the Cover the app finds for it again, its
     /// executable's icon. Without a chosen image nothing changes.
     pub fn remove_cover_image(&self, game_id: &str) -> Result<(), Error> {
-        match self.stored_local_game(game_id)? {
+        let removed = self.stored_local_game(game_id).and_then(|game| match game {
             Some(game) => local_covers::remove_chosen_image(&self.covers, game.id),
             None => Ok(()),
-        }
+        });
+        self.logged("remove_cover_image", removed)
     }
 
     /// The Local Game `game_id` as the store keeps it; `None` when the id is
@@ -682,6 +844,18 @@ impl Core {
         let index = Arc::new(steam_app_list::TitleIndex::new(self.store.searchable_steam_titles()?));
         *held = Some(Arc::clone(&index));
         Ok(index)
+    }
+}
+
+/// The name of an outcome the interface branches on (its `outcome` tag),
+/// for the Log.
+fn outcome_name(outcome: &impl Serialize) -> String {
+    match serde_json::to_value(outcome) {
+        Ok(serde_json::Value::Object(fields)) => match fields.get("outcome") {
+            Some(serde_json::Value::String(name)) => name.clone(),
+            _ => "done".to_owned(),
+        },
+        _ => "done".to_owned(),
     }
 }
 

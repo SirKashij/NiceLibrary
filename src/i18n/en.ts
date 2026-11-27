@@ -178,6 +178,25 @@ export const en = {
   'cover.useIcon': 'Use the executable’s icon',
   'cover.notAnImage': 'That file is not a PNG or JPEG image. The cover stays as it was.',
   'cover.changeFailed': 'The cover could not be changed.',
+  'game.status': 'Status',
+  'status.unplayed': 'Unplayed',
+  'status.playing': 'Playing',
+  'status.completed': 'Completed',
+  'status.dropped': 'Dropped',
+  'status.of': 'Status of {title}',
+  'status.setFailed': 'The status of {title} could not be changed.',
+  'filter.status': 'Status',
+  'filter.anyStatus': 'Any status',
+  'settings.log': 'Log file',
+  'log.why':
+    'NiceLibrary writes errors and notable events to a log file on this computer. If something goes wrong, open the folder and attach the file to your bug report yourself.',
+  'log.private': 'Nothing is sent. Your key and your SteamIDs are never written to the log.',
+  'log.openFolder': 'Open log folder',
+  'log.openFailed': 'The log folder could not be opened.',
+  'autostart.startWithWindows': 'Start with Windows',
+  'autostart.hint': 'When you sign in to Windows, NiceLibrary starts in the tray without opening its window.',
+  'autostart.loadFailed': 'Whether NiceLibrary starts with Windows could not be read.',
+  'autostart.saveFailed': 'Starting with Windows could not be changed.',
 } as const;
 
 export type MessageKey = keyof typeof en;

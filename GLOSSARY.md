@@ -84,7 +84,7 @@ A named group of Games created by the person. A Game can be in several Collectio
 _Avoid_: Category, tag, folder, list
 
 **Detail Page**:
-The page of one Game, opened from the Library: its large Cover, Source, whether it is Installed, Playtime, Last Played and its Launch. Going back returns to the Library as it was left.
+The page of one Game, opened from the Library: its large Cover, Source, whether it is Installed, its Status, Playtime, Last Played and its Launch. Going back returns to the Library as it was left.
 _Avoid_: Game page, info screen, dialog
 
 **Sort Order**:
@@ -126,6 +126,10 @@ _Avoid_: Offline mode, basic mode
 Starting a Game from the app.
 _Avoid_: Run, start, open
 
+**Log**:
+The files on this computer the app writes its errors and notable events to, for the person to attach to a bug report themselves. It never holds the Steam Web API key or a full SteamID, and the app never sends it.
+_Avoid_: Crash report, telemetry, diagnostics
+
 ### Interface
 
 **Theme**:
@@ -135,3 +139,7 @@ _Avoid_: Skin, mode, appearance
 **Tray**:
 The app's icon in the notification area of the Windows taskbar. While the window is closed the app keeps running there, so tracking goes on, unless the person turned close-to-tray off; its menu opens the window or quits the app. The German interface calls it "Infobereich".
 _Avoid_: System tray (in interface text), taskbar, background
+
+**Start with Windows**:
+The app starting by itself when the person signs in to Windows, hidden in the Tray so that tracking never depends on them remembering. It is off until they turn it on, and it is the current user's autostart entry itself, so it shows what Windows will really do. The German interface says "Mit Windows starten".
+_Avoid_: Autostart (in interface text), launch at login, boot (Launch is starting a Game)

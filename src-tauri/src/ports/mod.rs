@@ -3,6 +3,8 @@
 //! Version 1 implements them for Windows (ADR-0001). On other systems the
 //! app builds with stand-ins that report nothing found.
 
+#[cfg(windows)]
+mod autostart_windows;
 mod clock;
 #[cfg(windows)]
 mod file_dialog_windows;
@@ -16,6 +18,8 @@ mod secrets_windows;
 #[cfg(windows)]
 mod steam_windows;
 
+#[cfg(windows)]
+pub use autostart_windows::WindowsAutostart;
 pub use clock::SystemClock;
 #[cfg(windows)]
 pub use file_dialog_windows::{WindowsExecutablePicker, WindowsImagePicker};
@@ -29,7 +33,7 @@ pub use secrets_windows::WindowsSecretStore;
 #[cfg(windows)]
 pub use steam_windows::{Hive, RegistryValue, WindowsSteamLocator};
 
-use nicelibrary_core::{ExecutablePicker, IconExtractor, ImagePicker, Opener, Ports, SecretStore, SteamLocator};
+use nicelibrary_core::{Autostart, ExecutablePicker, IconExtractor, ImagePicker, Opener, Ports, SecretStore, SteamLocator};
 
 /// The ports of this machine.
 pub fn real_ports() -> Ports {
@@ -40,6 +44,7 @@ pub fn real_ports() -> Ports {
         secrets: secrets(),
         web_api: Box::new(HttpWebApi::new()),
         clock: Box::new(SystemClock),
+        autostart: autostart(),
         executable_picker: executable_picker(),
         icon_extractor: icon_extractor(),
         image_picker: image_picker(),
@@ -167,4 +172,31 @@ fn opener() -> Box<dyn Opener> {
     }
 
     Box::new(NoOpener)
+}
+
+#[cfg(windows)]
+fn autostart() -> Box<dyn Autostart> {
+    Box::new(WindowsAutostart::new())
+}
+
+#[cfg(not(windows))]
+fn autostart() -> Box<dyn Autostart> {
+    /// Starting with the system on Linux and macOS is not part of version 1.
+    struct NoAutostart;
+
+    impl Autostart for NoAutostart {
+        fn is_on(&self) -> Result<bool, String> {
+            Ok(false)
+        }
+
+        fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+            Err("starting with the system is not supported on this system".into())
+        }
+
+        fn turn_off(&self) -> Result<(), String> {
+            Ok(())
+        }
+    }
+
+    Box::new(NoAutostart)
 }

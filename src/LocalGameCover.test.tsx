@@ -11,6 +11,7 @@ const CELESTE: Game = {
   installed: true,
   playtimeMinutes: 0,
   lastPlayed: null,
+  status: 'unplayed',
 };
 const PORTAL_2: Game = {
   id: 'steam:620',
@@ -19,6 +20,7 @@ const PORTAL_2: Game = {
   installed: true,
   playtimeMinutes: null,
   lastPlayed: null,
+  status: 'unplayed',
 };
 
 /**
@@ -58,6 +60,12 @@ function fakeOperations({
       chosen.delete(gameId);
     },
     launch: async () => ({ outcome: 'launched' }),
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
+    openLogFolder: async () => {},
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
     steamWebApiKeyStored: async () => false,
     storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
     removeSteamWebApiKey: async () => {},

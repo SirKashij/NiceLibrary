@@ -6,7 +6,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use nicelibrary_core::{
-    Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, SteamLocator, Store, SyncOutcome,
+    Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, Status, SteamLocator, Store,
+    SyncOutcome,
     WebAnswer, WebApi,
 };
 use tempfile::TempDir;
@@ -154,6 +155,7 @@ impl App {
                 executable_picker: Box::new(NoExecutableChosen),
                 icon_extractor: Box::new(NoIconsNoImages),
                 image_picker: Box::new(NoIconsNoImages),
+                autostart: Box::new(NoAutostart),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -178,6 +180,7 @@ fn an_installed_steam_game_shows_its_source_and_that_it_is_installed() {
             installed: true,
             playtime_minutes: None,
             last_played: None,
+            status: Status::Unplayed,
         }))
     );
 }
@@ -244,5 +247,22 @@ impl nicelibrary_core::IconExtractor for NoIconsNoImages {
 impl nicelibrary_core::ImagePicker for NoIconsNoImages {
     fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
+    }
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
     }
 }

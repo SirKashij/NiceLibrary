@@ -47,15 +47,17 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
-    onAutomaticSync: () => () => {},
-    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
-    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
-    onAutomaticSteamAppListFetch: () => () => {},
     closeToTray: async () => true,
     setCloseToTray: async () => {},
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
+    onAutomaticSync: () => () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
     filterLibrary: async () => library,
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
     collections: async () => [...collections].sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase())),
@@ -69,6 +71,10 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    openLogFolder: async () => {},
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
   };
@@ -270,7 +276,7 @@ describe('Deleting a Collection', () => {
 
   it('removes no Game from the Library', async () => {
     const user = userEvent.setup();
-    const portal: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null };
+    const portal: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed' };
     render(<App operations={fakeOperations([BACKLOG], [portal]).operations} lang="en" />);
 
     await user.click(await screen.findByRole('button', { name: 'Delete Backlog' }));

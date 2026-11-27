@@ -70,6 +70,12 @@ function fakeOperations({
     deleteCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
+    openLogFolder: async () => {},
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     steamAppList: async () => list,
