@@ -36,6 +36,8 @@ winreg = "0.56"
 # ShellExecuteExW, to open steam:// URLs (src/ports/opener_windows.rs).
 windows-sys = { version = "0.61", features = [
     "Win32_Foundation",
+    # GetOpenFileNameW, to choose a Local Game's executable (src/ports/file_dialog_windows.rs).
+    "Win32_UI_Controls_Dialogs",
     # CredReadW and friends, for the Steam Web API key (src/ports/secrets_windows.rs).
     "Win32_Security_Credentials",
     "Win32_System_Com",

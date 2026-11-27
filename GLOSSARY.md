@@ -121,3 +121,9 @@ _Avoid_: System tray (in interface text), taskbar, background
 **Start with Windows**:
 The app starting by itself when the person signs in to Windows, hidden in the Tray so that tracking never depends on them remembering. It is off until they turn it on, and it is the current user's autostart entry itself, so it shows what Windows will really do. The German interface says "Mit Windows starten".
 _Avoid_: Autostart (in interface text), launch at login, boot (Launch is starting a Game)
+
+### Interface
+
+**Theme**:
+Whether the interface shows dark or light. Until the person chooses one in the settings, it follows the operating system's setting. The German interface calls it "Design".
+_Avoid_: Skin, mode, appearance

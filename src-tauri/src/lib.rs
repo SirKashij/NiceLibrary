@@ -7,8 +7,9 @@ mod tray;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AutomaticSync, Core, CoverCache, Error, Game, Launch, LibraryFilter, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
-    SyncOutcome, started_with_windows,
+    AddLocalGame, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error, ExecutableChoice, Game, Launch,
+    LibraryFilter, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
+    started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -122,6 +123,47 @@ fn set_start_with_windows(core: tauri::State<'_, Core>, on: bool) -> Result<(), 
     core.set_start_with_windows(on)
 }
 
+/// Async, so the window stays responsive while the file dialog is open.
+#[tauri::command]
+async fn choose_local_game_executable(core: tauri::State<'_, Core>) -> Result<ExecutableChoice, Error> {
+    core.choose_local_game_executable()
+}
+
+#[tauri::command]
+fn add_local_game(core: tauri::State<'_, Core>, executable: String, title: String) -> Result<AddLocalGame, Error> {
+    core.add_local_game(&executable, &title)
+}
+
+#[tauri::command]
+fn theme(core: tauri::State<'_, Core>) -> Result<Theme, Error> {
+    core.theme()
+}
+
+#[tauri::command]
+fn choose_theme(core: tauri::State<'_, Core>, theme: Theme) -> Result<(), Error> {
+    core.choose_theme(theme)
+}
+
+#[tauri::command]
+fn collections(core: tauri::State<'_, Core>) -> Result<Vec<Collection>, Error> {
+    core.collections()
+}
+
+#[tauri::command]
+fn create_collection(core: tauri::State<'_, Core>, name: String) -> Result<CollectionNaming, Error> {
+    core.create_collection(&name)
+}
+
+#[tauri::command]
+fn rename_collection(core: tauri::State<'_, Core>, id: i64, name: String) -> Result<CollectionNaming, Error> {
+    core.rename_collection(id, &name)
+}
+
+#[tauri::command]
+fn delete_collection(core: tauri::State<'_, Core>, id: i64) -> Result<(), Error> {
+    core.delete_collection(id)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -181,6 +223,12 @@ pub fn run() {
             open_steam_web_api_key_page,
             sync,
             last_sync,
+            theme,
+            choose_theme,
+            collections,
+            create_collection,
+            rename_collection,
+            delete_collection,
             filter_library,
             game,
             close_to_tray,
@@ -188,7 +236,9 @@ pub fn run() {
             close_window,
             show_tray_menu,
             starts_with_windows,
-            set_start_with_windows
+            set_start_with_windows,
+            choose_local_game_executable,
+            add_local_game
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

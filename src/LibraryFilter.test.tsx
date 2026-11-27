@@ -37,7 +37,13 @@ function fakeOperations() {
     showTrayMenu: async () => {},
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     onAutomaticSync: () => () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'named', id: 1 }),
+    renameCollection: async (id) => ({ outcome: 'named', id }),
+    deleteCollection: async () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);
       return LIBRARY.filter(
@@ -48,6 +54,8 @@ function fakeOperations() {
       );
     },
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, asked };
 }

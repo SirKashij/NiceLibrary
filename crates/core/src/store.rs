@@ -11,8 +11,11 @@ use std::sync::{Mutex, MutexGuard};
 
 use rusqlite::{Connection, params};
 
+use crate::collections::{self, CollectionNaming};
+use crate::local_games::StoredLocalGame;
 use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
+use crate::theme::Theme;
 use crate::{Error, Game};
 
 /// The schema changes, oldest first. Never edit or reorder a released entry;
@@ -38,6 +41,22 @@ const MIGRATIONS: &[&str] = &[
          steam_account TEXT    PRIMARY KEY,
          synced_at     INTEGER NOT NULL
      );",
+    // 3: Local Games, each with the path of its executable as chosen.
+    "CREATE TABLE local_games (
+         id         INTEGER PRIMARY KEY AUTOINCREMENT,
+         title      TEXT    NOT NULL,
+         executable TEXT    NOT NULL UNIQUE
+     );",
+    // 4: Collections and which Games are in them; they belong to the person, not to a Steam Account.
+    "CREATE TABLE collections (
+         id   INTEGER PRIMARY KEY,
+         name TEXT    NOT NULL
+     );
+     CREATE TABLE collection_games (
+         collection_id INTEGER NOT NULL REFERENCES collections (id),
+         game_id       TEXT    NOT NULL,
+         PRIMARY KEY (collection_id, game_id)
+     );",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
@@ -47,6 +66,9 @@ const LAST_READ_STEAM_ACCOUNT: &str = "steam_account";
 
 /// The setting that names the Steam Account the user chose.
 const CHOSEN_STEAM_ACCOUNT: &str = "chosen_steam_account";
+
+/// The setting that holds the theme the user chose.
+const THEME: &str = "theme";
 
 /// The local store.
 pub struct Store {
@@ -108,6 +130,21 @@ impl Store {
             "INSERT INTO settings (key, value) VALUES (?1, ?2)
              ON CONFLICT (key) DO UPDATE SET value = excluded.value",
             params![CHOSEN_STEAM_ACCOUNT, steam_id],
+        )?;
+        Ok(())
+    }
+
+    /// The theme the user chose; [`Theme::System`] until they choose.
+    pub(crate) fn theme(&self) -> Result<Theme, Error> {
+        Ok(self.setting(THEME)?.map_or(Theme::System, |setting| Theme::from_setting(&setting)))
+    }
+
+    /// Remembers `theme` as the theme the user chose.
+    pub(crate) fn choose_theme(&self, theme: Theme) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![THEME, theme.as_setting()],
         )?;
         Ok(())
     }
@@ -202,6 +239,83 @@ impl Store {
             })?
             .collect::<Result<_, _>>()?;
         Ok(games)
+    }
+}
+
+impl Store {
+    /// Every Local Game, in the order they were added.
+    pub(crate) fn local_games(&self) -> Result<Vec<StoredLocalGame>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare("SELECT id, title, executable FROM local_games ORDER BY id")?;
+        let games = statement
+            .query_map([], |row| Ok(StoredLocalGame { id: row.get(0)?, title: row.get(1)?, executable: row.get(2)? }))?
+            .collect::<Result<_, _>>()?;
+        Ok(games)
+    }
+
+    /// Adds the Local Game `title` with its `executable` and answers its id.
+    pub(crate) fn add_local_game(&self, title: &str, executable: &str) -> Result<i64, Error> {
+        let connection = self.connection();
+        connection.execute("INSERT INTO local_games (title, executable) VALUES (?1, ?2)", params![title, executable])?;
+        Ok(connection.last_insert_rowid())
+    }
+
+    /// Every Collection, as its id and name.
+    pub(crate) fn collections(&self) -> Result<Vec<(i64, String)>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare("SELECT id, name FROM collections")?;
+        let collections = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?.collect::<Result<_, _>>()?;
+        Ok(collections)
+    }
+
+    /// Which Games are in which Collection, as pairs of Collection id and Game id.
+    pub(crate) fn collection_games(&self) -> Result<Vec<(i64, String)>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare("SELECT collection_id, game_id FROM collection_games")?;
+        let games = statement.query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?.collect::<Result<_, _>>()?;
+        Ok(games)
+    }
+
+    /// Gives the Collection `id` the name `name`, already trimmed and not
+    /// empty, or creates a Collection with it when `id` is `None`. Refused
+    /// when another Collection has the name in any case. Fails for an `id`
+    /// that names no Collection.
+    pub(crate) fn name_collection(&self, id: Option<i64>, name: &str) -> Result<CollectionNaming, Error> {
+        let mut connection = self.connection();
+        // Checked and written at once, so two namings cannot both take one name.
+        let transaction = connection.transaction()?;
+        let others: Vec<(i64, String)> = transaction
+            .prepare("SELECT id, name FROM collections")?
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))?
+            .collect::<Result<_, _>>()?;
+        if others.iter().any(|(other, other_name)| Some(*other) != id && collections::same_name(other_name, name)) {
+            return Ok(CollectionNaming::NameTaken);
+        }
+        let id = match id {
+            Some(id) => {
+                if transaction.execute("UPDATE collections SET name = ?1 WHERE id = ?2", params![name, id])? == 0 {
+                    return Err(Error::new(format!("no such collection: {id}")));
+                }
+                id
+            }
+            None => {
+                transaction.execute("INSERT INTO collections (name) VALUES (?1)", [name])?;
+                transaction.last_insert_rowid()
+            }
+        };
+        transaction.commit()?;
+        Ok(CollectionNaming::Named { id })
+    }
+
+    /// Deletes the Collection `id` and its record of which Games are in it,
+    /// never a Game; nothing when there is no such Collection.
+    pub(crate) fn delete_collection(&self, id: i64) -> Result<(), Error> {
+        let mut connection = self.connection();
+        let transaction = connection.transaction()?;
+        transaction.execute("DELETE FROM collection_games WHERE collection_id = ?1", [id])?;
+        transaction.execute("DELETE FROM collections WHERE id = ?1", [id])?;
+        transaction.commit()?;
+        Ok(())
     }
 }
 

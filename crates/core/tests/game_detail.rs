@@ -88,6 +88,15 @@ impl nicelibrary_core::Clock for StoppedClock {
     fn sleep(&self, _duration: std::time::Duration, _wakeup: &nicelibrary_core::Wakeup) {}
 }
 
+/// A file dialog the user always cancels; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
+    }
+}
+
 /// Steam on disk with one Steam Account that has logged in.
 struct SteamFixture(TempDir);
 
@@ -142,6 +151,7 @@ impl App {
                 secrets: Box::new(KeyStored),
                 web_api: Box::new(SteamOwnsPortal2AndHalfLife2),
                 clock: Box::new(StoppedClock),
+                executable_picker: Box::new(NoExecutableChosen),
                 autostart: Box::new(NoAutostart),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),

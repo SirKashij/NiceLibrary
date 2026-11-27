@@ -24,6 +24,8 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     filterLibrary: async () => [],
     closeToTray: async () => true,
     setCloseToTray: async () => {},
@@ -33,11 +35,17 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     onAutomaticSync: () => () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'named', id: 1 }),
+    renameCollection: async (id) => ({ outcome: 'named', id }),
+    deleteCollection: async () => {},
     game: async () => null,
     launch: (game) => {
       requested.push(game.id);
       return launch(game);
     },
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, requested };
 }
