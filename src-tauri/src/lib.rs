@@ -581,8 +581,9 @@ fn start_automatic_steam_app_list_fetches(app: &App) -> std::io::Result<()> {
 /// (`onSession` in src/operations.ts). A failed look tells the interface nothing.
 const SESSION_EVENT: &str = "session";
 
-/// Records the Sessions of Local Games on a thread of its own for as long as
-/// the app runs.
+/// Records the Sessions of Local Games and Installed Steam Games on a thread
+/// of its own for as long as the app runs. Each Session that ends starts an
+/// automatic Sync, which the interface hears through `AUTOMATIC_SYNC_EVENT`.
 fn start_session_tracking(app: &App) -> std::io::Result<()> {
     let app = app.handle().clone();
     std::thread::Builder::new().name("session-tracking".into()).spawn(move || {

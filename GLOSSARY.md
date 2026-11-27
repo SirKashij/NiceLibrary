@@ -28,6 +28,9 @@ _Avoid_: Non-Steam game, custom game, manual game
 **Installed**:
 A Game whose files are present on this computer and can be launched right now. A Local Game is always Installed; a Steam Game may be owned but not Installed.
 
+**Install Folder**:
+The folder Steam installed an Installed Steam Game into, `steamapps/common/<folder>` in one of Steam's library folders. Any process whose executable lies in it is that Game running.
+
 **Steam Account**:
 The Steam identity whose Library is read. One installation of the app works with exactly one Steam Account.
 _Avoid_: User, profile
@@ -35,7 +38,7 @@ _Avoid_: User, profile
 ### Tracking
 
 **Session**:
-One uninterrupted period during which a Game's process was running, regardless of whether its window had focus. The app notices the process however the Game was started. When the app is closed or crashes while the Game runs, the Session ends at the last moment the app saw the process. A Session whose process the app still sees is running. The German interface calls it "Spielsitzung".
+One uninterrupted period during which a Game's process was running, regardless of whether its window had focus. The app notices the process however the Game was started: a Local Game by its executable, a Steam Game by its Install Folder. Every Session that ends starts a Sync. When the app is closed or crashes while the Game runs, the Session ends at the last moment the app saw the process. A Session whose process the app still sees is running. The German interface calls it "Spielsitzung".
 _Avoid_: Play session, run
 
 **Playtime**:

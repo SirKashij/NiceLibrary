@@ -209,8 +209,8 @@ export interface LibraryFilter {
 }
 
 /**
- * A Session of a Local Game that began or ended, noticed by the core however
- * the Game was started. Mirrors `Tracking` in crates/core; a failed look at
+ * A Session of a Local Game or an Installed Steam Game that began or ended,
+ * noticed by the core however the Game was started. Mirrors `Tracking` in crates/core; a failed look at
  * the running processes never reaches the interface.
  */
 export type SessionEvent = { state: 'started'; gameId: string } | { state: 'ended'; gameId: string };
@@ -440,9 +440,11 @@ export interface Operations {
   /** Adds or removes the current user's autostart entry. */
   setStartWithWindows(on: boolean): Promise<void>;
   /**
-   * Hears each Session of a Local Game begin and end while the app runs;
-   * each one changes the Game's Playtime and Last Played. Answers the
-   * function that stops listening.
+   * Hears each Session of a Local Game or a Steam Game begin and end while
+   * the app runs; each one changes a Local Game's Playtime and Last Played.
+   * A Steam Game's Playtime stays Steam's figure: the Sync each ended
+   * Session starts (`onAutomaticSync`) brings it. Answers the function that
+   * stops listening.
    */
   onSession(listener: (event: SessionEvent) => void): () => void;
   /**
