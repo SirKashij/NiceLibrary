@@ -37,6 +37,29 @@ button:focus-visible, input:focus-visible {
 }
 .sidebar nav button:hover { color: var(--color-text); }
 .sidebar nav button[aria-current='page'] { color: var(--color-text); box-shadow: inset var(--nav-indicator) 0 0 var(--color-text); }
+/* Collections in the sidebar: name, count, and quiet actions that show on hover or focus. */
+.collections { display: grid; gap: var(--space-2); padding-right: var(--space-3); font-size: var(--text-size-label); }
+.sidebar-heading { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.collection-list { display: grid; }
+.collection-row { display: flex; align-items: center; gap: var(--space-2); min-height: var(--nav-item-height); }
+.collection-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.collection-count { color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+.collection-actions { display: flex; gap: var(--space-1); opacity: 0; }
+.collection-row:hover .collection-actions, .collection-row:focus-within .collection-actions { opacity: 1; }
+.text-button { display: inline-flex; padding: var(--space-1); color: var(--color-text-muted); border-radius: var(--radius-control); }
+.text-button:hover { color: var(--color-text); }
+.icon { width: var(--icon-size); height: var(--icon-size); fill: none; stroke: currentColor; stroke-width: var(--icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
+.collection-form, .delete-question { display: grid; gap: var(--space-2); padding: var(--space-1) 0; }
+.collection-form input {
+  min-width: 0; font: inherit; color: var(--color-text); background: var(--color-surface);
+  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+}
+.collections .note { font-size: var(--text-size-label); }
+/* Read by screen readers, not shown. */
+.visually-hidden {
+  position: absolute; width: var(--hairline); height: var(--hairline); overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
 /* The last Sync and Sync now, at the bottom of the sidebar. */
 .sync { margin-top: auto; display: grid; justify-items: start; gap: var(--space-2); padding-right: var(--space-3); }
 .sync .note { font-size: var(--text-size-label); }
@@ -63,15 +86,15 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .field-row { display: flex; gap: var(--space-2); }
 .field-row input {
   flex: 1; min-width: 0; font: inherit; color: var(--color-text); background: var(--color-surface);
-  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
 }
 .button {
-  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control);
   padding: var(--space-1) var(--space-3); background: var(--color-surface-raised);
 }
 .button:hover { border-color: var(--color-text-muted); }
 .button:disabled { color: var(--color-text-muted); cursor: default; }
-.button:disabled:hover { border-color: var(--color-line); }
+.button:disabled:hover { border-color: var(--color-control-border); }
 .settings-actions { display: flex; gap: var(--space-2); }
 /* The guided step for the Steam Web API key. */
 .key-form { display: grid; gap: var(--space-2); }
@@ -120,13 +143,17 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .local-game-form { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); }
 .local-game-form > label { color: var(--color-text-muted); font-size: var(--text-size-label); }
 
+/* The theme: following the system, dark or light. */
+.theme-choice { display: grid; gap: var(--space-1); }
+.theme-choice label { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; cursor: pointer; }
+
 /* Library toolbar: search, Source and Installed only; the empty state when nothing matches. */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3); padding-bottom: var(--space-2); }
 .toolbar-search {
   flex: 1; min-width: 0; max-width: var(--note-max-width); font: inherit; color: var(--color-text); background: var(--color-surface);
-  border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
+  border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
 }
-.segmented { display: flex; border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); }
+.segmented { display: flex; border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); }
 .segmented button { padding: var(--space-1) var(--space-3); color: var(--color-text-muted); }
 .segmented button + button { border-left: var(--hairline) solid var(--color-line); }
 .segmented button:hover { color: var(--color-text); }

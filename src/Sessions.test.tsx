@@ -39,6 +39,12 @@ function fakeOperations(initial: Game[]) {
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    theme: async () => 'system',
+    chooseTheme: async () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'emptyName' }),
+    renameCollection: async () => ({ outcome: 'emptyName' }),
+    deleteCollection: async () => {},
     onSession: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

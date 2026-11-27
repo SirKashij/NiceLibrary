@@ -5,6 +5,7 @@
 //! everything that varies by machine or OS reaches the core through ports.
 
 mod clock;
+mod collections;
 mod covers;
 pub mod keyvalues;
 mod launch;
@@ -15,6 +16,7 @@ mod steam;
 mod steam_web_api;
 mod store;
 mod sync;
+mod theme;
 
 use std::fmt;
 use std::ops::ControlFlow;
@@ -23,6 +25,7 @@ use std::sync::{Mutex, MutexGuard, PoisonError};
 use serde::{Deserialize, Serialize, Serializer};
 
 pub use clock::{Clock, Wakeup};
+pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, OpenError, Opener};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
@@ -32,6 +35,7 @@ pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocato
 pub use steam_web_api::{SecretStore, SteamWebApiKeyCheck, WebAnswer, WebApi};
 pub use store::Store;
 pub use sync::{AutomaticSync, SyncOutcome};
+pub use theme::Theme;
 
 /// The origin a Game is read from.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -474,6 +478,62 @@ impl Core {
             .opener
             .open_url(steam_web_api::KEY_PAGE)
             .map_err(|error| Error::new(format!("{} could not be opened: {error}", steam_web_api::KEY_PAGE)))
+    }
+
+    /// The theme the user chose; until they choose, [`Theme::System`]: the
+    /// interface follows the operating system's dark or light setting.
+    pub fn theme(&self) -> Result<Theme, Error> {
+        self.store.theme()
+    }
+
+    /// Makes `theme` the theme of the interface, from now on and after every
+    /// restart.
+    pub fn choose_theme(&self, theme: Theme) -> Result<(), Error> {
+        self.store.choose_theme(theme)
+    }
+
+    /// Every Collection with how many Games of the Library are in it,
+    /// ordered by name whatever its case.
+    pub fn collections(&self) -> Result<Vec<Collection>, Error> {
+        let library: std::collections::HashSet<String> = self.library()?.into_iter().map(|game| game.id).collect();
+        let members = self.store.collection_games()?;
+        let mut collections: Vec<Collection> = self
+            .store
+            .collections()?
+            .into_iter()
+            .map(|(id, name)| {
+                let in_library = members.iter().filter(|(of, game)| *of == id && library.contains(game)).count();
+                Collection { id, name, game_count: u32::try_from(in_library).unwrap_or(u32::MAX) }
+            })
+            .collect();
+        collections.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()).then_with(|| a.id.cmp(&b.id)));
+        Ok(collections)
+    }
+
+    /// Creates a Collection named `name`, without the spaces around it. An
+    /// empty name, or one another Collection has in any case, is refused and
+    /// creates nothing.
+    pub fn create_collection(&self, name: &str) -> Result<CollectionNaming, Error> {
+        match collections::name_in(name) {
+            Some(name) => self.store.name_collection(None, name),
+            None => Ok(CollectionNaming::EmptyName),
+        }
+    }
+
+    /// Renames the Collection `id` to `name`, without the spaces around it,
+    /// under the same rules as [`Self::create_collection`]. Fails when there
+    /// is no such Collection.
+    pub fn rename_collection(&self, id: i64, name: &str) -> Result<CollectionNaming, Error> {
+        match collections::name_in(name) {
+            Some(name) => self.store.name_collection(Some(id), name),
+            None => Ok(CollectionNaming::EmptyName),
+        }
+    }
+
+    /// Deletes the Collection `id`. Its Games stay in the Library. Deleting
+    /// a Collection that is gone already changes nothing.
+    pub fn delete_collection(&self, id: i64) -> Result<(), Error> {
+        self.store.delete_collection(id)
     }
 }
 

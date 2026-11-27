@@ -6,8 +6,9 @@ pub mod ports;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSync, Core, CoverCache, Error, ExecutableChoice, Game, Launch, LibraryFilter,
-    SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Tracking,
+    AddLocalGame, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error, ExecutableChoice, Game, Launch,
+    LibraryFilter, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
+    Tracking,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -99,6 +100,36 @@ fn add_local_game(core: tauri::State<'_, Core>, executable: String, title: Strin
     core.add_local_game(&executable, &title)
 }
 
+#[tauri::command]
+fn theme(core: tauri::State<'_, Core>) -> Result<Theme, Error> {
+    core.theme()
+}
+
+#[tauri::command]
+fn choose_theme(core: tauri::State<'_, Core>, theme: Theme) -> Result<(), Error> {
+    core.choose_theme(theme)
+}
+
+#[tauri::command]
+fn collections(core: tauri::State<'_, Core>) -> Result<Vec<Collection>, Error> {
+    core.collections()
+}
+
+#[tauri::command]
+fn create_collection(core: tauri::State<'_, Core>, name: String) -> Result<CollectionNaming, Error> {
+    core.create_collection(&name)
+}
+
+#[tauri::command]
+fn rename_collection(core: tauri::State<'_, Core>, id: i64, name: String) -> Result<CollectionNaming, Error> {
+    core.rename_collection(id, &name)
+}
+
+#[tauri::command]
+fn delete_collection(core: tauri::State<'_, Core>, id: i64) -> Result<(), Error> {
+    core.delete_collection(id)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -143,6 +174,12 @@ pub fn run() {
             open_steam_web_api_key_page,
             sync,
             last_sync,
+            theme,
+            choose_theme,
+            collections,
+            create_collection,
+            rename_collection,
+            delete_collection,
             filter_library,
             game,
             choose_local_game_executable,

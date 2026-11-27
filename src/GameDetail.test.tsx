@@ -52,7 +52,13 @@ function fakeOperations(
     openSteamWebApiKeyPage: async () => {},
     sync: options.sync ?? (async () => ({ outcome: 'noKey' })),
     lastSync: async () => null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     onAutomaticSync: () => () => {},
+    collections: async () => [],
+    createCollection: async () => ({ outcome: 'named', id: 1 }),
+    renameCollection: async (id) => ({ outcome: 'named', id }),
+    deleteCollection: async () => {},
     onSession: () => () => {},
     filterLibrary: async () => games,
     game: async (gameId) => {

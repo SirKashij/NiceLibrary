@@ -1,9 +1,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { Collections } from './Collections';
 import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import { AddLocalGameButton } from './library/AddLocalGame';
 import { useSessionChanges } from './library/Sessions';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
+import { ThemeSettings } from './settings/ThemeSettings';
+import { ThemeProvider } from './theme';
 import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
 
 type View = 'library' | 'statistics' | 'settings';
@@ -17,7 +20,9 @@ const VIEWS: { view: View; label: MessageKey }[] = [
 export function App({ operations, lang }: { operations: Operations; lang: Lang }) {
   return (
     <I18nProvider lang={lang}>
-      <Shell operations={operations} />
+      <ThemeProvider operations={operations}>
+        <Shell operations={operations} />
+      </ThemeProvider>
     </I18nProvider>
   );
 }
@@ -51,6 +56,7 @@ function Shell({ operations }: { operations: Operations }) {
             </button>
           ))}
         </nav>
+        <Collections operations={operations} />
         {/* Starts over for each chosen account: shows its last Sync, never one of the account chosen before. */}
         <SyncStatus key={accountChoices} operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
       </aside>
@@ -373,6 +379,7 @@ function SettingsView({ operations, onAccountChosen }: { operations: Operations;
     <Page title="nav.settings">
       <SteamSettings operations={operations} onAccountChosen={onAccountChosen} />
       <SteamWebApiKeySettings operations={operations} />
+      <ThemeSettings />
     </Page>
   );
 }
