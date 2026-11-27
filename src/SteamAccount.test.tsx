@@ -57,12 +57,16 @@ function fakeOperations(
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => (account && lastSyncs[account]) || null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     launch: async () => ({ outcome: 'launched' }),
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, chosen };
 }

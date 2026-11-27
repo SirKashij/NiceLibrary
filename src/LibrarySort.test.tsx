@@ -51,6 +51,10 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
         .filter((game) => game.title.toLowerCase().includes(filter.search.toLowerCase()));
     },
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
     librarySort: async () => stored,
     chooseLibrarySort: async (sort) => {
       chosen.push(sort);

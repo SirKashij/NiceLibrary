@@ -11,8 +11,10 @@ use std::sync::{Mutex, MutexGuard};
 
 use rusqlite::{Connection, params};
 
+use crate::local_games::StoredLocalGame;
 use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
+use crate::theme::Theme;
 use crate::{Error, Game};
 
 /// The schema changes, oldest first. Never edit or reorder a released entry;
@@ -38,6 +40,12 @@ const MIGRATIONS: &[&str] = &[
          steam_account TEXT    PRIMARY KEY,
          synced_at     INTEGER NOT NULL
      );",
+    // 3: Local Games, each with the path of its executable as chosen.
+    "CREATE TABLE local_games (
+         id         INTEGER PRIMARY KEY AUTOINCREMENT,
+         title      TEXT    NOT NULL,
+         executable TEXT    NOT NULL UNIQUE
+     );",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
@@ -50,6 +58,8 @@ const CHOSEN_STEAM_ACCOUNT: &str = "chosen_steam_account";
 
 /// The setting that names the order the user chose for the Library.
 const LIBRARY_SORT: &str = "library_sort";
+/// The setting that holds the theme the user chose.
+const THEME: &str = "theme";
 
 /// The local store.
 pub struct Store {
@@ -115,6 +125,21 @@ impl Store {
             "INSERT INTO settings (key, value) VALUES (?1, ?2)
              ON CONFLICT (key) DO UPDATE SET value = excluded.value",
             params![LIBRARY_SORT, name],
+        )?;
+        Ok(())
+    }
+
+    /// The theme the user chose; [`Theme::System`] until they choose.
+    pub(crate) fn theme(&self) -> Result<Theme, Error> {
+        Ok(self.setting(THEME)?.map_or(Theme::System, |setting| Theme::from_setting(&setting)))
+    }
+
+    /// Remembers `theme` as the theme the user chose.
+    pub(crate) fn choose_theme(&self, theme: Theme) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![THEME, theme.as_setting()],
         )?;
         Ok(())
     }
@@ -209,6 +234,25 @@ impl Store {
             })?
             .collect::<Result<_, _>>()?;
         Ok(games)
+    }
+}
+
+impl Store {
+    /// Every Local Game, in the order they were added.
+    pub(crate) fn local_games(&self) -> Result<Vec<StoredLocalGame>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare("SELECT id, title, executable FROM local_games ORDER BY id")?;
+        let games = statement
+            .query_map([], |row| Ok(StoredLocalGame { id: row.get(0)?, title: row.get(1)?, executable: row.get(2)? }))?
+            .collect::<Result<_, _>>()?;
+        Ok(games)
+    }
+
+    /// Adds the Local Game `title` with its `executable` and answers its id.
+    pub(crate) fn add_local_game(&self, title: &str, executable: &str) -> Result<i64, Error> {
+        let connection = self.connection();
+        connection.execute("INSERT INTO local_games (title, executable) VALUES (?1, ?2)", params![title, executable])?;
+        Ok(connection.last_insert_rowid())
     }
 }
 

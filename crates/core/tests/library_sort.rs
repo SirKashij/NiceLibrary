@@ -86,6 +86,15 @@ impl Clock for StoppedClock {
     fn sleep(&self, _duration: std::time::Duration, _wakeup: &Wakeup) {}
 }
 
+/// A computer whose user chooses no executable; these tests add no Local Game.
+struct NoExecutableChosen;
+
+impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
+    fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
+}
+
 /// The test computer: Steam with PLAYER logged in, Portal 2 and "celeste"
 /// Installed. "celeste" is not among the Games Steam says PLAYER owns, so it
 /// has neither Playtime nor Last Played.
@@ -127,6 +136,7 @@ impl Computer {
                 secrets: Box::new(SteamOwning),
                 web_api: Box::new(SteamOwning),
                 clock: Box::new(StoppedClock),
+                executable_picker: Box::new(NoExecutableChosen),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),

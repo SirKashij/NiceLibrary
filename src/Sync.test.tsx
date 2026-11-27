@@ -75,6 +75,8 @@ function fakeOperations({
       return outcome;
     },
     lastSync: async () => last,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     filterLibrary: async () => [],
     onAutomaticSync: (listener) => {
       listeners.add(listener);
@@ -83,6 +85,8 @@ function fakeOperations({
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, calls, automaticSync, listeners };
 }

@@ -24,6 +24,8 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     game: async () => null,
@@ -33,6 +35,8 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
       requested.push(game.id);
       return launch(game);
     },
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, requested };
 }

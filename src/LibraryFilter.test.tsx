@@ -30,6 +30,8 @@ function fakeOperations() {
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     onAutomaticSync: () => () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);
@@ -43,6 +45,8 @@ function fakeOperations() {
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, asked };
 }
