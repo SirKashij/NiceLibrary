@@ -5,6 +5,8 @@
 //! a database from any earlier version is brought up to date on open. Every
 //! Steam-derived row carries the Steam Account it belongs to.
 
+mod steam_app_list;
+
 use std::fs;
 use std::path::Path;
 use std::sync::{Mutex, MutexGuard};
@@ -58,6 +60,12 @@ const MIGRATIONS: &[&str] = &[
          game_id       TEXT    NOT NULL,
          PRIMARY KEY (collection_id, game_id)
      );",
+    // 5: The Steam App List. Steam's, not a Steam Account's, so its rows carry none.
+    "CREATE TABLE steam_app_list (
+         app_id INTEGER PRIMARY KEY,
+         name   TEXT    NOT NULL,
+         search TEXT    NOT NULL
+     );",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
@@ -99,11 +107,22 @@ impl Store {
         self.connection.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    fn setting(&self, key: &str) -> Result<Option<String>, Error> {
+    /// The value of the setting `key`, once one is stored.
+    pub(crate) fn setting(&self, key: &str) -> Result<Option<String>, Error> {
         let connection = self.connection();
         let mut statement = connection.prepare("SELECT value FROM settings WHERE key = ?1")?;
         let mut rows = statement.query_map([key], |row| row.get(0))?;
         Ok(rows.next().transpose()?)
+    }
+
+    /// Stores `value` as the setting `key`, in place of any earlier one.
+    pub(crate) fn set_setting(&self, key: &str, value: &str) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![key, value],
+        )?;
+        Ok(())
     }
 
     /// The Steam Account whose Games were read last, from Steam's folders or

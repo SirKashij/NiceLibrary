@@ -126,6 +126,22 @@ export const en = {
   'theme.dark': 'Dark',
   'theme.light': 'Light',
   'theme.saveFailed': 'The theme could not be saved.',
+  'settings.appList': 'Steam app list',
+  'appList.why':
+    'NiceLibrary looks up the games you add yourself in Steam’s list of titles to find their covers. It fetches the list with your Steam Web API key, and again once a week.',
+  'appList.never': 'Not fetched yet.',
+  'appList.fetched': '{count} titles, fetched {time}',
+  'appList.unfinished': '{count} titles so far. The next fetch continues where the last one stopped.',
+  'appList.fetch': 'Fetch now',
+  'appList.fetching': 'Fetching…',
+  'appList.fetchingNote': 'Fetching the app list from Steam…',
+  'appList.upToDate': 'Steam’s app list is up to date.',
+  'appList.noKey': 'Add your Steam Web API key above to fetch the app list.',
+  'appList.keyRejected': 'Steam rejected your Steam Web API key. Replace it above.',
+  'appList.steamUnreachable':
+    'Steam could not be reached. The titles fetched so far are kept, and the next fetch continues where this one stopped.',
+  'appList.failed': 'The app list could not be fetched.',
+  'appList.loadFailed': 'The app list could not be checked.',
   'library.openGame': 'Details for {title}',
   'game.back': 'Back to the library',
   'game.facts': 'About {title}',
@@ -145,6 +161,19 @@ export const en = {
   'layout.list': 'List',
   'layout.titleColumn': 'Title',
   'layout.saveFailed': 'The layout could not be saved.',
+  'settings.window': 'Window',
+  'window.closeToTray': 'Keep running in the tray when the window is closed',
+  'window.closeToTrayOn':
+    'Closing the window hides it, and NiceLibrary keeps tracking your playtime in the tray. Quit it from the tray icon’s menu.',
+  'window.closeToTrayOff': 'Closing the window quits NiceLibrary, and your playtime is no longer tracked.',
+  'window.loadFailed': 'The window setting could not be loaded.',
+  'window.saveFailed': 'The window setting could not be saved.',
+  'tray.open': 'Open NiceLibrary',
+  'tray.quit': 'Quit',
+  'tray.noticeTitle': 'NiceLibrary keeps running',
+  'tray.notice':
+    'When you close the window, NiceLibrary keeps running in the tray so it can go on tracking your playtime. Click its tray icon to open it again, or quit it from the icon’s menu. You can change this in the Settings under Window.',
+  'tray.ok': 'OK',
 } as const;
 
 export type MessageKey = keyof typeof en;

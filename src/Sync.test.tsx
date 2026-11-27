@@ -78,6 +78,11 @@ function fakeOperations({
     theme: async () => 'system',
     chooseTheme: async () => {},
     filterLibrary: async () => [],
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
@@ -88,6 +93,9 @@ function fakeOperations({
     deleteCollection: async () => {},
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
     game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),

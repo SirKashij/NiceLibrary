@@ -32,11 +32,19 @@ function fakeOperations() {
     lastSync: async () => null,
     theme: async () => 'system',
     chooseTheme: async () => {},
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
     onAutomaticSync: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
     renameCollection: async (id) => ({ outcome: 'named', id }),
     deleteCollection: async () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);
       return LIBRARY.filter(

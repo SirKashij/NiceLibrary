@@ -2,16 +2,19 @@
 //! application core and adds nothing of its own.
 
 pub mod ports;
+mod tray;
 
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error, ExecutableChoice, Game, Launch,
-    LibraryFilter, LibraryLayout, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
+    AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
+    ExecutableChoice, Game, Launch, LibraryFilter, LibraryLayout, SteamAccountChoice, SteamAppList, SteamAppListFetch,
+    SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
-use tauri::{App, Emitter, Manager, WebviewWindowBuilder};
+use tauri::{App, AppHandle, Emitter, Manager, WebviewWindowBuilder, WindowEvent};
+use tray::TrayMenuTexts;
 
 #[tauri::command]
 fn library(core: tauri::State<'_, Core>) -> Result<Vec<Game>, Error> {
@@ -139,6 +142,39 @@ fn delete_collection(core: tauri::State<'_, Core>, id: i64) -> Result<(), Error>
     core.delete_collection(id)
 }
 
+#[tauri::command]
+fn close_to_tray(core: tauri::State<'_, Core>) -> Result<bool, Error> {
+    core.close_to_tray()
+}
+
+#[tauri::command]
+fn set_close_to_tray(core: tauri::State<'_, Core>, on: bool) -> Result<(), Error> {
+    core.set_close_to_tray(on)
+}
+
+/// Closes the window as its close button does (see [`Core::close_window`]).
+#[tauri::command]
+fn close_window(app: AppHandle) {
+    tray::close_main_window(&app);
+}
+
+/// The Tray's texts come from the interface, which owns every text.
+#[tauri::command]
+fn show_tray_menu(app: AppHandle, texts: TrayMenuTexts) -> Result<(), String> {
+    tray::show_menu(&app, &texts).map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+fn steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppList, Error> {
+    core.steam_app_list()
+}
+
+/// Async, so asking Steam for every page runs off the main thread.
+#[tauri::command]
+async fn fetch_steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppListFetch, Error> {
+    core.fetch_steam_app_list()
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -170,6 +206,16 @@ const COVERS: &str = "covers";
 
 pub fn run() {
     tauri::Builder::default()
+        // First, so a second start hands over and ends before it opens anything.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| tray::show_main_window(app)))
+        .on_window_event(|window, event| {
+            if let WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == tray::MAIN_WINDOW
+            {
+                api.prevent_close();
+                tray::close_main_window(window.app_handle());
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             library,
             read_installed_games,
@@ -189,12 +235,18 @@ pub fn run() {
             create_collection,
             rename_collection,
             delete_collection,
+            steam_app_list,
+            fetch_steam_app_list,
             filter_library,
             game,
             choose_local_game_executable,
             add_local_game,
             library_layout,
-            choose_library_layout
+            choose_library_layout,
+            close_to_tray,
+            set_close_to_tray,
+            close_window,
+            show_tray_menu
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
@@ -209,6 +261,8 @@ pub fn run() {
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
             app.manage(Core::new(ports::real_ports(), store, covers));
             start_automatic_syncs(app)?;
+            tray::create(app.handle())?;
+            start_automatic_steam_app_list_fetches(app)?;
             create_main_window(app)
         })
         .run(tauri::generate_context!())
@@ -228,6 +282,27 @@ fn start_automatic_syncs(app: &App) -> std::io::Result<()> {
             if event != AutomaticSync::Skipped {
                 // No window to tell is no reason to stop syncing.
                 let _ = app.emit(AUTOMATIC_SYNC_EVENT, &event);
+            }
+            ControlFlow::Continue(())
+        });
+    })?;
+    Ok(())
+}
+
+/// The event the interface hears the automatic fetches of the Steam App List
+/// through (`onAutomaticSteamAppListFetch` in src/operations.ts). A round that
+/// fetches nothing tells the interface nothing.
+const AUTOMATIC_STEAM_APP_LIST_FETCH_EVENT: &str = "automatic-steam-app-list-fetch";
+
+/// Runs the core's automatic fetches of the Steam App List on a thread of
+/// their own for as long as the app runs.
+fn start_automatic_steam_app_list_fetches(app: &App) -> std::io::Result<()> {
+    let app = app.handle().clone();
+    std::thread::Builder::new().name("automatic-steam-app-list-fetch".into()).spawn(move || {
+        app.state::<Core>().fetch_steam_app_list_automatically(|event| {
+            if event != AutomaticSteamAppListFetch::Skipped {
+                // No window to tell is no reason to stop fetching.
+                let _ = app.emit(AUTOMATIC_STEAM_APP_LIST_FETCH_EVENT, &event);
             }
             ControlFlow::Continue(())
         });

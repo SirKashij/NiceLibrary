@@ -51,6 +51,14 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
+    closeToTray: async () => true,
+    setCloseToTray: async () => {},
+    closeWindow: async () => {},
+    onTrayNotice: () => () => {},
+    showTrayMenu: async () => {},
     libraryLayout: () => stored,
     chooseLibraryLayout: async (layout) => {
       chosen.push(layout);

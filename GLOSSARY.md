@@ -96,6 +96,10 @@ _Avoid_: Box art, poster, artwork, thumbnail
 **Cover Match**:
 The link between a Local Game and the Steam title whose Cover it borrows. The person confirms or changes it when adding the Game.
 
+**Steam App List**:
+Steam's list of the titles it offers, each with its app id and name, fetched with the Steam Web API key and kept on this computer as the basis for Cover Matches. It is fetched, not synced: it belongs to no Steam Account.
+_Avoid_: App database, catalogue, Sync (for fetching it)
+
 ### Operation
 
 **Sync**:
@@ -123,3 +127,7 @@ _Avoid_: Skin, mode, appearance
 **Library Layout**:
 How the Library shows its Games: as a cover grid, one card with a large Cover per Game, or as a list, one row per Game with a small Cover, title, Source, Playtime, Last Played and its Launch. Both show the same Games in the same order. Until the person switches, it is the cover grid. The German interface calls it "Ansicht".
 _Avoid_: View (the app's pages are views), mode, display
+
+**Tray**:
+The app's icon in the notification area of the Windows taskbar. While the window is closed the app keeps running there, so tracking goes on, unless the person turned close-to-tray off; its menu opens the window or quits the app. The German interface calls it "Infobereich".
+_Avoid_: System tray (in interface text), taskbar, background
