@@ -58,6 +58,16 @@ export type LaunchOutcome = { outcome: 'launched' } | { outcome: 'steamNotFound'
 /** How storing the Steam Web API key went, when nothing failed. Mirrors `SteamWebApiKeyCheck` in crates/core. */
 export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' } | { outcome: 'steamUnreachable' };
 
+/** What the Library is narrowed to; every part that is set must match. Mirrors `LibraryFilter` in crates/core. */
+export interface LibraryFilter {
+  /** Text the title must contain, ignoring case; empty matches every title. */
+  search: string;
+  /** Only Games of this Source; `null` for both Sources. */
+  source: Source | null;
+  /** Only Installed Games. */
+  installedOnly: boolean;
+}
+
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
   library(): Promise<Game[]>;
@@ -114,6 +124,10 @@ export interface Operations {
    * the function that stops listening.
    */
   onAutomaticSync(listener: (event: AutomaticSync) => void): () => void;
+  /** The Games in the stored Library that match the filter, ordered by title like `library`. */
+  filterLibrary(filter: LibraryFilter): Promise<Game[]>;
+  /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
+  game(gameId: string): Promise<Game | null>;
   /** Whether closing the window keeps the app running in the Tray. On until the user turns it off. */
   closeToTray(): Promise<boolean>;
   /** Turns close-to-tray on or off, also after a restart. */
@@ -164,6 +178,8 @@ export const tauriOperations: Operations = {
       void listening.then((stop) => stop());
     };
   },
+  filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
+  game: (gameId) => invoke<Game | null>('game', { gameId }),
   closeToTray: () => invoke<boolean>('close_to_tray'),
   setCloseToTray: (on) => invoke<void>('set_close_to_tray', { on }),
   closeWindow: () => invoke<void>('close_window'),

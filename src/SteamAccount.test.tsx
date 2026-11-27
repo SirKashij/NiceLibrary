@@ -57,12 +57,14 @@ function fakeOperations(
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => (account && lastSyncs[account]) || null,
+    filterLibrary: async () => [],
     closeToTray: async () => true,
     setCloseToTray: async () => {},
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
     onAutomaticSync: () => () => {},
+    game: async () => null,
     launch: async () => ({ outcome: 'launched' }),
   };
   return { operations, chosen };

@@ -29,6 +29,8 @@ function fakeOperations({ closeToTray = true } = {}) {
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    filterLibrary: async () => [],
+    game: async () => null,
     closeToTray: async () => setting,
     setCloseToTray: async (on) => {
       calls.closeToTray.push(on);

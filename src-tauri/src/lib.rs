@@ -7,7 +7,7 @@ mod tray;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AutomaticSync, Core, CoverCache, Error, Game, Launch, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
+    AutomaticSync, Core, CoverCache, Error, Game, Launch, LibraryFilter, SteamAccountChoice, SteamInstallation, SteamWebApiKeyCheck, Store,
     SyncOutcome,
 };
 use percent_encoding::percent_decode_str;
@@ -72,6 +72,16 @@ async fn sync(core: tauri::State<'_, Core>) -> Result<SyncOutcome, Error> {
 #[tauri::command]
 fn last_sync(core: tauri::State<'_, Core>) -> Result<Option<u64>, Error> {
     core.last_sync()
+}
+
+#[tauri::command]
+fn filter_library(core: tauri::State<'_, Core>, filter: LibraryFilter) -> Result<Vec<Game>, Error> {
+    core.filter_library(&filter)
+}
+
+#[tauri::command]
+fn game(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<Game>, Error> {
+    core.game(&game_id)
 }
 
 /// Async, so a slow start of the browser does not block the window.
@@ -156,6 +166,8 @@ pub fn run() {
             open_steam_web_api_key_page,
             sync,
             last_sync,
+            filter_library,
+            game,
             close_to_tray,
             set_close_to_tray,
             close_window,

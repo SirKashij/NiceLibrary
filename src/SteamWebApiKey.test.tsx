@@ -41,12 +41,14 @@ function fakeOperations({ stored = false } = {}) {
     },
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    filterLibrary: async () => [],
     closeToTray: async () => true,
     setCloseToTray: async () => {},
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
     onAutomaticSync: () => () => {},
+    game: async () => null,
   };
   return { operations, calls };
 }

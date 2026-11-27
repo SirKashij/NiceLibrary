@@ -21,12 +21,14 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
+    filterLibrary: async () => [],
     closeToTray: async () => true,
     setCloseToTray: async () => {},
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
     onAutomaticSync: () => () => {},
+    game: async () => null,
     launch: async () => ({ outcome: 'launched' }),
   };
 }

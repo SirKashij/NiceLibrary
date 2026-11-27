@@ -83,6 +83,10 @@ _Avoid_: Ignored, archived
 A named group of Games created by the person. A Game can be in several Collections.
 _Avoid_: Category, tag, folder, list
 
+**Detail Page**:
+The page of one Game, opened from the Library: its large Cover, Source, whether it is Installed, Playtime, Last Played and its Launch. Going back returns to the Library as it was left.
+_Avoid_: Game page, info screen, dialog
+
 ### Artwork
 
 **Cover**:
