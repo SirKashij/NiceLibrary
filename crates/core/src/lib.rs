@@ -17,6 +17,7 @@ mod library_filter;
 mod progress;
 mod log;
 mod sessions;
+mod statistics;
 mod status;
 mod steam;
 mod steam_app_list;
@@ -46,6 +47,7 @@ pub use local_games::{AddLocalGame, EditLocalGame, ExecutableChoice, ExecutableP
 pub use progress::ManualProgress;
 pub use log::Log;
 pub use sessions::{ProcessList, Tracking};
+pub use statistics::{GamesByStatus, Statistics};
 pub use status::Status;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
 pub use steam_app_list::{AutomaticSteamAppListFetch, SteamAppList, SteamAppListFetch, SteamTitle};
@@ -249,9 +251,7 @@ impl Core {
 
     /// Every Game of both Sources, Hidden Games too, ordered by title.
     fn every_game(&self) -> Result<Vec<Game>, Error> {
-        // Until the user chooses, the account read last: it holds the Games.
-        let account = self.chosen_steam_account_or(|| self.store.last_read_steam_account())?;
-        let mut games = match account {
+        let mut games = match self.library_steam_account()? {
             Some(account) => {
                 let mut games = self.store.steam_games(&account)?;
                 let achievements = self.store.achievement_counts(&account)?;
@@ -279,6 +279,12 @@ impl Core {
         }
         games.sort_by(library_filter::by_title);
         Ok(games)
+    }
+
+    /// The Steam Account whose Steam Games the Library holds: the chosen
+    /// one, and until the user chooses, the account read last.
+    fn library_steam_account(&self) -> Result<Option<String>, Error> {
+        self.chosen_steam_account_or(|| self.store.last_read_steam_account())
     }
 
     /// The Games in the Library that match `filter`, as last stored, in the
@@ -1195,6 +1201,22 @@ impl Core {
             self.note("unhide_game: unhidden");
         }
         self.logged("unhide_game", unhidden)
+    }
+
+    /// The Statistics of the Library as it shows: total Playtime, unlocked
+    /// Achievements of all and their share, Games at 100 % Progress, and
+    /// Games per Status. Hidden Games count in none of them.
+    pub fn statistics(&self) -> Result<Statistics, Error> {
+        let statistics = self.stored_library().and_then(|games| {
+            let achievements = match self.library_steam_account()? {
+                Some(account) => self.store.achievement_counts(&account)?,
+                None => Default::default(),
+            };
+            Ok(statistics::of(&games, |game| {
+                steam_app_id(&game.id).and_then(|app_id| achievements.get(&app_id).copied())
+            }))
+        });
+        self.logged("statistics", statistics)
     }
 }
 

@@ -39,6 +39,9 @@ function fakeOperations({ closeToTray = true } = {}) {
     deleteCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     onAutomaticSync: () => () => {},
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),

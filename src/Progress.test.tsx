@@ -96,6 +96,9 @@ function fakeOperations(initial: Game[], sort: LibrarySort = 'name') {
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     setManualProgress: async (gameId, percent) => {
       const game = games.find((candidate) => candidate.id === gameId);
       if (!game || game.source !== 'local') return { outcome: 'notALocalGame' } satisfies ManualProgress;

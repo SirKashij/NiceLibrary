@@ -18,6 +18,7 @@ import { SortChoice, useLibrarySort } from './library/LibrarySort';
 import { StatusBadge } from './library/Status';
 import { ProgressBadge } from './library/Progress';
 import { LogSettings } from './settings/LogSettings';
+import { StatisticsPage } from './statistics/StatisticsPage';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -72,7 +73,7 @@ function Shell({ operations }: { operations: Operations }) {
       </aside>
       <main className="main">
         {view === 'library' && <LibraryView operations={operations} syncs={changes} />}
-        {view === 'statistics' && <PlaceholderPage title="nav.statistics" note="statistics.empty" />}
+        {view === 'statistics' && <StatisticsPage operations={operations} syncs={changes} />}
         {view === 'settings' && (
           <SettingsView operations={operations} onAccountChosen={() => setAccountChoices((n) => n + 1)} />
         )}
@@ -787,15 +788,6 @@ function SteamWebApiKeySettings({ operations }: { operations: Operations }) {
         <p className="muted">{t('key.data')}</p>
       </div>
     </section>
-  );
-}
-
-function PlaceholderPage({ title, note }: { title: MessageKey; note: MessageKey }) {
-  const t = useT();
-  return (
-    <Page title={title}>
-      <p className="note">{t(note)}</p>
-    </Page>
   );
 }
 

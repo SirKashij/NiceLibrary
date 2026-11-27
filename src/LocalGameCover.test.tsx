@@ -107,6 +107,9 @@ function fakeOperations({
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
   };
   return { operations, calls };

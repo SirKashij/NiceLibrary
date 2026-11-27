@@ -105,6 +105,9 @@ function fakeOperations(
     hideGame: async () => {},
     unhideGame: async () => {},
     startsWithWindows: async () => false,
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     setStartWithWindows: async () => {},
     onSession: () => () => {},

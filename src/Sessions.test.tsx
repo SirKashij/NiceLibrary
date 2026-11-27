@@ -42,6 +42,9 @@ function fakeOperations(initial: Game[]) {
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     launchOptions: async () => null,
     setLaunchOptions: async () => {},
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,

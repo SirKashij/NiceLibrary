@@ -83,6 +83,9 @@ function fakeOperations(initial: Game[], options: { setManualProgress?: Operatio
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     setManualProgress: (gameId, percent) => {
       calls.setManualProgress.push([gameId, percent]);
       if (options.setManualProgress) return options.setManualProgress(gameId, percent);

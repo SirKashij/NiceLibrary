@@ -77,6 +77,9 @@ function fakeOperations({
       games.push(game);
       return { outcome: 'added', game };
     },
+    statistics: async () => {
+      throw new Error('this test shows no Statistics');
+    },
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     setStatus: async () => {
       throw new Error('this test sets no Status');

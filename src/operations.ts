@@ -438,6 +438,11 @@ export interface Operations {
    * about it; its files on disk stay. Rejects for a Steam Game.
    */
   removeLocalGame(gameId: string): Promise<void>;
+  /**
+   * The Statistics of the Library as it shows, worked out by the core;
+   * Hidden Games count in none of them.
+   */
+  statistics(): Promise<Statistics>;
 }
 
 /** How choosing an image as a Local Game's Cover went. Every outcome but `chosen` changed nothing. Mirrors `CoverImageChoice` in crates/core. */
@@ -537,4 +542,23 @@ export const tauriOperations: Operations = {
   editLocalGame: (gameId, title, executable) =>
     invoke<EditLocalGame>('edit_local_game', { gameId, title, executable }),
   removeLocalGame: (gameId) => invoke<void>('remove_local_game', { gameId }),
+  statistics: () => invoke<Statistics>('statistics'),
 };
+
+/** Mirrors `Statistics` in crates/core: the totals over the Games in the Library. */
+export interface Statistics {
+  /** How many Games the Library holds. */
+  games: number;
+  /** The Playtime of every Game together, in minutes. */
+  playtimeMinutes: number;
+  /** How many Achievements of all Steam Games are unlocked. */
+  achievementsUnlocked: number;
+  /** How many Achievements the Steam Games have together. */
+  achievementsTotal: number;
+  /** The share of unlocked Achievements in whole percent, rounded down; `null` while there are none. */
+  achievementShare: number | null;
+  /** How many Games are at 100 % Progress. */
+  completeGames: number;
+  /** How many Games have each Status. */
+  gamesByStatus: Record<Status, number>;
+}

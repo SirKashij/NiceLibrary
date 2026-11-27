@@ -70,6 +70,10 @@ A percentage the person sets by hand on a Local Game.
 The person's own judgement of where they stand with a Game: Unplayed, Playing, Completed or Dropped. It is set by hand and is independent of Progress.
 _Avoid_: State
 
+**Statistics**:
+Figures over the Library that the core works out: total Playtime, unlocked Achievements of all and their share, the number of Games at 100 % Progress, and the number of Games per Status. Hidden Games count in none of them.
+_Avoid_: Stats, analytics
+
 ### Organising
 
 **Favorite**:
