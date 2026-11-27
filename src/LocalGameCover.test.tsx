@@ -127,6 +127,8 @@ function fakeOperations({
     coverHue: async (gameId) => (chosen.has(gameId) ? { hue: 220, saturation: 0.8 } : null),
     language: async () => 'system',
     chooseLanguage: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
   };
   return { operations, calls };
 }

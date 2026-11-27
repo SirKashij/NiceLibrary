@@ -123,6 +123,8 @@ function fakeOperations({
     setCoverMatch: async (gameId, appId) => {
       matched.push([gameId, appId]);
     },
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
   };
   return { operations, added, matched };
 }

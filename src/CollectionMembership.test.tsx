@@ -144,6 +144,8 @@ function fakeOperations({
     coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
   };
   return { operations, calls };
 }

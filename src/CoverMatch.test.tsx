@@ -123,6 +123,8 @@ function fakeOperations({
     coverHue: async () => null,
     install: async () => ({ outcome: 'started' }),
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
   };
   return { operations, calls };
 }

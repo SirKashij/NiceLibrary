@@ -92,6 +92,8 @@ function fakeOperations(games: Game[], install: (game: Game) => Promise<InstallO
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,
     setCoverMatch: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
   };
   return { operations, installs, launches };
 }

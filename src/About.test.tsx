@@ -90,6 +90,8 @@ function fakeOperations({
       return openPage();
     },
     install: async () => ({ outcome: 'started' }),
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
   };
   return { operations, calls };
 }

@@ -15,6 +15,7 @@ const PORTAL_2: Game = {
   playtimeMinutes: 75,
   lastPlayed: null,
   status: 'unplayed',
+  favorite: false,
 };
 
 /**
@@ -82,6 +83,39 @@ function fakeOperations({
       calls.privacySettingsOpened += 1;
       if (!privacyOpens) throw new Error('no browser');
     },
+    gameCollections: async () => [],
+    addGameToCollection: async () => {},
+    removeGameFromCollection: async () => {},
+    libraryLayout: async () => 'coverGrid',
+    chooseLibraryLayout: async () => {},
+    language: async () => 'system',
+    chooseLanguage: async () => {},
+    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
+    coverImageChosen: async () => false,
+    removeCoverImage: async () => {},
+    onSession: () => () => {},
+    achievements: async () => ({ state: 'notFetchedYet' }),
+    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
+    launchOptions: async () => null,
+    setLaunchOptions: async () => {},
+    hiddenGames: async () => [],
+    hideGame: async () => {},
+    unhideGame: async () => {},
+    localGame: async () => null,
+    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
+    editLocalGame: async () => ({ outcome: 'noTitle' }),
+    removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
+    coverHue: async () => null,
+    install: async () => ({ outcome: 'started' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
+    findSteamTitles: async () => [],
+    proposeCoverMatch: async () => null,
+    coverMatch: async () => null,
+    setCoverMatch: async () => {},
   };
   /** The core runs an automatic Sync that ends with `answer`. */
   const automaticSync = (answer: SyncOutcome) => {
