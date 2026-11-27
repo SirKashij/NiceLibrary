@@ -56,6 +56,7 @@ function fakeOperations({ closeToTray = true } = {}) {
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     onSession: () => () => {},
+    sessions: async () => [],
     openLogFolder: async () => {},
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},

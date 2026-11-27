@@ -65,6 +65,7 @@ function fakeOperations(library: Game[] = LIBRARY) {
     hiddenGames: async () => [],
     hideGame: async () => {},
     unhideGame: async () => {},
+    sessions: async () => [],
     filterLibrary: async (filter) => {
       asked.push(filter);
       return library.filter(

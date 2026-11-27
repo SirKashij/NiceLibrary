@@ -6,6 +6,7 @@ import { FavoriteToggle } from './Favorites';
 import { LaunchOptionsForm } from './LaunchOptions';
 import { GameActionButton } from './library/GameAction';
 import { HideGameButton } from './library/HiddenGames';
+import { SessionList } from './library/SessionList';
 import { StatusChoice } from './library/Status';
 import { LocalGameCoverChoice } from './LocalGameCover';
 import { CoverMatchChoice } from './CoverMatch';
@@ -19,10 +20,10 @@ const SOURCES: Record<Source, MessageKey> = {
 /**
  * The detail page of one Game: its large Cover, title, Source, whether it is
  * Installed, its Status to set, Playtime, Last Played, its Collections and
- * the main action, its Achievements, marking it as a Favorite, and the way
- * back to the Library. Shows the Game as opened at once and as the core
- * answers it then, again after each change. Takes its Tint from the Game's
- * Cover, or stays neutral (see src/coverTint.ts).
+ * the main action, its Sessions and Achievements, marking it as a Favorite,
+ * and the way back to the Library. Shows the Game as opened at once and as
+ * the core answers it then, again after each change. Takes its Tint from the
+ * Game's Cover, or stays neutral (see src/coverTint.ts).
  */
 export function GameDetail({
   operations,
@@ -192,6 +193,7 @@ export function GameDetail({
           )}
         </div>
       </div>
+      {game !== null && <SessionList operations={operations} game={game} changes={syncs} />}
       {game !== null && <Achievements operations={operations} game={game} syncs={syncs} />}
     </section>
   );

@@ -215,6 +215,17 @@ export interface LibraryFilter {
  */
 export type SessionEvent = { state: 'started'; gameId: string } | { state: 'ended'; gameId: string };
 
+/** One Session of a Game, as the detail page lists it. Mirrors `Session` in crates/core. */
+export interface Session {
+  /** When it began, in seconds since the Unix epoch. */
+  startedAt: number;
+  /** How long it lasted, or has lasted so far while it runs, in seconds. */
+  seconds: number;
+  /** Whether its process still runs. */
+  running: boolean;
+}
+
+
 /** One Achievement of a Steam Game, with whether the Steam Account unlocked it. Mirrors `Achievement` in crates/core. */
 export interface Achievement {
   /** Steam's name for it, unique within the Game. */
@@ -434,6 +445,11 @@ export interface Operations {
    * function that stops listening.
    */
   onSession(listener: (event: SessionEvent) => void): () => void;
+  /**
+   * The Sessions of a Game, newest first; one whose process still runs is
+   * marked as running. Empty for a Game without Sessions.
+   */
+  sessions(gameId: string): Promise<Session[]>;
   /** The Achievements of the Game as the last Syncs fetched them. Answers from the store at once. */
   achievements(gameId: string): Promise<GameAchievements>;
   /**
@@ -647,6 +663,7 @@ export const tauriOperations: Operations = {
       void listening.then((stop) => stop());
     };
   },
+  sessions: (gameId) => invoke<Session[]>('sessions', { gameId }),
   achievements: (gameId) => invoke<GameAchievements>('achievements', { gameId }),
   // Under the Game's address in the `cover` URL scheme (`cover_response` in src-tauri/src/lib.rs).
   achievementIconUrl: (game, icon) => convertFileSrc(`${game.id}/achievements/${icon}`, 'cover'),

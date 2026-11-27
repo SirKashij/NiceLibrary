@@ -48,6 +48,23 @@ pub enum Tracking {
     Failed { reason: Error },
 }
 
+/// One Session of a Game, as the detail page lists it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Session {
+    /// When it began, in seconds since the Unix epoch.
+    pub started_at: u64,
+    /// How long it lasted, or has lasted so far while it runs, in seconds.
+    pub seconds: u64,
+    /// Whether its process still runs: the last look found it and tracking goes on.
+    pub running: bool,
+}
+
+/// The id of the Local Game whose Game id is `game_id`, if it is one.
+pub(crate) fn local_game_id(game_id: &str) -> Option<i64> {
+    game_id.strip_prefix("local:")?.parse().ok()
+}
+
 /// How long after one look at the running processes the next one happens.
 /// A Session may begin and end up to this much later than its process.
 pub(crate) const LOOK_EVERY: Duration = Duration::from_secs(5);

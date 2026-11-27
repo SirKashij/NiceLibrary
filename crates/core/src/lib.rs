@@ -56,7 +56,7 @@ pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
 pub use local_games::{AddLocalGame, EditLocalGame, ExecutableChoice, ExecutablePicker, LocalGame};
 pub use log::Log;
-pub use sessions::{ProcessList, Tracking};
+pub use sessions::{ProcessList, Session, Tracking};
 pub use status::Status;
 pub use library_layout::LibraryLayout;
 pub use steam::{SteamAccount, SteamAccountChoice, SteamInstallation, SteamLocator};
@@ -181,6 +181,9 @@ pub struct Core {
     steam_title_index: Mutex<Option<Arc<steam_app_list::TitleIndex>>>,
     /// Where errors and notable events are written.
     log: Log,
+    /// The stored Sessions whose process the tracking found at its last
+    /// look, by their id; empty while the tracking does not run.
+    running_sessions: Mutex<std::collections::BTreeSet<i64>>,
 }
 
 impl Core {
@@ -195,6 +198,7 @@ impl Core {
             steam_app_list_soon: Wakeup::new(),
             steam_title_index: Mutex::new(None),
             log: Log::none(),
+            running_sessions: Mutex::default(),
         }
     }
 
@@ -783,6 +787,8 @@ impl Core {
             });
             failing = failed;
             if flow.is_break() {
+                // Nothing looks any more, so no Session is known to run.
+                self.show_running(&sessions::OpenSessions::new());
                 return;
             }
             self.ports.clock.sleep(sessions::LOOK_EVERY, &never);
@@ -809,6 +815,7 @@ impl Core {
         let ended: Vec<i64> = open.keys().copied().filter(|game| !running.contains(game)).collect();
         for game in ended {
             open.remove(&game);
+            self.show_running(open);
             report(Tracking::Ended { game_id: sessions::game_id(game) })?;
         }
         for game in running {
@@ -820,6 +827,7 @@ impl Core {
                 Ok(None) => {}
                 Ok(Some(session)) => {
                     open.insert(game, session);
+                    self.show_running(open);
                     report(Tracking::Started { game_id: sessions::game_id(game) })?;
                 }
                 Err(reason) => report(Tracking::Failed { reason })?,
@@ -888,6 +896,35 @@ impl Core {
         };
         let executables = executables_in_folder::suggestions(&folder, &self.store.local_games()?);
         Ok(FolderSuggestions::Suggested { folder: text.to_owned(), executables })
+    }
+
+    /// Makes the Sessions in `open` the ones [`Self::sessions`] marks as running.
+    fn show_running(&self, open: &sessions::OpenSessions) {
+        *self.running_sessions.lock().unwrap_or_else(PoisonError::into_inner) = open.values().copied().collect();
+    }
+
+    /// The Sessions of the Game `game_id`, newest first, each with when it
+    /// began and how long it lasted; one whose process still runs is marked
+    /// as running and lasts up to the last look that found it. A Game with
+    /// no Sessions, or not in the Library, has none.
+    pub fn sessions(&self, game_id: &str) -> Result<Vec<Session>, Error> {
+        self.logged("sessions", self.stored_sessions(game_id))
+    }
+
+    fn stored_sessions(&self, game_id: &str) -> Result<Vec<Session>, Error> {
+        let Some(local_game) = sessions::local_game_id(game_id) else {
+            return Ok(Vec::new());
+        };
+        let stored = self.store.local_game_sessions(local_game)?;
+        let running = self.running_sessions.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        Ok(stored
+            .into_iter()
+            .map(|(id, started_at, ended_at)| Session {
+                started_at,
+                seconds: ended_at.saturating_sub(started_at),
+                running: running.contains(&id),
+            })
+            .collect())
     }
 
     /// Opens the Steam page where the user creates their Steam Web API key,

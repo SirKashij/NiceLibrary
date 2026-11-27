@@ -94,6 +94,7 @@ function fakeOperations(
     hiddenGames: async () => [],
     hideGame: async () => {},
     unhideGame: async () => {},
+    sessions: async () => [],
     filterLibrary: async () => games,
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},

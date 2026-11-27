@@ -73,6 +73,7 @@ function fakeOperations({
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    sessions: async () => [],
     filterLibrary: async () => [...games],
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},

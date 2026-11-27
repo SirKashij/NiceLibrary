@@ -62,6 +62,7 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    sessions: async () => [],
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

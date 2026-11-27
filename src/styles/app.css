@@ -248,6 +248,15 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
   border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
 }
 
+/* Sessions on the detail page (src/library/SessionList.tsx): hairline rows, the running one marked in words. */
+.game-sessions { display: grid; gap: var(--space-3); padding-top: var(--space-7); max-width: var(--note-max-width); }
+.game-sessions h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.session-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.session-list li { display: flex; gap: var(--space-4); padding: var(--space-2) 0; border-top: var(--hairline) solid var(--color-line); }
+.session-list time { flex: 1; color: var(--color-text-muted); }
+.session-list li[data-running='true'] time { color: var(--color-text); }
+.session-running { font-size: var(--text-size-label); font-weight: var(--weight-medium); }
+
 /* Achievements on the detail page: hairlines between them, locked ones dimmed and marked as locked. */
 .achievements { display: grid; gap: var(--space-3); padding-top: var(--space-7); max-width: var(--note-max-width); }
 .achievements-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }

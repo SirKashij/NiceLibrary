@@ -613,6 +613,24 @@ impl Store {
         Ok(())
     }
 
+    /// The Sessions of the Local Game `local_game`, newest first: each one's
+    /// id, start and end, in seconds since the Unix epoch.
+    pub(crate) fn local_game_sessions(&self, local_game: i64) -> Result<Vec<(i64, u64, u64)>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(
+            "SELECT id, started_at, ended_at FROM local_game_sessions WHERE local_game = ?1
+             ORDER BY started_at DESC, id DESC",
+        )?;
+        let sessions = statement
+            .query_map([local_game], |row| {
+                let started_at: i64 = row.get(1)?;
+                let ended_at: i64 = row.get(2)?;
+                Ok((row.get(0)?, u64::try_from(started_at).unwrap_or(0), u64::try_from(ended_at).unwrap_or(0)))
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(sessions)
+    }
+
     /// What the Sessions of each Local Game that has any add up to, by its id.
     pub(crate) fn local_games_played(&self) -> Result<BTreeMap<i64, Played>, Error> {
         let connection = self.connection();
