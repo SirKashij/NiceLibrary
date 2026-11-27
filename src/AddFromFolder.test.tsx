@@ -10,7 +10,7 @@ const HADES = 'C:\\Games\\Hades\\x64\\Hades.exe';
 const PORTAL = 'C:\\Games\\Portal 2\\portal2.exe';
 
 function localGame(id: number, title: string): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed' };
 }
 
 /** The folder the user chooses: Celeste and Hades are new, Portal 2 is in the Library already. */
@@ -73,6 +73,12 @@ function fakeOperations({
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     suggestExecutablesInFolder: folder,
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
+    openLogFolder: async () => {},
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
     addLocalGame: async (executable, title) => {
       added.push({ executable, title });
       if (add) return add(executable, title);

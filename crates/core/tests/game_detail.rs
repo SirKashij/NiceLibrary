@@ -6,7 +6,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use nicelibrary_core::{
-    Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, SteamLocator, Store, SyncOutcome,
+    Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, Status, SteamLocator, Store,
+    SyncOutcome,
     WebAnswer, WebApi,
 };
 use tempfile::TempDir;
@@ -152,6 +153,7 @@ impl App {
                 web_api: Box::new(SteamOwnsPortal2AndHalfLife2),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(NoExecutableChosen),
+                autostart: Box::new(NoAutostart),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -176,6 +178,7 @@ fn an_installed_steam_game_shows_its_source_and_that_it_is_installed() {
             installed: true,
             playtime_minutes: None,
             last_played: None,
+            status: Status::Unplayed,
         }))
     );
 }
@@ -227,4 +230,21 @@ fn a_game_that_is_not_in_the_library_has_no_detail_page() {
 
     assert_eq!(app.core.game("steam:400"), Ok(None));
     assert_eq!(app.core.game(r"C:\Windows\notepad.exe"), Ok(None));
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
 }

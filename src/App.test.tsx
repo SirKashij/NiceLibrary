@@ -19,6 +19,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    openLogFolder: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     theme: async () => 'system',
@@ -29,6 +30,8 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
     onAutomaticSync: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
@@ -40,6 +43,9 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
     launch: async () => ({ outcome: 'launched' }),
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
@@ -51,7 +57,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
 const pending = <T,>() => new Promise<T>(() => {});
 
 function steamGame(appId: number, title: string, installed = true): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed' };
 }
 
 function gameTitles() {

@@ -12,6 +12,7 @@ function steamGame(appId: number, title: string, details: Partial<Game> = {}): G
     installed: true,
     playtimeMinutes: null,
     lastPlayed: null,
+    status: 'unplayed',
     ...details,
   };
 }
@@ -50,6 +51,7 @@ function fakeOperations(
     storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
+    openLogFolder: async () => {},
     sync: options.sync ?? (async () => ({ outcome: 'noKey' })),
     lastSync: async () => null,
     theme: async () => 'system',
@@ -59,6 +61,8 @@ function fakeOperations(
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
     onAutomaticSync: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
@@ -77,6 +81,9 @@ function fakeOperations(
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
   };
   return { operations, calls, change: (next: Game[]) => (games = next) };
 }
@@ -120,7 +127,7 @@ describe('The detail page of a Game', () => {
     expect(facts).toHaveTextContent('InstalledNo');
     expect(facts).toHaveTextContent('PlaytimeNever played');
     expect(facts).toHaveTextContent('Last playedNever');
-    expect(within(page).queryByRole('button', { name: /Play/ })).not.toBeInTheDocument();
+    expect(within(page).queryByRole('button', { name: /^Play / })).not.toBeInTheDocument();
   });
 
   it('says that Playtime and Last Played are not known before the first Sync', async () => {

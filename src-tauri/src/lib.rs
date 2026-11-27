@@ -8,8 +8,9 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
-    ExecutableChoice, FolderSuggestions, Game, Launch, LibraryFilter, LibrarySort, SteamAccountChoice, SteamAppList, SteamAppListFetch,
+    ExecutableChoice, FolderSuggestions, Game, Launch, LibraryFilter, LibrarySort, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
     SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
+    started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -95,10 +96,25 @@ fn choose_library_sort(core: tauri::State<'_, Core>, sort: LibrarySort) -> Resul
     core.choose_library_sort(sort)
 }
 
+#[tauri::command]
+fn set_status(core: tauri::State<'_, Core>, game_id: String, status: Status) -> Result<Game, Error> {
+    core.set_status(&game_id, status)
+}
+
 /// Async, so a slow start of the browser does not block the window.
 #[tauri::command]
 async fn open_steam_web_api_key_page(core: tauri::State<'_, Core>) -> Result<(), Error> {
     core.open_steam_web_api_key_page()
+}
+
+#[tauri::command]
+fn starts_with_windows(core: tauri::State<'_, Core>) -> Result<bool, Error> {
+    core.starts_with_windows()
+}
+
+#[tauri::command]
+fn set_start_with_windows(core: tauri::State<'_, Core>, on: bool) -> Result<(), Error> {
+    core.set_start_with_windows(on)
 }
 
 /// Async, so the window stays responsive while the file dialog is open.
@@ -180,6 +196,12 @@ async fn fetch_steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppLi
     core.fetch_steam_app_list()
 }
 
+/// Async, so a slow start of File Explorer does not block the window.
+#[tauri::command]
+async fn open_log_folder(core: tauri::State<'_, Core>) -> Result<(), Error> {
+    core.open_log_folder()
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 pub const COVER_PROTOCOL: &str = "cover";
@@ -209,10 +231,19 @@ const DATABASE: &str = "nicelibrary.db";
 /// profile (`%LOCALAPPDATA%\<identifier>` on Windows).
 const COVERS: &str = "covers";
 
+/// The folder of the log files in the app's data folder, next to the
+/// database (`%APPDATA%\<identifier>\logs` on Windows).
+const LOGS: &str = "logs";
+
 pub fn run() {
     tauri::Builder::default()
         // First, so a second start hands over and ends before it opens anything.
-        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| tray::show_main_window(app)))
+        // A start with Windows while the app already runs leaves it in the Tray.
+        .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
+            if !started_with_windows(&args) {
+                tray::show_main_window(app);
+            }
+        }))
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event
                 && window.label() == tray::MAIN_WINDOW
@@ -252,6 +283,10 @@ pub fn run() {
             set_close_to_tray,
             close_window,
             show_tray_menu,
+            set_status,
+            open_log_folder,
+            starts_with_windows,
+            set_start_with_windows,
             suggest_executables_in_folder
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
@@ -265,7 +300,8 @@ pub fn run() {
         .setup(|app| {
             let store = Store::open(&app.path().app_data_dir()?.join(DATABASE))?;
             let covers = CoverCache::new(app.path().app_cache_dir()?.join(COVERS));
-            app.manage(Core::new(ports::real_ports(), store, covers));
+            let log = Log::new(app.path().app_data_dir()?.join(LOGS));
+            app.manage(Core::new(ports::real_ports(), store, covers).with_log(log));
             start_automatic_syncs(app)?;
             tray::create(app.handle())?;
             start_automatic_steam_app_list_fetches(app)?;
@@ -317,8 +353,13 @@ fn start_automatic_steam_app_list_fetches(app: &App) -> std::io::Result<()> {
 }
 
 /// Creates the window declared in tauri.conf.json (`"create": false` there).
+/// Started with Windows, the app starts hidden in the Tray: the window is
+/// created, so the interface runs, but not shown.
 fn create_main_window(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
-    let config = app.config().app.windows.first().ok_or("tauri.conf.json declares no window")?.clone();
+    let mut config = app.config().app.windows.first().ok_or("tauri.conf.json declares no window")?.clone();
+    if started_with_windows(std::env::args()) {
+        config.visible = false;
+    }
     let builder = WebviewWindowBuilder::from_config(app.handle(), &config)?;
     #[cfg(windows)]
     let builder = with_webview2_env_args(builder);

@@ -5,6 +5,9 @@ import { listen } from '@tauri-apps/api/event';
 
 export type Source = 'steam' | 'local';
 
+/** The person's own judgement of where they stand with a Game. Mirrors `Status` in crates/core. */
+export type Status = 'unplayed' | 'playing' | 'completed' | 'dropped';
+
 /** One playable title in the Library. Mirrors `Game` in crates/core. */
 export interface Game {
   /** Unique across Sources: `steam:<app id>` for a Steam Game, `local:<number>` for a Local Game. */
@@ -19,6 +22,8 @@ export interface Game {
   playtimeMinutes: number | null;
   /** Last Played, in seconds since the Unix epoch; `null` for never or not known. */
   lastPlayed: number | null;
+  /** Set by hand only, `unplayed` until then; no Sync changes it. */
+  status: Status;
 }
 
 /** How a Sync went, when nothing failed. Every outcome but `synced` changed nothing. Mirrors `SyncOutcome` in crates/core. */
@@ -159,6 +164,8 @@ export interface LibraryFilter {
   installedOnly: boolean;
   /** The order the Games are answered in. */
   sort: LibrarySort;
+  /** Only Games with this Status; `null` for every Status. */
+  status: Status | null;
 }
 
 export interface Operations {
@@ -284,6 +291,24 @@ export interface Operations {
   /** Makes `sort` the order of the Library, also after a restart. */
   chooseLibrarySort(sort: LibrarySort): Promise<void>;
   /**
+   * Sets the Status of a Game, also after a restart, and answers the Game as
+   * the Library now shows it. Rejects for a Game that is not in the Library.
+   */
+  setStatus(gameId: string, status: Status): Promise<Game>;
+  /**
+   * Shows the folder of the log files in File Explorer, so the user can attach
+   * one to a bug report themselves. The app never sends the log. Rejects when
+   * the folder could not be shown.
+   */
+  openLogFolder(): Promise<void>;
+  /**
+   * Whether the app starts with Windows, hidden in the Tray: what the current
+   * user's autostart entry says, also after it was changed outside the app.
+   */
+  startsWithWindows(): Promise<boolean>;
+  /** Adds or removes the current user's autostart entry. */
+  setStartWithWindows(on: boolean): Promise<void>;
+  /**
    * Asks the user to choose a folder of Games in the operating system's
    * folder dialog and suggests the executables in it, each with a proposed
    * title. Adds nothing; the ticked ones are added with `addLocalGame`.
@@ -356,5 +381,9 @@ export const tauriOperations: Operations = {
   showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
   librarySort: () => invoke<LibrarySort>('library_sort'),
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
+  setStatus: (gameId, status) => invoke<Game>('set_status', { gameId, status }),
+  openLogFolder: () => invoke<void>('open_log_folder'),
+  startsWithWindows: () => invoke<boolean>('starts_with_windows'),
+  setStartWithWindows: (on) => invoke<void>('set_start_with_windows', { on }),
   suggestExecutablesInFolder: () => invoke<FolderSuggestions>('suggest_executables_in_folder'),
 };

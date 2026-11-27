@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
-    AutomaticSync, Clock, Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, SteamLocator,
+    AutomaticSync, Clock, Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, Status, SteamLocator,
     SteamWebApiKeyCheck, Store, SyncOutcome, Wakeup, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
@@ -313,6 +313,7 @@ impl Computer {
                 web_api: api,
                 clock: Box::new(self.clock.clone()),
                 executable_picker: Box::new(NoExecutableChosen),
+                autostart: Box::new(NoAutostart),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -328,6 +329,7 @@ fn steam_game(app_id: u32, title: &str, installed: bool, minutes: u32, last_play
         installed,
         playtime_minutes: Some(minutes),
         last_played,
+        status: Status::Unplayed,
     }
 }
 
@@ -796,6 +798,7 @@ fn an_automatic_sync_that_fails_in_the_app_reaches_the_interface_with_its_reason
             web_api: Box::new(SteamWebApi::owning(vec![])),
             clock: Box::new(computer.clock.clone()),
             executable_picker: Box::new(NoExecutableChosen),
+            autostart: Box::new(NoAutostart),
         },
         Store::open(&computer.profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(computer.profile.path().join("covers")),
@@ -860,5 +863,22 @@ struct NoExecutableChosen;
 impl nicelibrary_core::ExecutablePicker for NoExecutableChosen {
     fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
         Ok(None)
+    }
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
     }
 }
