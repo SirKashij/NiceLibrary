@@ -66,6 +66,7 @@ function fakeOperations({
     renameCollection: async (id) => ({ outcome: 'named', id }),
     deleteCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

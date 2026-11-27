@@ -78,6 +78,22 @@ export type AddLocalGame =
   | { outcome: 'noTitle' }
   | { outcome: 'notFound' };
 
+/**
+ * What came of asking the user for a folder of Games, when nothing failed.
+ * Mirrors `FolderSuggestions` in crates/core.
+ */
+export type FolderSuggestions =
+  | { outcome: 'cancelled' }
+  | { outcome: 'suggested'; folder: string; executables: SuggestedExecutable[] };
+
+/** An executable found in a folder of Games. Mirrors `SuggestedExecutable` in crates/core. */
+export interface SuggestedExecutable {
+  executable: string;
+  /** The title the app proposes; for an executable already in the Library, the title it has there. */
+  title: string;
+  alreadyAdded: boolean;
+}
+
 /** The theme the user chose; `system` follows the operating system's dark or light setting. Mirrors `Theme` in crates/core. */
 export type Theme = 'system' | 'dark' | 'light';
 
@@ -267,6 +283,13 @@ export interface Operations {
   librarySort(): Promise<LibrarySort>;
   /** Makes `sort` the order of the Library, also after a restart. */
   chooseLibrarySort(sort: LibrarySort): Promise<void>;
+  /**
+   * Asks the user to choose a folder of Games in the operating system's
+   * folder dialog and suggests the executables in it, each with a proposed
+   * title. Adds nothing; the ticked ones are added with `addLocalGame`.
+   * Rejects when no dialog can be shown.
+   */
+  suggestExecutablesInFolder(): Promise<FolderSuggestions>;
 }
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
@@ -333,4 +356,5 @@ export const tauriOperations: Operations = {
   showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
   librarySort: () => invoke<LibrarySort>('library_sort'),
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
+  suggestExecutablesInFolder: () => invoke<FolderSuggestions>('suggest_executables_in_folder'),
 };

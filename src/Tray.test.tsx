@@ -39,6 +39,7 @@ function fakeOperations({ closeToTray = true } = {}) {
     theme: async () => 'system',
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

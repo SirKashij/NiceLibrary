@@ -3,6 +3,7 @@ import { Collections } from './Collections';
 import { GameDetail } from './GameDetail';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import { AddLocalGameButton } from './library/AddLocalGame';
+import { AddFromFolderButton } from './library/AddFromFolder';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
 import { ThemeSettings } from './settings/ThemeSettings';
 import { ThemeProvider } from './theme';
@@ -261,6 +262,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
       <div ref={libraryView} hidden={opened !== undefined}>
         <Page title="nav.library">
           <AddLocalGameButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
+          <AddFromFolderButton operations={operations} onAdded={() => setAdditions((n) => n + 1)} />
           <LibraryToolbar filter={filter} onChange={setFilter}>
             <SortChoice sort={librarySort.sort} choose={librarySort.choose} />
           </LibraryToolbar>

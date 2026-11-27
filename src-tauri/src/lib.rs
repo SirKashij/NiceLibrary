@@ -8,7 +8,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
-    ExecutableChoice, Game, Launch, LibraryFilter, LibrarySort, SteamAccountChoice, SteamAppList, SteamAppListFetch,
+    ExecutableChoice, FolderSuggestions, Game, Launch, LibraryFilter, LibrarySort, SteamAccountChoice, SteamAppList, SteamAppListFetch,
     SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme,
 };
 use percent_encoding::percent_decode_str;
@@ -110,6 +110,11 @@ async fn choose_local_game_executable(core: tauri::State<'_, Core>) -> Result<Ex
 #[tauri::command]
 fn add_local_game(core: tauri::State<'_, Core>, executable: String, title: String) -> Result<AddLocalGame, Error> {
     core.add_local_game(&executable, &title)
+}
+
+#[tauri::command]
+async fn suggest_executables_in_folder(core: tauri::State<'_, Core>) -> Result<FolderSuggestions, Error> {
+    core.suggest_executables_in_folder()
 }
 
 #[tauri::command]
@@ -246,7 +251,8 @@ pub fn run() {
             close_to_tray,
             set_close_to_tray,
             close_window,
-            show_tray_menu
+            show_tray_menu,
+            suggest_executables_in_folder
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

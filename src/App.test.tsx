@@ -42,6 +42,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     chooseLibrarySort: async () => {},
     launch: async () => ({ outcome: 'launched' }),
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
 }

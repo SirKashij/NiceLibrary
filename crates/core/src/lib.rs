@@ -7,6 +7,7 @@
 mod clock;
 mod collections;
 mod covers;
+mod executables_in_folder;
 pub mod keyvalues;
 mod launch;
 mod local_games;
@@ -28,6 +29,7 @@ use serde::{Deserialize, Serialize, Serializer};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
+pub use executables_in_folder::{FolderSuggestions, SuggestedExecutable};
 pub use launch::{Launch, OpenError, Opener};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
@@ -432,6 +434,26 @@ impl Core {
         }
         let id = self.store.add_local_game(title, executable)?;
         Ok(AddLocalGame::Added { game: Game::local(id, title.to_owned()) })
+    }
+
+    /// Asks the user to choose a folder of Games and suggests the executables
+    /// in it as Local Games, each with a proposed title; those already in the
+    /// Library are marked. Adds nothing: the user adds the ones they tick
+    /// with [`Self::add_local_game`].
+    pub fn suggest_executables_in_folder(&self) -> Result<FolderSuggestions, Error> {
+        let chosen = self
+            .ports
+            .executable_picker
+            .choose_folder()
+            .map_err(|reason| Error::new(format!("folder dialog: {reason}")))?;
+        let Some(folder) = chosen else {
+            return Ok(FolderSuggestions::Cancelled);
+        };
+        let Some(text) = folder.to_str() else {
+            return Err(Error::new(format!("not a path that can be stored: {}", folder.display())));
+        };
+        let executables = executables_in_folder::suggestions(&folder, &self.store.local_games()?);
+        Ok(FolderSuggestions::Suggested { folder: text.to_owned(), executables })
     }
 
     /// Opens the Steam page where the user creates their Steam Web API key,

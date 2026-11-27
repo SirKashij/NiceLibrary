@@ -48,6 +48,7 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
       return launch(game);
     },
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, requested };

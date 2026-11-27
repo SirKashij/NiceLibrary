@@ -54,6 +54,7 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     theme: async () => 'system',
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),

@@ -78,6 +78,7 @@ function fakeOperations(
     chooseLibrarySort: async () => {},
     launch: async () => ({ outcome: 'launched' }),
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, chosen };

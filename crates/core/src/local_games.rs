@@ -11,14 +11,22 @@ use serde::Serialize;
 
 use crate::Game;
 
-/// Port: asks the user to choose a Game's executable, as a file dialog does.
+/// Port: asks the user to choose a Game's executable, or a folder of Games,
+/// as a file dialog does.
 ///
-/// Contract: `Ok(Some(path))` with the absolute path of the file the user
-/// chose, which exists; `Ok(None)` when they cancel. Blocks until they have
-/// decided. `Err` when no dialog can be shown, described for a log or a
-/// developer.
+/// Contract of both: `Ok(Some(path))` with the absolute path of the file or
+/// folder the user chose, which exists; `Ok(None)` when they cancel. Blocks
+/// until they have decided. `Err` when no dialog can be shown, described for
+/// a log or a developer.
 pub trait ExecutablePicker: Send + Sync {
     fn choose_executable(&self) -> Result<Option<PathBuf>, String>;
+
+    /// Asks for a folder (see `executables_in_folder`). By default no folder
+    /// dialog can be shown, so that substitutes which only choose executables
+    /// need not say so.
+    fn choose_folder(&self) -> Result<Option<PathBuf>, String> {
+        Err("no folder dialog".into())
+    }
 }
 
 /// What came of asking the user for a Local Game's executable, when nothing

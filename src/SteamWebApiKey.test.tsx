@@ -61,6 +61,7 @@ function fakeOperations({ stored = false } = {}) {
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, calls };

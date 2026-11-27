@@ -75,6 +75,7 @@ function fakeOperations(
       return games.find((game) => game.id === gameId) ?? null;
     },
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, calls, change: (next: Game[]) => (games = next) };

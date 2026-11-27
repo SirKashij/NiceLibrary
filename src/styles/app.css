@@ -143,6 +143,10 @@ input[type='radio'] { margin: 0; accent-color: var(--color-accent); }
 .local-game-form { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); }
 .local-game-form > label { color: var(--color-text-muted); font-size: var(--text-size-label); }
 
+/* Adding Local Games from a folder: one row per suggested executable. */
+.suggested-executables { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-2); }
+.suggested-executable { display: grid; gap: var(--space-1); }
+
 /* The theme: following the system, dark or light. */
 .theme-choice { display: grid; gap: var(--space-1); }
 .theme-choice label { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; cursor: pointer; }

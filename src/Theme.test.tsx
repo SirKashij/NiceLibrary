@@ -48,6 +48,7 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     renameCollection: async () => ({ outcome: 'emptyName' }),
     deleteCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
   };
   return { operations, calls };
