@@ -487,6 +487,33 @@ export interface Operations {
    * Rejects when no dialog can be shown.
    */
   suggestExecutablesInFolder(): Promise<FolderSuggestions>;
+  /**
+   * Up to twenty titles of the stored Steam App List whose name contains
+   * `typed`, whatever its case and punctuation, the closest first. Fast
+   * enough to run as the user types.
+   */
+  findSteamTitles(typed: string): Promise<SteamTitle[]>;
+  /**
+   * The title of the Steam App List the app proposes as the Cover Match of a
+   * Local Game titled `title`, before it is added; `null` when none matches
+   * or no Steam App List is stored, as without a key.
+   */
+  proposeCoverMatch(title: string): Promise<SteamTitle | null>;
+  /** The Steam title a Local Game borrows its Cover from; `null` without a Cover Match. */
+  coverMatch(gameId: string): Promise<SteamTitle | null>;
+  /**
+   * Gives a Local Game the Cover Match `appId`, a title of the Steam App
+   * List, in place of any before; `null` removes it and the Game shows its
+   * executable's icon again. Rejects for anything but a Local Game in the
+   * Library, and for an app id not in the Steam App List.
+   */
+  setCoverMatch(gameId: string, appId: number | null): Promise<void>;
+}
+
+/** One title of the Steam App List. Mirrors `SteamTitle` in crates/core. */
+export interface SteamTitle {
+  appId: number;
+  name: string;
 }
 
 /** The hue most of a Cover's colourful pixels share. Mirrors `CoverHue` in crates/core. */
@@ -624,4 +651,8 @@ export const tauriOperations: Operations = {
   coverHue: (gameId) => invoke<CoverHue | null>('cover_hue', { gameId }),
   install: (game) => invoke<InstallOutcome>('install', { gameId: game.id }),
   suggestExecutablesInFolder: () => invoke<FolderSuggestions>('suggest_executables_in_folder'),
+  findSteamTitles: (typed) => invoke<SteamTitle[]>('find_steam_titles', { typed }),
+  proposeCoverMatch: (title) => invoke<SteamTitle | null>('propose_cover_match', { title }),
+  coverMatch: (gameId) => invoke<SteamTitle | null>('cover_match', { gameId }),
+  setCoverMatch: (gameId, appId) => invoke<void>('set_cover_match', { gameId, appId }),
 };

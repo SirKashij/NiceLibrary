@@ -94,7 +94,7 @@ _Avoid_: Sorting, ranking
 ### Artwork
 
 **Cover**:
-The upright picture that represents a Game in the Library. A Steam Game's comes from Steam. A Local Game's is its Cover Image, else the icon of its executable on a neutral background, else there is none and the Library shows a neutral placeholder with the title.
+The upright picture that represents a Game in the Library. A Steam Game's comes from Steam. A Local Game's is its Cover Image, else the Steam Cover of its Cover Match, else the icon of its executable on a neutral background, else there is none and the Library shows a neutral placeholder with the title.
 _Avoid_: Box art, poster, artwork, thumbnail
 
 **Cover Image**:
@@ -102,7 +102,7 @@ An image the person chose as a Local Game's Cover. The app keeps its own copy in
 _Avoid_: Custom cover, own cover
 
 **Cover Match**:
-The link between a Local Game and the Steam title whose Cover it borrows. The person confirms or changes it when adding the Game.
+The link between a Local Game and the Steam title whose Cover it borrows. When the Game is added, the app proposes the title of the Steam App List whose name is the Game's or begins with it; the person confirms it, picks another title or declines, and can change or remove it later on the Detail Page. Removing the Local Game forgets it.
 
 **Tint**:
 The background and accent colour a Detail Page takes from the dominant hue of its Game's Cover, the hue most of the Cover's colourful pixels share. A Game without a Cover, a Cover without colour, or a Tint that would miss the contrast rules of the shown Theme leaves the page neutral.

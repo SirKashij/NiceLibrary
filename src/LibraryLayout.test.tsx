@@ -107,6 +107,10 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
+    findSteamTitles: async () => [],
+    proposeCoverMatch: async () => null,
+    coverMatch: async () => null,
+    setCoverMatch: async () => {},
   };
   return { operations, chosen, launched, installed, marks, failWhenChoosing: () => (failChoosing = true) };
 }

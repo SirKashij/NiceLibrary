@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useT, type MessageKey } from '../i18n';
-import type { AddLocalGame, Operations } from '../operations';
+import { CoverMatchProposal } from '../CoverMatch';
+import type { AddLocalGame, Operations, SteamTitle } from '../operations';
 
 /** A message about adding: `status` for what went well, `alert` for what did not. */
 type Notice = { role: 'status' | 'alert'; message: MessageKey; title?: string };
 
-/** The executable the user chose and the title to add it under, while they confirm. */
-type Proposal = { executable: string; title: string };
+/** The executable the user chose, the title to add it under and its Cover Match, while they confirm. */
+type Proposal = { executable: string; title: string; match?: SteamTitle | null };
 
 /** What an answer of the core other than `added` tells the user. */
 function refusal(answer: Exclude<AddLocalGame, { outcome: 'added' }>): Notice {
@@ -22,7 +23,8 @@ function refusal(answer: Exclude<AddLocalGame, { outcome: 'added' }>): Notice {
 
 /**
  * Adding a Local Game: the user chooses its executable in the file dialog,
- * confirms or corrects the proposed title, and the Game joins the Library.
+ * confirms or corrects the proposed title and Cover Match, and the Game
+ * joins the Library with them.
  * `onAdded` hears each Game the core added.
  */
 export function AddLocalGameButton({ operations, onAdded }: { operations: Operations; onAdded: () => void }) {
@@ -56,10 +58,17 @@ export function AddLocalGameButton({ operations, onAdded }: { operations: Operat
     operations
       .addLocalGame(chosen.executable, chosen.title)
       .then(
-        (answer) => {
+        async (answer) => {
           if (answer.outcome !== 'added') return setNotice(refusal(answer));
           setProposal(undefined);
-          setNotice({ role: 'status', message: 'localGame.added', title: answer.game.title });
+          let notice: Notice = { role: 'status', message: 'localGame.added', title: answer.game.title };
+          if (chosen.match) {
+            // Saved before the Library loads the new Game's Cover.
+            await operations.setCoverMatch(answer.game.id, chosen.match.appId).catch(() => {
+              notice = { role: 'alert', message: 'coverMatch.notSaved', title: answer.game.title };
+            });
+          }
+          setNotice(notice);
           onAdded();
         },
         () => setNotice({ role: 'alert', message: 'localGame.addFailed' }),
@@ -117,6 +126,11 @@ export function AddLocalGameButton({ operations, onAdded }: { operations: Operat
             <span>{t('localGame.executable')}</span>
             <span className="muted local-game-executable">{proposal.executable}</span>
           </div>
+          <CoverMatchProposal
+            operations={operations}
+            title={proposal.title}
+            onChange={(match) => setProposal((current) => current && { ...current, match })}
+          />
         </form>
       )}
       {notice && (

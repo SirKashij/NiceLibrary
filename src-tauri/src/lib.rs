@@ -10,7 +10,7 @@ use nicelibrary_core::{
     About, AboutPage, AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
     CoverHue, CoverImageChoice, EditLocalGame, Error, ExecutableChoice, FolderSuggestions, Game, GameAchievements, Install, Language, Launch, LaunchOptions,
     LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
-    SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
+    SteamInstallation, SteamTitle, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -275,6 +275,28 @@ fn remove_cover_image(core: tauri::State<'_, Core>, game_id: String) -> Result<(
     core.remove_cover_image(&game_id)
 }
 
+/// Async, so loading the stored Steam App List for the first lookup runs off the main thread.
+#[tauri::command]
+async fn find_steam_titles(core: tauri::State<'_, Core>, typed: String) -> Result<Vec<SteamTitle>, Error> {
+    core.find_steam_titles(&typed)
+}
+
+/// Async, like `find_steam_titles`.
+#[tauri::command]
+async fn propose_cover_match(core: tauri::State<'_, Core>, title: String) -> Result<Option<SteamTitle>, Error> {
+    core.propose_cover_match(&title)
+}
+
+#[tauri::command]
+fn cover_match(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<SteamTitle>, Error> {
+    core.cover_match(&game_id)
+}
+
+#[tauri::command]
+fn set_cover_match(core: tauri::State<'_, Core>, game_id: String, app_id: Option<u32>) -> Result<(), Error> {
+    core.set_cover_match(&game_id, app_id)
+}
+
 /// Async, so a slow start of File Explorer does not block the window.
 #[tauri::command]
 async fn open_log_folder(core: tauri::State<'_, Core>) -> Result<(), Error> {
@@ -443,6 +465,10 @@ pub fn run() {
             choose_cover_image,
             cover_image_chosen,
             remove_cover_image,
+            find_steam_titles,
+            propose_cover_match,
+            cover_match,
+            set_cover_match,
             set_status,
             open_log_folder,
             starts_with_windows,

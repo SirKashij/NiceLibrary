@@ -84,6 +84,10 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     removeLocalGame: async () => {},
     markFavorite: async () => {},
     favoriteCount: async () => 0,
+    findSteamTitles: async () => [],
+    proposeCoverMatch: async () => null,
+    coverMatch: async () => null,
+    setCoverMatch: async () => {},
   };
   return { operations, requested };
 }

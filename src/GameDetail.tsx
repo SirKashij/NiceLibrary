@@ -8,6 +8,7 @@ import { GameActionButton } from './library/GameAction';
 import { HideGameButton } from './library/HiddenGames';
 import { StatusChoice } from './library/Status';
 import { LocalGameCoverChoice } from './LocalGameCover';
+import { CoverMatchChoice } from './CoverMatch';
 import type { Game, Operations, Source, Status } from './operations';
 
 const SOURCES: Record<Source, MessageKey> = {
@@ -97,8 +98,13 @@ export function GameDetail({
     };
   }, [operations, opened.id, syncs]);
 
-  // A Local Game's Cover changes when the user chooses an image or goes back to the icon; its Tint follows.
+  // A Local Game's Cover changes when the user chooses an image, a Cover
+  // Match or goes back to the icon; its Tint follows.
   const [coverChanges, setCoverChanges] = useState(0);
+  const coverChanged = (changed: Game) => {
+    setCoverChanges((n) => n + 1);
+    onCoverChanged(changed);
+  };
   const tint = useCoverTint(operations, opened.id, coverChanges);
   // The Tint replaces the theme's background and accent for everything on the page.
   const tinted = tint
@@ -129,14 +135,14 @@ export function GameDetail({
         <div className="game-detail-cover">
           {cover(game ?? opened)}
           {game?.source === 'local' && (
-            <LocalGameCoverChoice
-              operations={operations}
-              game={game}
-              onCoverChanged={(changed) => {
-                setCoverChanges((n) => n + 1);
-                onCoverChanged(changed);
-              }}
-            />
+            <>
+              <LocalGameCoverChoice
+                operations={operations}
+                game={game}
+                onCoverChanged={coverChanged}
+              />
+              <CoverMatchChoice operations={operations} game={game} onCoverChanged={coverChanged} />
+            </>
           )}
           {game && <FavoriteToggle game={game} onToggle={onFavorite} />}
         </div>

@@ -1,10 +1,11 @@
-//! Covers of Local Games: an image the user chose, else the icon of the
-//! Game's executable on a neutral background (ADR-0005).
+//! Covers of Local Games: an image the user chose, else the Steam Cover of
+//! its Cover Match, else the icon of the Game's executable on a neutral
+//! background (ADR-0005).
 //!
 //! The chain a Local Game's Cover is looked for in, first match wins:
 //!
 //! 1. the image the user chose, copied into the app's data folder;
-//! 2. the Steam Cover of its Cover Match, once Cover Matches exist (#37);
+//! 2. the Steam Cover of its Cover Match (see `crate::cover_match`);
 //! 3. its executable's icon, at the largest size the executable has.
 //!
 //! Without any of them the Game has no Cover and the interface shows a
@@ -17,7 +18,7 @@ use std::sync::PoisonError;
 
 use serde::Serialize;
 
-use crate::covers::{self, Cover, CoverCache};
+use crate::covers::{self, Cover, CoverCache, Downloader};
 use crate::local_games::StoredLocalGame;
 use crate::Error;
 
@@ -66,16 +67,24 @@ pub enum CoverImageChoice {
 
 /// The Cover of the Local Game `game`, following the chain at the top of
 /// this module.
+/// `matched` is the app id of its Cover Match, if it has one. A matched
+/// title Steam has no image for, or that cannot be fetched now, gives way to
+/// the icon, so a Local Game is never blank.
 pub(crate) fn cover(
     covers: &CoverCache,
     icons: &dyn IconExtractor,
+    downloader: &dyn Downloader,
     game: &StoredLocalGame,
+    matched: Option<u32>,
 ) -> Result<Option<Cover>, Error> {
     if let Some(chosen) = chosen_image(covers, game.id)? {
         return Ok(Some(chosen));
     }
-    // A Cover Match (#37) goes here: the matched title's Steam Cover, through
-    // `CoverCache::steam_cover`, before the icon.
+    if let Some(app_id) = matched
+        && let Ok(Some(steam_cover)) = covers.steam_cover(downloader, app_id)
+    {
+        return Ok(Some(steam_cover));
+    }
     icon_cover(covers, icons, &game.executable)
 }
 
