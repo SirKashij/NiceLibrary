@@ -23,6 +23,9 @@ function fakeOperations() {
     steamAccount: async () => null,
     chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game) => `cover://localhost/${game.id}`,
+    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
+    coverImageChosen: async () => false,
+    removeCoverImage: async () => {},
     launch: async () => ({ outcome: 'launched' }),
     steamWebApiKeyStored: async () => false,
     storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
@@ -49,6 +52,9 @@ function fakeOperations() {
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
     onSession: () => () => {},
+    hiddenGames: async () => [],
+    hideGame: async () => {},
+    unhideGame: async () => {},
     filterLibrary: async (filter) => {
       asked.push(filter);
       return LIBRARY.filter(

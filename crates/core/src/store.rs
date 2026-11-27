@@ -5,6 +5,7 @@
 //! a database from any earlier version is brought up to date on open. Every
 //! Steam-derived row carries the Steam Account it belongs to.
 
+mod hidden_games;
 mod steam_app_list;
 
 use std::collections::{BTreeMap, HashMap};
@@ -120,7 +121,11 @@ const MIGRATIONS: &[&str] = &[
     // its Working Directory, NULL for the executable's folder.
     "ALTER TABLE local_games ADD COLUMN launch_arguments TEXT NOT NULL DEFAULT '';
      ALTER TABLE local_games ADD COLUMN working_directory TEXT;",
-    // 10: The Manual Progress of a Local Game, in percent; NULL while the user has set none.
+    // 10: Hidden Games; hiding belongs to the person, not to a Steam Account.
+    "CREATE TABLE hidden_games (
+         game_id TEXT PRIMARY KEY
+     );",
+    // 11: The Manual Progress of a Local Game, in percent; NULL while the user has set none.
     "ALTER TABLE local_games ADD COLUMN manual_progress INTEGER;",
 ];
 

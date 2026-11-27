@@ -11,6 +11,7 @@ mod collections;
 mod covers;
 pub mod keyvalues;
 mod launch;
+mod local_covers;
 mod local_games;
 mod library_filter;
 mod progress;
@@ -40,6 +41,7 @@ pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
+pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
 pub use progress::ManualProgress;
 pub use log::Log;
@@ -149,6 +151,8 @@ pub struct Ports {
     pub executable_picker: Box<dyn ExecutablePicker>,
     pub processes: Box<dyn ProcessList>,
     pub process_starter: Box<dyn ProcessStarter>,
+    pub icon_extractor: Box<dyn IconExtractor>,
+    pub image_picker: Box<dyn ImagePicker>,
 }
 
 /// The application core. Each public method is one operation.
@@ -226,14 +230,25 @@ impl Core {
         self.logged("open_log_folder", opened)
     }
 
-    /// All Games in the Library, as last stored, ordered by title. Answers
-    /// from the store alone, so a start shows the Library at once.
+    /// All Games in the Library, as last stored, ordered by title; a Hidden
+    /// Game is not among them. Answers from the store alone, so a start
+    /// shows the Library at once.
     pub fn library(&self) -> Result<Vec<Game>, Error> {
         self.logged("library", self.stored_library())
     }
 
-    /// [`Self::library`], without writing to the Log.
+    /// [`Self::library`], without writing to the Log. Every view built on
+    /// the Library (the filtered Library, a Game's detail page, setting its
+    /// Status, its Launch) leaves the Hidden Games out through it.
     fn stored_library(&self) -> Result<Vec<Game>, Error> {
+        let hidden = self.store.hidden_game_ids()?;
+        let mut games = self.every_game()?;
+        games.retain(|game| !hidden.contains(&game.id));
+        Ok(games)
+    }
+
+    /// Every Game of both Sources, Hidden Games too, ordered by title.
+    fn every_game(&self) -> Result<Vec<Game>, Error> {
         // Until the user chooses, the account read last: it holds the Games.
         let account = self.chosen_steam_account_or(|| self.store.last_read_steam_account())?;
         let mut games = match account {
@@ -384,13 +399,18 @@ impl Core {
         steam::read_installation(self.ports.steam_locator.as_ref())
     }
 
-    /// The Cover of the Game `game_id`; `None` when it has none and the
-    /// interface shows a placeholder instead.
+    /// The Cover of the Game `game_id`: a Steam Game's from Steam, a Local
+    /// Game's the image the user chose, else its executable's icon on a
+    /// neutral background. `None` when it has none and the interface shows a
+    /// placeholder instead.
     pub fn cover(&self, game_id: &str) -> Result<Option<Cover>, Error> {
-        let Some(app_id) = steam_app_id(game_id) else {
-            return Ok(None);
-        };
-        self.covers.steam_cover(self.ports.downloader.as_ref(), app_id)
+        if let Some(app_id) = steam_app_id(game_id) {
+            return self.covers.steam_cover(self.ports.downloader.as_ref(), app_id);
+        }
+        match self.stored_local_game(game_id)? {
+            Some(game) => local_covers::cover(&self.covers, self.ports.icon_extractor.as_ref(), &game),
+            None => Ok(None),
+        }
     }
 
     /// Launches the Game `game_id`. A Steam Game is launched through Steam, by
@@ -996,6 +1016,61 @@ impl Core {
         self.logged("find_steam_titles", titles)
     }
 
+    /// Asks the user to choose an image and makes it the Cover of the Local
+    /// Game `game_id`, in place of its executable's icon or an image chosen
+    /// before. The image is copied into the app's data folder, so it stays
+    /// the Cover when the original is moved or deleted. A file that is not a
+    /// PNG or JPEG image is refused and changes nothing. Fails for a Game
+    /// that is not a Local Game in the Library.
+    pub fn choose_cover_image(&self, game_id: &str) -> Result<CoverImageChoice, Error> {
+        self.logged_outcome("choose_cover_image", self.pick_cover_image(game_id))
+    }
+
+    fn pick_cover_image(&self, game_id: &str) -> Result<CoverImageChoice, Error> {
+        let Some(game) = self.stored_local_game(game_id)? else {
+            return Err(Error::new(format!("not a Local Game in the library: {game_id}")));
+        };
+        let chosen = self
+            .ports
+            .image_picker
+            .choose_image()
+            .map_err(|reason| Error::new(format!("file dialog: {reason}")))?;
+        match chosen {
+            Some(image) => local_covers::keep_chosen_image(&self.covers, game.id, &image),
+            None => Ok(CoverImageChoice::Cancelled),
+        }
+    }
+
+    /// Whether the user chose an image as the Cover of the Local Game
+    /// `game_id` (see [`Self::choose_cover_image`]).
+    pub fn cover_image_chosen(&self, game_id: &str) -> Result<bool, Error> {
+        let chosen = self.stored_local_game(game_id).and_then(|game| match game {
+            Some(game) => Ok(local_covers::chosen_image(&self.covers, game.id)?.is_some()),
+            None => Ok(false),
+        });
+        self.logged("cover_image_chosen", chosen)
+    }
+
+    /// Forgets the image the user chose as the Cover of the Local Game
+    /// `game_id`: the Game shows the Cover the app finds for it again, its
+    /// executable's icon. Without a chosen image nothing changes.
+    pub fn remove_cover_image(&self, game_id: &str) -> Result<(), Error> {
+        let removed = self.stored_local_game(game_id).and_then(|game| match game {
+            Some(game) => local_covers::remove_chosen_image(&self.covers, game.id),
+            None => Ok(()),
+        });
+        self.logged("remove_cover_image", removed)
+    }
+
+    /// The Local Game `game_id` as the store keeps it; `None` when the id is
+    /// not a Local Game's or the Game is not in the Library.
+    fn stored_local_game(&self, game_id: &str) -> Result<Option<local_games::StoredLocalGame>, Error> {
+        let Some(id) = game_id.strip_prefix("local:").and_then(|id| id.parse::<i64>().ok()) else {
+            return Ok(None);
+        };
+        Ok(self.store.local_games()?.into_iter().find(|game| game.id == id))
+    }
+
     /// The names lookups search, loaded from the store unless already held.
     fn steam_title_index(&self) -> Result<Arc<steam_app_list::TitleIndex>, Error> {
         let mut held = self.steam_title_index.lock().unwrap_or_else(PoisonError::into_inner);
@@ -1005,6 +1080,42 @@ impl Core {
         let index = Arc::new(steam_app_list::TitleIndex::new(self.store.searchable_steam_titles()?));
         *held = Some(Arc::clone(&index));
         Ok(index)
+    }
+
+    /// The Hidden Games, ordered by title like [`Self::library`]. A Hidden
+    /// Game stays hidden through Syncs and restarts until it is unhidden.
+    pub fn hidden_games(&self) -> Result<Vec<Game>, Error> {
+        let games = self.store.hidden_game_ids().and_then(|hidden| {
+            let mut games = self.every_game()?;
+            games.retain(|game| hidden.contains(&game.id));
+            Ok(games)
+        });
+        self.logged("hidden_games", games)
+    }
+
+    /// Hides the Game `game_id`: it leaves the Library and every view built
+    /// on it without being deleted. Fails when there is no such Game.
+    pub fn hide_game(&self, game_id: &str) -> Result<(), Error> {
+        let hidden = self.every_game().and_then(|games| {
+            if !games.iter().any(|game| game.id == game_id) {
+                return Err(Error::new(format!("no such game in the library: {game_id}")));
+            }
+            self.store.hide_game(game_id)
+        });
+        if hidden.is_ok() {
+            self.note("hide_game: hidden");
+        }
+        self.logged("hide_game", hidden)
+    }
+
+    /// Brings the Hidden Game `game_id` back into the Library; unhiding a
+    /// Game that is not hidden changes nothing.
+    pub fn unhide_game(&self, game_id: &str) -> Result<(), Error> {
+        let unhidden = self.store.unhide_game(game_id);
+        if unhidden.is_ok() {
+            self.note("unhide_game: unhidden");
+        }
+        self.logged("unhide_game", unhidden)
     }
 }
 

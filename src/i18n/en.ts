@@ -184,6 +184,10 @@ export const en = {
   'progress.clear': 'Clear',
   'progress.invalid': 'Enter a whole number from 0 to 100.',
   'progress.saveFailed': 'The Manual Progress could not be saved.',
+  'cover.chooseImage': 'Choose an image…',
+  'cover.useIcon': 'Use the executable’s icon',
+  'cover.notAnImage': 'That file is not a PNG or JPEG image. The cover stays as it was.',
+  'cover.changeFailed': 'The cover could not be changed.',
   'game.status': 'Status',
   'status.unplayed': 'Unplayed',
   'status.playing': 'Playing',
@@ -226,6 +230,16 @@ export const en = {
   'launchOptions.saved': 'The launch options were saved.',
   'launchOptions.saveFailed': 'The launch options could not be saved.',
   'launchOptions.loadFailed': 'The launch options could not be loaded.',
+  'hidden.title': 'Hidden games',
+  'hidden.hideGame': 'Hide {title}',
+  'hidden.hide': 'Hide',
+  'hidden.hidden': '{title} is hidden. You find it under Hidden games.',
+  'hidden.hideFailed': '{title} could not be hidden.',
+  'hidden.unhideGame': 'Unhide {title}',
+  'hidden.unhide': 'Unhide',
+  'hidden.unhideFailed': '{title} could not be unhidden.',
+  'hidden.none': 'No game is hidden.',
+  'hidden.loadFailed': 'Your hidden games could not be loaded.',
 } as const;
 
 export type MessageKey = keyof typeof en;

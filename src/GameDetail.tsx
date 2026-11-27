@@ -4,7 +4,9 @@ import { useFormat, useT, type MessageKey } from './i18n';
 import { LaunchOptionsForm } from './LaunchOptions';
 import { ManualProgressForm } from './ManualProgress';
 import { ProgressValue } from './library/Progress';
+import { HideGameButton } from './library/HiddenGames';
 import { StatusChoice } from './library/Status';
+import { LocalGameCoverChoice } from './LocalGameCover';
 import type { Game, Operations, Source, Status } from './operations';
 
 const SOURCES: Record<Source, MessageKey> = {
@@ -29,6 +31,8 @@ export function GameDetail({
   onPlay,
   onChanged,
   onBack,
+  onHidden,
+  onCoverChanged,
 }: {
   operations: Operations;
   /** The Game as the Library showed it when it was opened. */
@@ -42,6 +46,10 @@ export function GameDetail({
   /** Hears that the Game's Status or Manual Progress was set, which changes the Library and its order. */
   onChanged: (game: Game) => void;
   onBack: () => void;
+  /** Hears the Game once the user hid it. */
+  onHidden: (game: Game) => void;
+  /** Hears that the user changed the Game's Cover, so it is loaded again. */
+  onCoverChanged: (game: Game) => void;
 }) {
   const t = useT();
   const format = useFormat();
@@ -91,7 +99,12 @@ export function GameDetail({
       </button>
       {notice}
       <div className="game-detail-body">
-        <div className="game-detail-cover">{cover(game ?? opened)}</div>
+        <div className="game-detail-cover">
+          {cover(game ?? opened)}
+          {game?.source === 'local' && (
+            <LocalGameCoverChoice operations={operations} game={game} onCoverChanged={onCoverChanged} />
+          )}
+        </div>
         <div className="game-detail-info">
           <h1 id={headingId} ref={heading} tabIndex={-1}>
             {opened.title}
@@ -147,6 +160,7 @@ export function GameDetail({
                   {t('status.setFailed', { title: game.title })}
                 </p>
               )}
+              <HideGameButton operations={operations} game={game} onHidden={onHidden} />
               {game.source === 'local' && <LaunchOptionsForm operations={operations} game={game} />}
               {game.source === 'local' && (
                 <ManualProgressForm

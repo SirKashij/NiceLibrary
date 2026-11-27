@@ -76,7 +76,7 @@ _Avoid_: State
 A Game the person has marked to find it quickly.
 
 **Hidden Game**:
-A Game the person has removed from the normal Library view without deleting it.
+A Game the person has removed from the normal Library view without deleting it. It is left out of the search results, Favorites and Collections too, and stays hidden through Syncs and restarts until the person unhides it.
 _Avoid_: Ignored, archived
 
 **Collection**:
@@ -94,8 +94,12 @@ _Avoid_: Sorting, ranking
 ### Artwork
 
 **Cover**:
-The upright picture that represents a Game in the Library.
+The upright picture that represents a Game in the Library. A Steam Game's comes from Steam. A Local Game's is its Cover Image, else the icon of its executable on a neutral background, else there is none and the Library shows a neutral placeholder with the title.
 _Avoid_: Box art, poster, artwork, thumbnail
+
+**Cover Image**:
+An image the person chose as a Local Game's Cover. The app keeps its own copy in its data folder, so moving or deleting the original changes nothing. Going back to the executable's icon forgets the copy.
+_Avoid_: Custom cover, own cover
 
 **Cover Match**:
 The link between a Local Game and the Steam title whose Cover it borrows. The person confirms or changes it when adding the Game.

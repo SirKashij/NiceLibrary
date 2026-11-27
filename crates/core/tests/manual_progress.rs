@@ -117,6 +117,22 @@ impl nicelibrary_core::ProcessStarter for NothingStarted {
     }
 }
 
+/// A computer whose executables show no icon and whose user chooses no
+/// image; these tests need neither.
+struct NoIconsNoImages;
+
+impl nicelibrary_core::IconExtractor for NoIconsNoImages {
+    fn largest_icon(&self, _executable: &Path) -> Result<Option<nicelibrary_core::Icon>, String> {
+        Ok(None)
+    }
+}
+
+impl nicelibrary_core::ImagePicker for NoIconsNoImages {
+    fn choose_image(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
+    }
+}
+
 /// One running app with Portal 2 Installed through Steam and the Local Game
 /// Celeste added.
 struct App {
@@ -168,6 +184,8 @@ impl App {
                 autostart: Box::new(NoAutostart),
                 processes: Box::new(NothingRuns),
                 process_starter: Box::new(NothingStarted),
+                icon_extractor: Box::new(NoIconsNoImages),
+                image_picker: Box::new(NoIconsNoImages),
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.join("covers")),

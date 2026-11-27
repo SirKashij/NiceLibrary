@@ -335,6 +335,8 @@ impl Computer {
                 autostart: Box::new(NoAutostart),
                 processes: Box::new(NothingRuns),
                 process_starter: Box::new(NothingStarted),
+                icon_extractor: Box::new(NoIconsNoImages),
+                image_picker: Box::new(NoIconsNoImages),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.covers()),
@@ -891,4 +893,20 @@ fn progress_reaches_the_interface_on_the_game_and_sorting_by_it_arrives_as_the_i
     assert_eq!(game["progress"], serde_json::json!(50));
     assert_eq!(serde_json::from_value::<LibrarySort>(serde_json::json!("progress")).unwrap(), LibrarySort::Progress);
     assert_eq!(serde_json::to_value(LibrarySort::Progress).unwrap(), serde_json::json!("progress"));
+}
+
+/// A computer whose executables show no icon and whose user chooses no
+/// image; these tests need neither.
+struct NoIconsNoImages;
+
+impl nicelibrary_core::IconExtractor for NoIconsNoImages {
+    fn largest_icon(&self, _executable: &std::path::Path) -> Result<Option<nicelibrary_core::Icon>, String> {
+        Ok(None)
+    }
+}
+
+impl nicelibrary_core::ImagePicker for NoIconsNoImages {
+    fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
+    }
 }

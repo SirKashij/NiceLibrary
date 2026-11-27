@@ -238,9 +238,11 @@ export interface Operations {
   chooseSteamAccount(steamId: string): Promise<SteamAccountChoice>;
   /**
    * The address an `<img>` loads the Game's Cover from. The core downloads
-   * and caches it; when the Game has none, the image fails to load.
+   * and caches it; when the Game has none, the image fails to load. A new
+   * `revision` gives a new address, so the image loads again after the
+   * Cover changed.
    */
-  coverUrl(game: Game): string;
+  coverUrl(game: Game, revision?: number): string;
   /**
    * Launches an Installed Game. A Steam Game starts through Steam itself, a
    * Local Game by starting its executable with its Launch Options.
@@ -348,6 +350,17 @@ export interface Operations {
    */
   setManualProgress(gameId: string, percent: number | null): Promise<ManualProgress>;
   /**
+   * Asks the user to choose an image in the operating system's file dialog
+   * and makes it the Cover of a Local Game, in place of its executable's
+   * icon. The image is copied into the app's data folder. Rejects for a Game
+   * that is not a Local Game, and when no dialog can be shown.
+   */
+  chooseCoverImage(gameId: string): Promise<CoverImageChoice>;
+  /** Whether the user chose an image as the Cover of a Local Game. */
+  coverImageChosen(gameId: string): Promise<boolean>;
+  /** Forgets the chosen image: the Local Game's Cover is its executable's icon again. */
+  removeCoverImage(gameId: string): Promise<void>;
+  /**
    * Sets the Status of a Game, also after a restart, and answers the Game as
    * the Library now shows it. Rejects for a Game that is not in the Library.
    */
@@ -386,7 +399,16 @@ export interface Operations {
    * Rejects for anything but a Local Game in the Library.
    */
   setLaunchOptions(gameId: string, options: LaunchOptions): Promise<void>;
+  /** The Hidden Games, ordered by title like `library`. They stay hidden through Syncs and restarts. */
+  hiddenGames(): Promise<Game[]>;
+  /** Hides a Game: it leaves the Library and every view built on it without being deleted. */
+  hideGame(gameId: string): Promise<void>;
+  /** Brings a Hidden Game back into the Library. */
+  unhideGame(gameId: string): Promise<void>;
 }
+
+/** How choosing an image as a Local Game's Cover went. Every outcome but `chosen` changed nothing. Mirrors `CoverImageChoice` in crates/core. */
+export type CoverImageChoice = { outcome: 'chosen' } | { outcome: 'cancelled' } | { outcome: 'notAnImage' };
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
 export interface TrayMenuTexts {
@@ -403,7 +425,9 @@ export const tauriOperations: Operations = {
   steamAccount: () => invoke<string | null>('steam_account'),
   chooseSteamAccount: (steamId) => invoke<SteamAccountChoice>('choose_steam_account', { steamId }),
   // The `cover` URL scheme of the desktop shell (COVER_PROTOCOL in src-tauri/src/lib.rs).
-  coverUrl: (game) => convertFileSrc(game.id, 'cover'),
+  // The shell reads only the path; the revision is for the interface's image cache.
+  coverUrl: (game, revision) =>
+    `${convertFileSrc(game.id, 'cover')}${revision ? `?revision=${revision}` : ''}`,
   launch: (game) => invoke<LaunchOutcome>('launch', { gameId: game.id }),
   steamWebApiKeyStored: () => invoke<boolean>('steam_web_api_key_stored'),
   storeSteamWebApiKey: (key) => invoke<SteamWebApiKeyCheck>('store_steam_web_api_key', { key }),
@@ -453,6 +477,9 @@ export const tauriOperations: Operations = {
   librarySort: () => invoke<LibrarySort>('library_sort'),
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
   setManualProgress: (gameId, percent) => invoke<ManualProgress>('set_manual_progress', { gameId, percent }),
+  chooseCoverImage: (gameId) => invoke<CoverImageChoice>('choose_cover_image', { gameId }),
+  coverImageChosen: (gameId) => invoke<boolean>('cover_image_chosen', { gameId }),
+  removeCoverImage: (gameId) => invoke<void>('remove_cover_image', { gameId }),
   setStatus: (gameId, status) => invoke<Game>('set_status', { gameId, status }),
   openLogFolder: () => invoke<void>('open_log_folder'),
   startsWithWindows: () => invoke<boolean>('starts_with_windows'),
@@ -469,4 +496,7 @@ export const tauriOperations: Operations = {
   achievementIconUrl: (game, icon) => convertFileSrc(`${game.id}/achievements/${icon}`, 'cover'),
   launchOptions: (gameId) => invoke<LaunchOptions | null>('launch_options', { gameId }),
   setLaunchOptions: (gameId, options) => invoke<void>('set_launch_options', { gameId, options }),
+  hiddenGames: () => invoke<Game[]>('hidden_games'),
+  hideGame: (gameId) => invoke<void>('hide_game', { gameId }),
+  unhideGame: (gameId) => invoke<void>('unhide_game', { gameId }),
 };

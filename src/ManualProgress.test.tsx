@@ -73,6 +73,12 @@ function fakeOperations(initial: Game[], options: { setManualProgress?: Operatio
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     launchOptions: async () => null,
     setLaunchOptions: async () => {},
+    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
+    coverImageChosen: async () => false,
+    removeCoverImage: async () => {},
+    hiddenGames: async () => [],
+    hideGame: async () => {},
+    unhideGame: async () => {},
     setManualProgress: (gameId, percent) => {
       calls.setManualProgress.push([gameId, percent]);
       if (options.setManualProgress) return options.setManualProgress(gameId, percent);

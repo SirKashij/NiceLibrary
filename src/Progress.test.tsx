@@ -86,6 +86,12 @@ function fakeOperations(initial: Game[], sort: LibrarySort = 'name') {
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     launchOptions: async () => null,
     setLaunchOptions: async () => {},
+    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
+    coverImageChosen: async () => false,
+    removeCoverImage: async () => {},
+    hiddenGames: async () => [],
+    hideGame: async () => {},
+    unhideGame: async () => {},
     setManualProgress: async (gameId, percent) => {
       const game = games.find((candidate) => candidate.id === gameId);
       if (!game || game.source !== 'local') return { outcome: 'notALocalGame' } satisfies ManualProgress;

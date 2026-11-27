@@ -158,6 +158,8 @@ impl App {
                 processes: Box::new(processes.clone()),
                 process_starter: Box::new(NothingStarted),
                 autostart: Box::new(NoAutostart),
+                icon_extractor: Box::new(NoIconsNoImages),
+                image_picker: Box::new(NoIconsNoImages),
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.join("covers")),
@@ -492,5 +494,21 @@ impl nicelibrary_core::ProcessStarter for NothingStarted {
         _working_directory: &std::path::Path,
     ) -> Result<(), String> {
         Err(format!("this test starts no process, not even {}", executable.display()))
+    }
+}
+
+/// A computer whose executables show no icon and whose user chooses no
+/// image; these tests need neither.
+struct NoIconsNoImages;
+
+impl nicelibrary_core::IconExtractor for NoIconsNoImages {
+    fn largest_icon(&self, _executable: &std::path::Path) -> Result<Option<nicelibrary_core::Icon>, String> {
+        Ok(None)
+    }
+}
+
+impl nicelibrary_core::ImagePicker for NoIconsNoImages {
+    fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
+        Ok(None)
     }
 }

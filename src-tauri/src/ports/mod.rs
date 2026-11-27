@@ -10,6 +10,8 @@ mod clock;
 mod file_dialog_windows;
 mod http;
 #[cfg(windows)]
+mod icon_windows;
+#[cfg(windows)]
 mod opener_windows;
 #[cfg(windows)]
 mod process_starter_windows;
@@ -24,8 +26,10 @@ mod steam_windows;
 pub use autostart_windows::WindowsAutostart;
 pub use clock::SystemClock;
 #[cfg(windows)]
-pub use file_dialog_windows::WindowsExecutablePicker;
+pub use file_dialog_windows::{WindowsExecutablePicker, WindowsImagePicker};
 pub use http::{HttpDownloader, HttpWebApi};
+#[cfg(windows)]
+pub use icon_windows::WindowsIconExtractor;
 #[cfg(windows)]
 pub use opener_windows::WindowsOpener;
 #[cfg(windows)]
@@ -38,7 +42,8 @@ pub use secrets_windows::WindowsSecretStore;
 pub use steam_windows::{Hive, RegistryValue, WindowsSteamLocator};
 
 use nicelibrary_core::{
-    Autostart, ExecutablePicker, Opener, Ports, ProcessList, ProcessStarter, SecretStore, SteamLocator,
+    Autostart, ExecutablePicker, IconExtractor, ImagePicker, Opener, Ports, ProcessList, ProcessStarter, SecretStore,
+    SteamLocator,
 };
 
 /// The ports of this machine.
@@ -54,6 +59,8 @@ pub fn real_ports() -> Ports {
         executable_picker: executable_picker(),
         processes: processes(),
         process_starter: process_starter(),
+        icon_extractor: icon_extractor(),
+        image_picker: image_picker(),
     }
 }
 
@@ -89,6 +96,44 @@ fn executable_picker() -> Box<dyn ExecutablePicker> {
     impl ExecutablePicker for NoFileDialog {
         fn choose_executable(&self) -> Result<Option<std::path::PathBuf>, String> {
             Err("choosing an executable is not supported on this system".into())
+        }
+    }
+
+    Box::new(NoFileDialog)
+}
+
+#[cfg(windows)]
+fn icon_extractor() -> Box<dyn IconExtractor> {
+    Box::new(WindowsIconExtractor)
+}
+
+#[cfg(not(windows))]
+fn icon_extractor() -> Box<dyn IconExtractor> {
+    /// Local Games on Linux and macOS are not part of version 1.
+    struct NoIcons;
+
+    impl IconExtractor for NoIcons {
+        fn largest_icon(&self, _executable: &std::path::Path) -> Result<Option<nicelibrary_core::Icon>, String> {
+            Ok(None)
+        }
+    }
+
+    Box::new(NoIcons)
+}
+
+#[cfg(windows)]
+fn image_picker() -> Box<dyn ImagePicker> {
+    Box::new(WindowsImagePicker)
+}
+
+#[cfg(not(windows))]
+fn image_picker() -> Box<dyn ImagePicker> {
+    /// Choosing a Cover image on Linux and macOS is not part of version 1.
+    struct NoFileDialog;
+
+    impl ImagePicker for NoFileDialog {
+        fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
+            Err("choosing an image is not supported on this system".into())
         }
     }
 
