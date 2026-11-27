@@ -223,6 +223,10 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 /* A Local Game's Cover choice below its Cover on the detail page (src/LocalGameCover.tsx). */
 .cover-choice { display: grid; justify-items: start; gap: var(--space-2); padding-top: var(--space-2); }
 
+/* Language settings: the same column of choices as the theme. */
+.language-choice { display: grid; gap: var(--space-1); }
+.language-choice label { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; cursor: pointer; }
+
 /* Status: a quiet label under each Cover, a choice on the detail page, a select in the toolbar. */
 .status-badge { color: var(--color-text-muted); font-size: var(--text-size-label); }
 .status-badge[data-status='playing'] { color: var(--color-text); }
@@ -280,6 +284,19 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .favorite-toggle[aria-pressed='true'] .icon { fill: currentColor; }
 .game:hover .favorite-toggle, .game:focus-within .favorite-toggle,
 .game-detail-cover .favorite-toggle, .favorite-toggle:focus-visible { opacity: 1; }
+/* About NiceLibrary (src/About.tsx): a quiet entry under the last Sync, the dialog like the Tray notice. */
+.about-button { font-size: var(--text-size-label); color: var(--color-text-muted); }
+.about-button:hover { color: var(--color-text); }
+.about-backdrop { position: fixed; inset: 0; display: grid; place-items: center; padding: var(--space-5); background: var(--color-backdrop); }
+.about {
+  display: grid; gap: var(--space-3); justify-items: start; max-width: var(--note-max-width); max-height: 100%; overflow: auto;
+  padding: var(--space-5); background: var(--color-surface-raised); border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control);
+}
+.about h2 { font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display); }
+.about h3 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.about-facts { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.about-links { display: flex; gap: var(--space-2); }
+.about-section { display: grid; gap: var(--space-2); padding-top: var(--space-3); border-top: var(--hairline) solid var(--color-line); }
 
 /* Cover Match: the Steam title a Local Game borrows its Cover from, proposed when adding, changed on the detail page. */
 .cover-match-proposal { display: grid; gap: var(--space-2); margin: 0; padding: 0; border: 0; min-width: 0; }

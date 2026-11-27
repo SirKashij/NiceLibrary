@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react';
-import { useT, type MessageKey } from './i18n';
+import { useFormat, useT, type MessageKey } from './i18n';
 import type { Collection, CollectionNaming, Operations } from './operations';
 
 /** What the user is doing with the Collections right now, if anything. */
@@ -48,6 +48,7 @@ export function Collections({
   onChanged?: () => void;
 }) {
   const t = useT();
+  const format = useFormat();
   const headingId = useId();
   const [collections, setCollections] = useState<Collection[]>();
   const [loadFailed, setLoadFailed] = useState(false);
@@ -155,11 +156,11 @@ export function Collections({
                     {collection.name}
                   </button>
                   <span className="collection-count">
-                    <span aria-hidden="true">{collection.gameCount}</span>
+                    <span aria-hidden="true">{format.count(collection.gameCount)}</span>
                     <span className="visually-hidden">
                       {collection.gameCount === 1
                         ? t('collections.oneGame')
-                        : t('collections.games', { count: String(collection.gameCount) })}
+                        : t('collections.games', { count: format.count(collection.gameCount) })}
                     </span>
                   </span>
                   <span className="collection-actions">

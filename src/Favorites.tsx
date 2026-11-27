@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useT } from './i18n';
+import { useFormat, useT } from './i18n';
 import type { Game, Operations } from './operations';
 
 /** A five-pointed star; the outline of a Favorite's marker, filled once marked. */
@@ -69,6 +69,7 @@ export function FavoritesEntry({
   onOpen: () => void;
 }) {
   const t = useT();
+  const format = useFormat();
   const [count, setCount] = useState<number>();
   // Only the answer to the latest question counts.
   const latest = useRef(0);
@@ -87,7 +88,7 @@ export function FavoritesEntry({
       ? t('favorites.title')
       : count === 1
         ? t('favorites.entryOne')
-        : t('favorites.entry', { count: String(count) });
+        : t('favorites.entry', { count: format.count(count) });
   return (
     <button
       type="button"

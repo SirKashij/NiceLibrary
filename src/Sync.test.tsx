@@ -80,6 +80,8 @@ function fakeOperations({
     },
     lastSync: async () => last,
     theme: async () => 'system',
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async () => {},
     hiddenGames: async () => [],
     hideGame: async () => {},
@@ -92,6 +94,8 @@ function fakeOperations({
     showTrayMenu: async () => {},
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

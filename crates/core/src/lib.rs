@@ -4,6 +4,7 @@
 //! about Tauri; the desktop shell is a thin adapter over these operations, and
 //! everything that varies by machine or OS reaches the core through ports.
 
+mod about;
 mod achievements;
 mod autostart;
 mod clock;
@@ -12,6 +13,7 @@ mod cover_match;
 mod covers;
 mod favorites;
 pub mod keyvalues;
+mod language;
 mod launch;
 mod local_covers;
 mod local_games;
@@ -36,11 +38,13 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use log::Level;
 
+pub use about::{About, AboutPage};
 pub use achievements::{Achievement, GameAchievements};
 pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
+pub use language::Language;
 pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
@@ -836,6 +840,19 @@ impl Core {
         self.logged("choose_library_layout", self.store.choose_library_layout(layout))
     }
 
+    /// The interface language the user chose; until they choose,
+    /// [`Language::System`]: the interface follows the system language, and
+    /// English for anything but German.
+    pub fn language(&self) -> Result<Language, Error> {
+        self.logged("language", self.store.language())
+    }
+
+    /// Makes `language` the interface language, from now on and after every
+    /// restart.
+    pub fn choose_language(&self, language: Language) -> Result<(), Error> {
+        self.logged("choose_language", self.store.choose_language(language))
+    }
+
     /// Every Collection with how many Games of the Library are in it,
     /// ordered by name whatever its case.
     pub fn collections(&self) -> Result<Vec<Collection>, Error> {
@@ -1307,6 +1324,19 @@ impl Core {
             .map(|games| u32::try_from(games.iter().filter(|game| game.favorite).count()).unwrap_or(u32::MAX));
         self.logged("favorite_count", count)
     }
+
+    /// The version of the app that runs and its license, for the About dialog.
+    pub fn about(&self) -> About {
+        about::about()
+    }
+
+    /// Opens `page`, the project page or the license, in the browser.
+    pub fn open_about_page(&self, page: AboutPage) -> Result<(), Error> {
+        let url = page.url();
+        let opened =
+            self.ports.opener.open_url(url).map_err(|error| Error::new(format!("{url} could not be opened: {error}")));
+        self.logged("open_about_page", opened)
+    }
 }
 
 /// The name of an outcome the interface branches on (its `outcome` tag),
@@ -1320,7 +1350,6 @@ fn outcome_name(outcome: &impl Serialize) -> String {
         _ => "done".to_owned(),
     }
 }
-
 
 /// The number in the Local Game id `game_id`; an error for any other Game,
 /// since only Local Games are edited and removed by hand.

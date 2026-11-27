@@ -10,6 +10,7 @@ import type { Achievement, Game, GameAchievements, Operations } from './operatio
  */
 export function Achievements({ operations, game, syncs }: { operations: Operations; game: Game; syncs: number }) {
   const t = useT();
+  const format = useFormat();
   const headingId = useId();
   const [answer, setAnswer] = useState<GameAchievements | 'loading' | 'failed'>('loading');
 
@@ -31,7 +32,7 @@ export function Achievements({ operations, game, syncs }: { operations: Operatio
         <h2 id={headingId}>{t('achievements.title')}</h2>
         {typeof answer === 'object' && answer.state === 'listed' && (
           <span className="muted">
-            {t('achievements.count', { unlocked: String(answer.unlocked), total: String(answer.total) })}
+            {t('achievements.count', { unlocked: format.count(answer.unlocked), total: format.count(answer.total) })}
           </span>
         )}
       </div>

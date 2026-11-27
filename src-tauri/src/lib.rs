@@ -7,8 +7,8 @@ mod tray;
 use std::ops::ControlFlow;
 
 use nicelibrary_core::{
-    AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
-    CoverImageChoice, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Launch, LaunchOptions,
+    About, AboutPage, AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
+    CoverImageChoice, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Language, Launch, LaunchOptions,
     LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
     SteamInstallation, SteamTitle, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
 };
@@ -326,6 +326,27 @@ fn favorite_count(core: tauri::State<'_, Core>) -> Result<u32, Error> {
     core.favorite_count()
 }
 
+#[tauri::command]
+fn about(core: tauri::State<'_, Core>) -> About {
+    core.about()
+}
+
+/// Async, so a slow start of the browser does not block the window.
+#[tauri::command]
+async fn open_about_page(core: tauri::State<'_, Core>, page: AboutPage) -> Result<(), Error> {
+    core.open_about_page(page)
+}
+
+#[tauri::command]
+fn language(core: tauri::State<'_, Core>) -> Result<Language, Error> {
+    core.language()
+}
+
+#[tauri::command]
+fn choose_language(core: tauri::State<'_, Core>, language: Language) -> Result<(), Error> {
+    core.choose_language(language)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 /// Achievement icons come from `<game id>/achievements/<icon>` under the same scheme
@@ -445,7 +466,11 @@ pub fn run() {
             edit_local_game,
             remove_local_game,
             mark_favorite,
-            favorite_count
+            favorite_count,
+            about,
+            open_about_page,
+            language,
+            choose_language
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

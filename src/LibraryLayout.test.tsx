@@ -96,6 +96,10 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
       marks.push([gameId, favorite]);
     },
     favoriteCount: async () => 0,
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     findSteamTitles: async () => [],
     proposeCoverMatch: async () => null,
     coverMatch: async () => null,

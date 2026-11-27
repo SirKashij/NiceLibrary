@@ -44,6 +44,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     hiddenGames: async () => [],
     hideGame: async () => {},
     unhideGame: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     filterLibrary: async () => [],
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
@@ -53,6 +55,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     theme: async () => theme,
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async (chosen) => {
       calls.chosen.push(chosen);
       theme = chosen;

@@ -61,6 +61,8 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     theme: async () => 'system',
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
@@ -86,6 +88,8 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     librarySort: async () => stored,
     chooseLibrarySort: async (sort) => {
       chosen.push(sort);
