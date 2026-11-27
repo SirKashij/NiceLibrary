@@ -35,6 +35,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
     filterLibrary: async () => [],
+    librarySort: async () => 'name',
+    chooseLibrarySort: async () => {},
     game: async () => null,
     theme: async () => theme,
     chooseTheme: async (chosen) => {
