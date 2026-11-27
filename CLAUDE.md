@@ -18,6 +18,10 @@ Issues liegen in GitHub Issues von `SirKashij/NiceLibrary` (über die `gh`-CLI).
 
 Standard-Labels: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
 
+### Implement-spec
+
+Briefs für Orchestrator, Implementierer und Merger sowie die Hotspot-Dateien, bevor ein Spec mit parallelen Agenten umgesetzt wird. See `docs/agents/implement-spec.md`.
+
 ### Domain docs
 
 Single-context: ein `GLOSSARY.md` und `docs/adr/` im Repo-Root. See `docs/agents/domain.md`.
