@@ -285,6 +285,13 @@ export interface Operations {
    * the folder could not be shown.
    */
   openLogFolder(): Promise<void>;
+  /**
+   * Whether the app starts with Windows, hidden in the Tray: what the current
+   * user's autostart entry says, also after it was changed outside the app.
+   */
+  startsWithWindows(): Promise<boolean>;
+  /** Adds or removes the current user's autostart entry. */
+  setStartWithWindows(on: boolean): Promise<void>;
 }
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
@@ -353,4 +360,6 @@ export const tauriOperations: Operations = {
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
   setStatus: (gameId, status) => invoke<Game>('set_status', { gameId, status }),
   openLogFolder: () => invoke<void>('open_log_folder'),
+  startsWithWindows: () => invoke<boolean>('starts_with_windows'),
+  setStartWithWindows: (on) => invoke<void>('set_start_with_windows', { on }),
 };

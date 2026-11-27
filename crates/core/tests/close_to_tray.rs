@@ -67,6 +67,12 @@ impl Clock for Nothing {
     fn sleep(&self, _duration: Duration, _wakeup: &Wakeup) {}
 }
 
+impl nicelibrary_core::ExecutablePicker for Nothing {
+    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
+        Ok(None)
+    }
+}
+
 /// The app's data folder, kept across the starts of one test.
 struct Profile(TempDir);
 
@@ -89,6 +95,7 @@ impl Profile {
             web_api: Box::new(Nothing),
             clock: Box::new(Nothing),
             executable_picker: Box::new(Nothing),
+            autostart: Box::new(NoAutostart),
         };
         let store = Store::open(&self.path().join("nicelibrary.db")).unwrap();
         Core::new(ports, store, CoverCache::new(self.path().join("covers")))
@@ -156,4 +163,21 @@ fn the_close_to_tray_setting_is_kept_after_a_restart() {
 
     assert!(!restarted.close_to_tray().unwrap());
     assert_eq!(restarted.close_window().unwrap(), WindowClose::Quit);
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
 }

@@ -153,6 +153,7 @@ impl App {
                 web_api: Box::new(SteamOwnsPortal2AndHalfLife2),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(NoExecutableChosen),
+                autostart: Box::new(NoAutostart),
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("covers")),
@@ -229,4 +230,21 @@ fn a_game_that_is_not_in_the_library_has_no_detail_page() {
 
     assert_eq!(app.core.game("steam:400"), Ok(None));
     assert_eq!(app.core.game(r"C:\Windows\notepad.exe"), Ok(None));
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
 }

@@ -191,4 +191,8 @@ export const de: Record<MessageKey, string> = {
   'log.private': 'Nichts wird gesendet. Dein Schlüssel und deine SteamIDs landen nie im Protokoll.',
   'log.openFolder': 'Protokollordner öffnen',
   'log.openFailed': 'Der Protokollordner konnte nicht geöffnet werden.',
+  'autostart.startWithWindows': 'Mit Windows starten',
+  'autostart.hint': 'Wenn du dich bei Windows anmeldest, startet NiceLibrary im Infobereich, ohne sein Fenster zu öffnen.',
+  'autostart.loadFailed': 'Ob NiceLibrary mit Windows startet, konnte nicht gelesen werden.',
+  'autostart.saveFailed': 'Der Start mit Windows konnte nicht geändert werden.',
 };

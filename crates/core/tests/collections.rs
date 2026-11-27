@@ -108,6 +108,7 @@ impl Profile {
                 web_api: Box::new(NoSecretsNoWebApi),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(NoExecutableChosen),
+                autostart: Box::new(NoAutostart),
             },
             store,
             CoverCache::new(self.folder.path().join("covers")),
@@ -330,4 +331,21 @@ fn a_collection_reaches_the_interface_in_the_shape_the_interface_expects() {
         serde_json::to_value(CollectionNaming::NameTaken).unwrap(),
         serde_json::json!({ "outcome": "nameTaken" })
     );
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
 }

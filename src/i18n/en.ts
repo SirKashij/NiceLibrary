@@ -189,6 +189,10 @@ export const en = {
   'log.private': 'Nothing is sent. Your key and your SteamIDs are never written to the log.',
   'log.openFolder': 'Open log folder',
   'log.openFailed': 'The log folder could not be opened.',
+  'autostart.startWithWindows': 'Start with Windows',
+  'autostart.hint': 'When you sign in to Windows, NiceLibrary starts in the tray without opening its window.',
+  'autostart.loadFailed': 'Whether NiceLibrary starts with Windows could not be read.',
+  'autostart.saveFailed': 'Starting with Windows could not be changed.',
 } as const;
 
 export type MessageKey = keyof typeof en;
