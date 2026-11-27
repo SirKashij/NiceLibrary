@@ -206,4 +206,8 @@ export const de: Record<MessageKey, string> = {
   'limited.syncAgain': 'Erneut synchronisieren',
   'limited.retry': 'Erneut versuchen',
   'limited.privacyFailed': 'Deine Steam-Privatsphäre-Einstellungen konnten nicht geöffnet werden.',
+  'autostart.startWithWindows': 'Mit Windows starten',
+  'autostart.hint': 'Wenn du dich bei Windows anmeldest, startet NiceLibrary im Infobereich, ohne sein Fenster zu öffnen.',
+  'autostart.loadFailed': 'Ob NiceLibrary mit Windows startet, konnte nicht gelesen werden.',
+  'autostart.saveFailed': 'Der Start mit Windows konnte nicht geändert werden.',
 };

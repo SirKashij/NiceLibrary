@@ -204,6 +204,10 @@ export const en = {
   'limited.syncAgain': 'Sync again',
   'limited.retry': 'Try again',
   'limited.privacyFailed': 'Your Steam privacy settings could not be opened.',
+  'autostart.startWithWindows': 'Start with Windows',
+  'autostart.hint': 'When you sign in to Windows, NiceLibrary starts in the tray without opening its window.',
+  'autostart.loadFailed': 'Whether NiceLibrary starts with Windows could not be read.',
+  'autostart.saveFailed': 'Starting with Windows could not be changed.',
 } as const;
 
 export type MessageKey = keyof typeof en;

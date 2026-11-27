@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useT, type MessageKey } from '../i18n';
 import type { Operations } from '../operations';
+import { StartWithWindowsSetting } from './StartWithWindowsSetting';
 
-/** The close-to-tray setting: whether closing the window keeps the app running in the Tray. */
+/**
+ * The Window settings: whether closing the window keeps the app running in
+ * the Tray (close-to-tray), and whether the app starts with Windows.
+ */
 export function WindowSettings({ operations }: { operations: Operations }) {
   const t = useT();
   // `undefined` while loading; what is saved once the core answered.
@@ -52,6 +56,7 @@ export function WindowSettings({ operations }: { operations: Operations }) {
           {t(problem)}
         </p>
       )}
+      <StartWithWindowsSetting operations={operations} />
     </section>
   );
 }

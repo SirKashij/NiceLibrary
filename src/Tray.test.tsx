@@ -28,18 +28,18 @@ function fakeOperations({ closeToTray = true } = {}) {
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
-    onAutomaticSync: () => () => {},
-    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
-    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
-    onAutomaticSteamAppListFetch: () => () => {},
+    theme: async () => 'system',
+    chooseTheme: async () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
     renameCollection: async (id) => ({ outcome: 'named', id }),
     deleteCollection: async () => {},
-    theme: async () => 'system',
-    chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    onAutomaticSync: () => () => {},
+    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
+    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
+    onAutomaticSteamAppListFetch: () => () => {},
     openLogFolder: async () => {},
     limitedMode: async () => ({ outcome: 'off' }),
     openSteamPrivacySettings: async () => {},
@@ -62,6 +62,8 @@ function fakeOperations({ closeToTray = true } = {}) {
       noticeListeners.add(listener);
       return () => noticeListeners.delete(listener);
     },
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
     showTrayMenu: async (texts) => {
       calls.trayMenus.push(texts);
     },
@@ -70,6 +72,9 @@ function fakeOperations({ closeToTray = true } = {}) {
   const firstClose = () => act(() => noticeListeners.forEach((listener) => listener()));
   return { operations, calls, firstClose };
 }
+
+/** The close-to-tray checkbox; the Window section also holds the one for starting with Windows. */
+const CLOSE_TO_TRAY = 'Keep running in the tray when the window is closed';
 
 async function openWindowSettings(operations: Operations, lang: 'de' | 'en' = 'en') {
   const user = userEvent.setup();
@@ -151,7 +156,7 @@ describe('The close-to-tray setting', () => {
   it('turns close-to-tray off and on again', async () => {
     const { operations, calls } = fakeOperations();
     const { user, section } = await openWindowSettings(operations);
-    const checkbox = await within(section).findByRole('checkbox');
+    const checkbox = await within(section).findByRole('checkbox', { name: CLOSE_TO_TRAY });
 
     await user.click(checkbox);
     expect(checkbox).not.toBeChecked();
@@ -165,7 +170,7 @@ describe('The close-to-tray setting', () => {
     const { operations } = fakeOperations({ closeToTray: false });
     const { section } = await openWindowSettings(operations);
 
-    expect(await within(section).findByRole('checkbox')).not.toBeChecked();
+    expect(await within(section).findByRole('checkbox', { name: CLOSE_TO_TRAY })).not.toBeChecked();
     expect(section).toHaveTextContent('Closing the window quits NiceLibrary');
   });
 
@@ -184,14 +189,14 @@ describe('The close-to-tray setting', () => {
     const { section } = await openWindowSettings(operations);
 
     expect(await within(section).findByRole('alert')).toHaveTextContent('The window setting could not be loaded.');
-    expect(within(section).queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(within(section).queryByRole('checkbox', { name: CLOSE_TO_TRAY })).not.toBeInTheDocument();
   });
 
   it('says so when it cannot be saved and keeps showing what is saved', async () => {
     const { operations } = fakeOperations();
     operations.setCloseToTray = () => Promise.reject(new Error('database: locked'));
     const { user, section } = await openWindowSettings(operations);
-    const checkbox = await within(section).findByRole('checkbox');
+    const checkbox = await within(section).findByRole('checkbox', { name: CLOSE_TO_TRAY });
 
     await user.click(checkbox);
 

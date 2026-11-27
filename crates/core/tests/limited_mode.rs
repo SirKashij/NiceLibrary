@@ -147,6 +147,23 @@ impl ExecutablePicker for NoExecutableChosen {
     }
 }
 
+/// These tests do not start the app with Windows.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
+}
+
 /// The computer the app runs on: Steam with PLAYER_ONE and PLAYER_TWO,
 /// Portal 2 Installed, and the user profile.
 struct Computer {
@@ -212,6 +229,7 @@ impl Computer {
                 secrets: Box::new(self.secrets.clone()),
                 web_api: Box::new(api.clone()),
                 clock: Box::new(StoppedClock),
+                autostart: Box::new(NoAutostart),
                 executable_picker: Box::new(NoExecutableChosen),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),

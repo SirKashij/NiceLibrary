@@ -121,6 +121,7 @@ impl App {
                 web_api: Box::new(NoSecretsNoWebApi),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(user.clone()),
+                autostart: Box::new(NoAutostart),
             },
             Store::open(&profile.join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.join("covers")),
@@ -266,6 +267,7 @@ fn a_failing_file_dialog_is_an_error() {
             web_api: Box::new(NoSecretsNoWebApi),
             clock: Box::new(StoppedClock),
             executable_picker: Box::new(BrokenDialog),
+            autostart: Box::new(NoAutostart),
         },
         Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
         CoverCache::new(profile.path().join("covers")),
@@ -449,4 +451,21 @@ fn a_local_game_is_found_by_the_local_source_and_installed_only_filters() {
     let filter = nicelibrary_core::LibraryFilter { source: Some(Source::Local), installed_only: true, ..Default::default() };
 
     assert_eq!(app.core.filter_library(&filter).unwrap(), [game]);
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
 }

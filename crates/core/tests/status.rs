@@ -135,6 +135,7 @@ impl Computer {
                 web_api: Box::new(SteamOwning),
                 clock: Box::new(StoppedClock),
                 executable_picker: Box::new(NoExecutableChosen),
+                autostart: Box::new(NoAutostart),
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -320,4 +321,21 @@ fn a_local_game_starts_as_unplayed_and_takes_a_status_like_a_steam_game() {
     let local_and_completed =
         LibraryFilter { source: Some(Source::Local), status: Some(Status::Completed), ..Default::default() };
     assert_eq!(titles(&core, local_and_completed), ["Celeste"]);
+}
+
+/// A computer where the app does not start with Windows; these tests do not turn it on.
+struct NoAutostart;
+
+impl nicelibrary_core::Autostart for NoAutostart {
+    fn is_on(&self) -> Result<bool, String> {
+        Ok(false)
+    }
+
+    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
+        Err("this test does not start the app with Windows".into())
+    }
+
+    fn turn_off(&self) -> Result<(), String> {
+        Ok(())
+    }
 }

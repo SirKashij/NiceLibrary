@@ -300,6 +300,13 @@ export interface Operations {
   limitedMode(): Promise<LimitedMode>;
   /** Opens Steam's privacy settings of the signed-in profile in the browser. Rejects when it could not be opened. */
   openSteamPrivacySettings(): Promise<void>;
+  /**
+   * Whether the app starts with Windows, hidden in the Tray: what the current
+   * user's autostart entry says, also after it was changed outside the app.
+   */
+  startsWithWindows(): Promise<boolean>;
+  /** Adds or removes the current user's autostart entry. */
+  setStartWithWindows(on: boolean): Promise<void>;
 }
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
@@ -370,4 +377,6 @@ export const tauriOperations: Operations = {
   openLogFolder: () => invoke<void>('open_log_folder'),
   limitedMode: () => invoke<LimitedMode>('limited_mode'),
   openSteamPrivacySettings: () => invoke<void>('open_steam_privacy_settings'),
+  startsWithWindows: () => invoke<boolean>('starts_with_windows'),
+  setStartWithWindows: (on) => invoke<void>('set_start_with_windows', { on }),
 };

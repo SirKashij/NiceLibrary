@@ -4,6 +4,7 @@
 //! about Tauri; the desktop shell is a thin adapter over these operations, and
 //! everything that varies by machine or OS reaches the core through ports.
 
+mod autostart;
 mod clock;
 mod collections;
 mod covers;
@@ -30,6 +31,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use log::Level;
 
+pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
@@ -133,6 +135,7 @@ pub struct Ports {
     pub secrets: Box<dyn SecretStore>,
     pub web_api: Box<dyn WebApi>,
     pub clock: Box<dyn Clock>,
+    pub autostart: Box<dyn Autostart>,
     pub executable_picker: Box<dyn ExecutablePicker>,
 }
 
@@ -608,6 +611,19 @@ impl Core {
             .open_url(steam_web_api::KEY_PAGE)
             .map_err(|error| Error::new(format!("{} could not be opened: {error}", steam_web_api::KEY_PAGE)));
         self.logged("open_steam_web_api_key_page", opened)
+    }
+
+    /// Whether the app starts with Windows, hidden in the Tray, when the
+    /// user signs in: what the current user's autostart entry says, also
+    /// after it was changed outside the app. Off until the user turns it on.
+    pub fn starts_with_windows(&self) -> Result<bool, Error> {
+        self.logged("starts_with_windows", autostart::starts_with_windows(self.ports.autostart.as_ref()))
+    }
+
+    /// Adds or removes the current user's autostart entry, which starts the
+    /// app hidden in the Tray (see [`started_with_windows`]).
+    pub fn set_start_with_windows(&self, on: bool) -> Result<(), Error> {
+        self.logged("set_start_with_windows", autostart::set_start_with_windows(self.ports.autostart.as_ref(), on))
     }
 
     /// The theme the user chose; until they choose, [`Theme::System`]: the

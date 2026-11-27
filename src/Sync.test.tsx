@@ -86,6 +86,8 @@ function fakeOperations({
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

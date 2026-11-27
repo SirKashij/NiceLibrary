@@ -75,6 +75,8 @@ function fakeOperations({
       throw new Error('this test sets no Status');
     },
     openLogFolder: async () => {},
+    startsWithWindows: async () => false,
+    setStartWithWindows: async () => {},
     limitedMode: async () => mode,
     openSteamPrivacySettings: async () => {
       calls.privacySettingsOpened += 1;
