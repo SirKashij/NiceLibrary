@@ -27,6 +27,7 @@ use crate::statistics::Recorded;
 use crate::steam::{InstalledApp, LocalPlaytime};
 use crate::sync::OwnedGame;
 use crate::theme::Theme;
+use crate::unreadable_database::{UnreadableDatabase, UnreadableReason};
 use crate::{Error, Game, LaunchOptions, Status};
 
 mod achievements;
@@ -210,14 +211,32 @@ impl Store {
     /// Opens the database at `path`, creating it and its folder if needed,
     /// and brings its schema up to date.
     ///
-    /// A database written by a newer version of the app is refused rather
-    /// than changed.
-    pub fn open(path: &Path) -> Result<Self, Error> {
+    /// A database that cannot be opened is left as it is, and the answer
+    /// says why: a newer version of the app wrote it, it is damaged, or its
+    /// folder cannot be written.
+    pub fn open(path: &Path) -> Result<Self, UnreadableDatabase> {
+        let unreadable = |reason, detail: String| UnreadableDatabase::new(reason, path.to_owned(), detail);
         if let Some(folder) = path.parent() {
-            fs::create_dir_all(folder).map_err(|e| Error::new(format!("cannot create {}: {e}", folder.display())))?;
+            fs::create_dir_all(folder).map_err(|e| {
+                unreadable(UnreadableReason::FolderNotWritable, format!("cannot create {}: {e}", folder.display()))
+            })?;
         }
-        let mut connection = Connection::open(path)?;
-        migrate(&mut connection)?;
+        let mut connection = Connection::open(path).map_err(|e| unreadable(reason_for(&e), format!("database: {e}")))?;
+        migrate(&mut connection).map_err(|failure| match failure {
+            Migration::Newer { applied } => unreadable(
+                UnreadableReason::NewerVersion,
+                format!(
+                    "the database was written by a newer version of NiceLibrary (schema {applied}, this version knows {})",
+                    MIGRATIONS.len()
+                ),
+            ),
+            Migration::Failed(e) => unreadable(reason_for(&e), format!("database: {e}")),
+        })?;
+        // SQLite falls back to only reading a file it cannot write; every
+        // change after the start would then fail.
+        if connection.is_readonly(rusqlite::MAIN_DB).unwrap_or(true) {
+            return Err(unreadable(UnreadableReason::FolderNotWritable, "the database can only be read".into()));
+        }
         Ok(Self { connection: Mutex::new(connection) })
     }
 
@@ -831,16 +850,36 @@ fn seconds_column(seconds: u64) -> Result<i64, Error> {
     i64::try_from(seconds).map_err(|_| Error::new(format!("a time out of range: {seconds} seconds since 1970")))
 }
 
-fn migrate(connection: &mut Connection) -> Result<(), Error> {
+/// Why [`migrate`] did not bring a database up to date.
+enum Migration {
+    /// A newer version of the app wrote it, after `applied` migrations.
+    Newer { applied: i64 },
+    Failed(rusqlite::Error),
+}
+
+impl From<rusqlite::Error> for Migration {
+    fn from(error: rusqlite::Error) -> Self {
+        Self::Failed(error)
+    }
+}
+
+/// The reason a failure of SQLite to open or migrate the database stands for.
+/// A failure that points neither to the folder nor to permissions counts as damage.
+fn reason_for(error: &rusqlite::Error) -> UnreadableReason {
+    use rusqlite::ErrorCode::{CannotOpen, PermissionDenied, ReadOnly};
+    match error.sqlite_error_code() {
+        Some(CannotOpen | PermissionDenied | ReadOnly) => UnreadableReason::FolderNotWritable,
+        _ => UnreadableReason::Damaged,
+    }
+}
+
+fn migrate(connection: &mut Connection) -> Result<(), Migration> {
     // How many migrations have already run on this database.
     let applied: i64 = connection.query_row("PRAGMA user_version", [], |row| row.get(0))?;
-    let applied = usize::try_from(applied).unwrap_or(usize::MAX);
-    if applied > MIGRATIONS.len() {
-        return Err(Error::new(format!(
-            "the database was written by a newer version of NiceLibrary (schema {applied}, this version knows {})",
-            MIGRATIONS.len()
-        )));
+    if usize::try_from(applied).map_or(true, |applied| applied > MIGRATIONS.len()) {
+        return Err(Migration::Newer { applied });
     }
+    let applied = usize::try_from(applied).expect("checked above");
     for (index, migration) in MIGRATIONS.iter().enumerate().skip(applied) {
         let transaction = connection.transaction()?;
         transaction.execute_batch(migration)?;

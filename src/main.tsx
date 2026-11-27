@@ -8,9 +8,12 @@ import './styles/app.css';
 import { App } from './App';
 import { systemLang } from './i18n';
 import { tauriOperations } from './operations';
+import { startingDatabase } from './UnreadableDatabase';
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App operations={tauriOperations} lang={systemLang()} />
-  </StrictMode>,
+startingDatabase(tauriOperations).then((database) =>
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <App operations={tauriOperations} lang={systemLang()} database={database} />
+    </StrictMode>,
+  ),
 );

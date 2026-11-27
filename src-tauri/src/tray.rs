@@ -74,7 +74,12 @@ pub fn close_main_window(app: &AppHandle) {
     let Some(window) = app.get_webview_window(MAIN_WINDOW) else {
         return;
     };
-    match app.state::<Core>().close_window() {
+    // Without a store (Unreadable Database) there is no Tray to keep running in.
+    let Some(core) = app.try_state::<Core>() else {
+        app.exit(0);
+        return;
+    };
+    match core.close_window() {
         Ok(WindowClose::ShowTrayNotice) => {
             let _ = window.emit(TRAY_NOTICE_EVENT, ());
         }

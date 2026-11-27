@@ -423,4 +423,15 @@ export const de: Record<MessageKey, string> = {
     'Diese Datei stammt von einer neueren Version von NiceLibrary. Aktualisiere die App, um sie zu importieren. Es wurde nichts geändert.',
   'import.damaged': 'Diese Datei ist keine Exportdatei von NiceLibrary, oder sie ist beschädigt. Es wurde nichts geändert.',
   'import.failed': 'Deine Daten konnten nicht importiert werden.',
+  'unreadable.title': 'Deine Bibliothek kann nicht geöffnet werden',
+  'unreadable.newerVersion':
+    'Deine Bibliothek wurde von einer neueren Version von NiceLibrary gespeichert. Aktualisiere die App, um sie zu öffnen.',
+  'unreadable.damaged': 'Die Datei deiner Bibliothek ist beschädigt oder keine Datenbank von NiceLibrary.',
+  'unreadable.folderNotWritable':
+    'NiceLibrary kann nicht in den Ordner deiner Bibliothek schreiben. Prüfe, ob der Ordner existiert und du darin Dateien ändern darfst.',
+  'unreadable.path': 'Datenbankdatei',
+  'unreadable.untouched': 'NiceLibrary hat die Datei weder geändert noch verschoben oder gelöscht.',
+  'unreadable.openFolder': 'Ordner öffnen',
+  'unreadable.openFolderFailed': 'Der Ordner konnte nicht geöffnet werden.',
+  'unreadable.quit': 'Beenden',
 };

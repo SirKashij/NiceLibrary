@@ -80,7 +80,7 @@ If a check needs another WebDriver command, add a method to the handle in `e2e/a
 
 The app keeps its data in one SQLite database in the user profile, `%APPDATA%\io.github.sirkashij.nicelibrary\nicelibrary.db`. The end-to-end tests start the real app, so they use that file too. The core tests use a temporary database each.
 
-The schema changes only through migrations, the list `MIGRATIONS` in `crates/core/src/store.rs`. To change the schema, append an entry; never edit or reorder one that has been released. A database written by a newer version of the app is refused, not changed.
+The schema changes only through migrations, the list `MIGRATIONS` in `crates/core/src/store.rs`. To change the schema, append an entry; never edit or reorder one that has been released. A database written by a newer version of the app is refused, not changed. When the database cannot be opened (newer version, damaged file, or a folder that cannot be written), the app starts as an Unreadable Database: only its window, which names the reason and the file's path.
 
 The Steam Web API key is never kept in the database, a file or a log. It lives only in the Windows Credential Manager, as the generic credential `io.github.sirkashij.nicelibrary/steam-web-api-key` (ADR-0002). Error messages never repeat it, nor a URL that carries it.
 
