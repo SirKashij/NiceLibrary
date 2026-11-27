@@ -576,13 +576,13 @@ impl Core {
     /// user signs in: what the current user's autostart entry says, also
     /// after it was changed outside the app. Off until the user turns it on.
     pub fn starts_with_windows(&self) -> Result<bool, Error> {
-        autostart::starts_with_windows(self.ports.autostart.as_ref())
+        self.logged("starts_with_windows", autostart::starts_with_windows(self.ports.autostart.as_ref()))
     }
 
     /// Adds or removes the current user's autostart entry, which starts the
     /// app hidden in the Tray (see [`started_with_windows`]).
     pub fn set_start_with_windows(&self, on: bool) -> Result<(), Error> {
-        autostart::set_start_with_windows(self.ports.autostart.as_ref(), on)
+        self.logged("set_start_with_windows", autostart::set_start_with_windows(self.ports.autostart.as_ref(), on))
     }
 
     /// The theme the user chose; until they choose, [`Theme::System`]: the
