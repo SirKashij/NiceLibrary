@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AboutButton } from './About';
 import { Collections } from './Collections';
 import { FavoritesEntry, FavoriteToggle, NoFavorites, useFavoriteMarking } from './Favorites';
 import { GameCollections } from './GameCollections';
@@ -110,6 +111,7 @@ function Shell({ operations }: { operations: Operations }) {
         />
         {/* Starts over for each chosen account: shows its last Sync, never one of the account chosen before. */}
         <SyncStatus key={accountChoices} operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
+        <AboutButton operations={operations} />
       </aside>
       <main className="main">
         {view === 'library' && (

@@ -4,6 +4,7 @@
 //! about Tauri; the desktop shell is a thin adapter over these operations, and
 //! everything that varies by machine or OS reaches the core through ports.
 
+mod about;
 mod achievements;
 mod autostart;
 mod clock;
@@ -35,6 +36,7 @@ use serde::{Deserialize, Serialize, Serializer};
 
 use log::Level;
 
+pub use about::{About, AboutPage};
 pub use achievements::{Achievement, GameAchievements};
 pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
@@ -1242,6 +1244,19 @@ impl Core {
             .map(|games| u32::try_from(games.iter().filter(|game| game.favorite).count()).unwrap_or(u32::MAX));
         self.logged("favorite_count", count)
     }
+
+    /// The version of the app that runs and its license, for the About dialog.
+    pub fn about(&self) -> About {
+        about::about()
+    }
+
+    /// Opens `page`, the project page or the license, in the browser.
+    pub fn open_about_page(&self, page: AboutPage) -> Result<(), Error> {
+        let url = page.url();
+        let opened =
+            self.ports.opener.open_url(url).map_err(|error| Error::new(format!("{url} could not be opened: {error}")));
+        self.logged("open_about_page", opened)
+    }
 }
 
 /// The name of an outcome the interface branches on (its `outcome` tag),
@@ -1255,7 +1270,6 @@ fn outcome_name(outcome: &impl Serialize) -> String {
         _ => "done".to_owned(),
     }
 }
-
 
 /// The number in the Local Game id `game_id`; an error for any other Game,
 /// since only Local Games are edited and removed by hand.

@@ -112,6 +112,8 @@ function fakeOperations(games: Game[], achievements: Record<string, GameAchievem
     removeGameFromCollection: async () => {},
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
   };
   return { operations, asked };
 }

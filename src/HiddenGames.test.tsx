@@ -95,6 +95,8 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     removeGameFromCollection: async () => {},
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
   };
   return { operations, hidden };
 }

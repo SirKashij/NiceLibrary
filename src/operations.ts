@@ -443,10 +443,25 @@ export interface Operations {
   markFavorite(gameId: string, favorite: boolean): Promise<void>;
   /** How many Games of the Library are Favorites. */
   favoriteCount(): Promise<number>;
+  /** The version of the app that runs and its license, for the About dialog. */
+  about(): Promise<About>;
+  /** Opens the project page or the license in the browser. */
+  openAboutPage(page: AboutPage): Promise<void>;
 }
 
 /** How choosing an image as a Local Game's Cover went. Every outcome but `chosen` changed nothing. Mirrors `CoverImageChoice` in crates/core. */
 export type CoverImageChoice = { outcome: 'chosen' } | { outcome: 'cancelled' } | { outcome: 'notAnImage' };
+
+/** What the About dialog tells of the app itself. Mirrors `About` in crates/core. */
+export interface About {
+  /** Such as `0.1.0`. */
+  version: string;
+  /** The SPDX identifier of the license, such as `MIT`. */
+  license: string;
+}
+
+/** A page the About dialog links to. Mirrors `AboutPage` in crates/core. */
+export type AboutPage = 'project' | 'license';
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
 export interface TrayMenuTexts {
@@ -548,4 +563,6 @@ export const tauriOperations: Operations = {
   removeLocalGame: (gameId) => invoke<void>('remove_local_game', { gameId }),
   markFavorite: (gameId, favorite) => invoke<void>('mark_favorite', { gameId, favorite }),
   favoriteCount: () => invoke<number>('favorite_count'),
+  about: () => invoke<About>('about'),
+  openAboutPage: (page) => invoke<void>('open_about_page', { page }),
 };

@@ -92,6 +92,8 @@ function fakeOperations({
     showTrayMenu: async () => {},
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

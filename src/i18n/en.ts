@@ -270,6 +270,24 @@ export const en = {
   'favorites.toggle': 'Favorite {title}',
   'favorites.none': 'No favorites yet. Mark a game with its star to find it here.',
   'favorites.failed': '{title} could not be marked or unmarked as a favorite.',
+  'about.title': 'About NiceLibrary',
+  'about.version': 'Version {version}',
+  'about.license': '{license} License',
+  'about.versionFailed': 'The version could not be read.',
+  'about.projectPage': 'Project page',
+  'about.licensePage': 'License',
+  'about.openFailed': 'The page could not be opened.',
+  'about.privacy': 'Privacy',
+  'about.privacyConnections':
+    'NiceLibrary connects only to the Steam Web API, for your games, playtime and achievements; to Steam’s image servers, for covers; and to GitHub, to check for updates.',
+  'about.privacyStorage':
+    'Everything it stores stays only on this computer: your library and settings in a database in your user profile, covers in a cache folder, and your Steam Web API key in the Windows Credential Manager.',
+  'about.privacyNothingElse': 'Nothing else leaves your computer.',
+  'about.trademarks': 'Trademarks',
+  'about.trademarkNotice':
+    'Steam and the Steam logo are trademarks and/or registered trademarks of Valve Corporation in the U.S. and/or other countries.',
+  'about.notAffiliated': 'NiceLibrary is not affiliated with, endorsed or sponsored by Valve Corporation.',
+  'about.close': 'Close',
 } as const;
 
 export type MessageKey = keyof typeof en;

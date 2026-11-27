@@ -75,6 +75,8 @@ function fakeOperations({
     showTrayMenu: async () => {},
     markFavorite: async () => {},
     favoriteCount: async () => 0,
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
     renameCollection: async (id) => ({ outcome: 'named', id }),

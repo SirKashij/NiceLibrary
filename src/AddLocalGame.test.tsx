@@ -53,6 +53,8 @@ function fakeOperations({
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),
     onAutomaticSteamAppListFetch: () => () => {},
+    about: async () => ({ version: '0.1.0', license: 'MIT' }),
+    openAboutPage: async () => {},
     theme: async () => 'system',
     chooseTheme: async () => {},
     collections: async () => [],

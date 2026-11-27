@@ -118,6 +118,9 @@ struct RecordingOpener {
 
 impl Opener for RecordingOpener {
     fn open_url(&self, url: &str) -> Result<(), OpenError> {
+        if *self.broken.lock().unwrap() {
+            return Err(OpenError::Failed("no browser is available".into()));
+        }
         self.opened.lock().unwrap().push(url.to_owned());
         Ok(())
     }
@@ -355,6 +358,18 @@ fn a_log_folder_that_cannot_be_opened_is_an_error() {
     let error = app.core.open_log_folder().unwrap_err();
 
     assert!(error.to_string().contains("Explorer is not available"), "{error}");
+}
+
+#[test]
+fn an_about_page_that_cannot_be_opened_writes_why_to_the_log() {
+    let app = App::start();
+    *app.opener.broken.lock().unwrap() = true;
+
+    assert!(app.core.open_about_page(nicelibrary_core::AboutPage::License).is_err());
+
+    let log = app.log();
+    assert!(log.contains("ERROR open_about_page: "), "{log}");
+    assert!(log.contains("no browser is available"), "{log}");
 }
 
 /// A computer where the app does not start with Windows; these tests do not turn it on.
