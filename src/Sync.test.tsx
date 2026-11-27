@@ -77,10 +77,12 @@ function fakeOperations({
     lastSync: async () => last,
     theme: async () => 'system',
     chooseTheme: async () => {},
+    filterLibrary: async () => [],
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
+    game: async (gameId) => library.find((game) => game.id === gameId) ?? null,
   };
   return { operations, calls, automaticSync, listeners };
 }

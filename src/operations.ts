@@ -60,6 +60,15 @@ export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' }
 
 /** The theme the user chose; `system` follows the operating system's dark or light setting. Mirrors `Theme` in crates/core. */
 export type Theme = 'system' | 'dark' | 'light';
+/** What the Library is narrowed to; every part that is set must match. Mirrors `LibraryFilter` in crates/core. */
+export interface LibraryFilter {
+  /** Text the title must contain, ignoring case; empty matches every title. */
+  search: string;
+  /** Only Games of this Source; `null` for both Sources. */
+  source: Source | null;
+  /** Only Installed Games. */
+  installedOnly: boolean;
+}
 
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
@@ -121,6 +130,10 @@ export interface Operations {
   theme(): Promise<Theme>;
   /** Makes a theme the theme of the interface, also after a restart. */
   chooseTheme(theme: Theme): Promise<void>;
+  /** The Games in the stored Library that match the filter, ordered by title like `library`. */
+  filterLibrary(filter: LibraryFilter): Promise<Game[]>;
+  /** The Game as the Library shows it, for its detail page; `null` when it is no longer in the Library. */
+  game(gameId: string): Promise<Game | null>;
 }
 
 export const tauriOperations: Operations = {
@@ -147,4 +160,6 @@ export const tauriOperations: Operations = {
   },
   theme: () => invoke<Theme>('theme'),
   chooseTheme: (theme) => invoke<void>('choose_theme', { theme }),
+  filterLibrary: (filter) => invoke<Game[]>('filter_library', { filter }),
+  game: (gameId) => invoke<Game | null>('game', { gameId }),
 };

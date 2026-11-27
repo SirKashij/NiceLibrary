@@ -26,6 +26,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     onAutomaticSync: () => () => {},
+    filterLibrary: async () => [],
+    game: async () => null,
     theme: async () => theme,
     chooseTheme: async (chosen) => {
       calls.chosen.push(chosen);

@@ -26,7 +26,9 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     lastSync: async () => null,
     theme: async () => 'system',
     chooseTheme: async () => {},
+    filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
+    game: async () => null,
     launch: (game) => {
       requested.push(game.id);
       return launch(game);
@@ -54,7 +56,7 @@ describe('Launching an Installed Steam Game', () => {
     render(<App operations={operations} lang="en" />);
 
     const [portal, portal2] = within(await screen.findByRole('list', { name: 'Games' })).getAllByRole('listitem');
-    expect(within(portal).queryByRole('button')).not.toBeInTheDocument();
+    expect(within(portal).queryByRole('button', { name: 'Play Portal' })).not.toBeInTheDocument();
     expect(within(portal2).getByRole('button', { name: 'Play Portal 2' })).toBeInTheDocument();
   });
 

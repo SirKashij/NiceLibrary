@@ -59,7 +59,9 @@ function fakeOperations(
     lastSync: async () => (account && lastSyncs[account]) || null,
     theme: async () => 'system',
     chooseTheme: async () => {},
+    filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
+    game: async () => null,
     launch: async () => ({ outcome: 'launched' }),
   };
   return { operations, chosen };

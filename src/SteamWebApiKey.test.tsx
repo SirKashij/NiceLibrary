@@ -43,7 +43,9 @@ function fakeOperations({ stored = false } = {}) {
     lastSync: async () => null,
     theme: async () => 'system',
     chooseTheme: async () => {},
+    filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
+    game: async () => null,
   };
   return { operations, calls };
 }
