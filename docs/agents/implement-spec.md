@@ -54,4 +54,4 @@ Files nearly every ticket edits, and where merges conflict:
 - `src/operations.ts` and `src/App.tsx`.
 - `src/i18n/de.ts` and `src/i18n/en.ts`.
 - `GLOSSARY.md`.
-- Test fakes: every test file that spells out `Operations` or `Ports` breaks when an Operation or Port is added (#73).
+- Test fakes: `crates/core/src/stand_ins.rs` and `src/test/operations.ts`. A new Port gets its do-nothing stand-in there, a new Operation its base fake; tests spread `..stand_ins::ports()` or `...baseOperations()` and name only what they use.

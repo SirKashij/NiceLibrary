@@ -17,12 +17,13 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use nicelibrary_core::{
-    AddLocalGame, Clock, Core, CoverCache, CoverImageChoice, DataExport, DataImport, Downloader, ExecutablePicker,
-    DataFilePicker, Language, LaunchOptions, LibraryLayout, LibrarySort, OpenError, Opener, Ports, ProcessList,
-    Status, SteamLocator, Store, Theme, Tracking, Wakeup,
+    AddLocalGame, Clock, Core, CoverCache, CoverImageChoice, DataExport, DataImport, DataFilePicker, Language,
+    LaunchOptions, LibraryLayout, LibrarySort, Ports, ProcessList, Status, SteamLocator, Store, Theme, Tracking,
+    Wakeup,
 };
 use serde_json::{Value, json};
 use tempfile::TempDir;
+use nicelibrary_core::stand_ins;
 
 /// The Steam Web API key the secret store holds in these tests.
 const KEY: &str = "0123456789ABCDEF0123456789ABCDEF";
@@ -430,18 +431,13 @@ impl App {
         let core = Core::new(
             Ports {
                 steam_locator: Box::new(SteamAt(steam)),
-                downloader: Box::new(Offline),
-                opener: Box::new(NoUrls),
                 secrets: Box::new(secrets.clone()),
-                web_api: Box::new(NoWebApi),
                 clock: Box::new(processes.clock.clone()),
-                executable_picker: Box::new(NoExecutableChosen),
                 processes: Box::new(processes.clone()),
                 autostart: Box::new(Autostart::default()),
-                process_starter: Box::new(NothingStarted),
-                icon_extractor: Box::new(NoIcons),
                 image_picker: Box::new(images.clone()),
                 data_file_picker: Box::new(user.clone()),
+                ..stand_ins::ports()
             },
             Store::open(&profile.path().join("nicelibrary.db")).unwrap(),
             CoverCache::new(profile.path().join("cache").join("covers"))
@@ -694,24 +690,6 @@ impl SteamFixture {
     }
 }
 
-/// A computer without a network connection.
-struct Offline;
-
-impl Downloader for Offline {
-    fn download(&self, _url: &str) -> Result<Option<Vec<u8>>, String> {
-        Err("no network connection".into())
-    }
-}
-
-/// A computer that opens no URL; these tests launch nothing.
-struct NoUrls;
-
-impl Opener for NoUrls {
-    fn open_url(&self, url: &str) -> Result<(), OpenError> {
-        Err(OpenError::Failed(format!("this test opens no URL, not even {url}")))
-    }
-}
-
 /// A secret store that holds a Steam Web API key and remembers every change
 /// anyone makes to it.
 #[derive(Clone, Default)]
@@ -736,41 +714,5 @@ impl nicelibrary_core::SecretStore for KeyStored {
     fn delete(&self, name: &str) -> Result<(), String> {
         self.0.lock().unwrap().push(format!("delete {name}"));
         Ok(())
-    }
-}
-
-/// A network that reaches no Web API.
-struct NoWebApi;
-
-impl nicelibrary_core::WebApi for NoWebApi {
-    fn get(&self, _url: &str) -> Result<nicelibrary_core::WebAnswer, String> {
-        Err("this test asks no Web API".into())
-    }
-}
-
-/// No file dialog is needed here; Games are added by path.
-struct NoExecutableChosen;
-
-impl ExecutablePicker for NoExecutableChosen {
-    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
-        Ok(None)
-    }
-}
-
-/// A computer that starts no process; these tests launch no Local Game.
-struct NothingStarted;
-
-impl nicelibrary_core::ProcessStarter for NothingStarted {
-    fn start(&self, executable: &Path, _arguments: &[String], _working_directory: &Path) -> Result<(), String> {
-        Err(format!("this test starts no process, not even {}", executable.display()))
-    }
-}
-
-/// A computer whose executables show no icon.
-struct NoIcons;
-
-impl nicelibrary_core::IconExtractor for NoIcons {
-    fn largest_icon(&self, _executable: &Path) -> Result<Option<nicelibrary_core::Icon>, String> {
-        Ok(None)
     }
 }

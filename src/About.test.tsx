@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
 import type { About, AboutPage, Operations } from './operations';
+import { baseOperations } from './test/operations';
 
 /**
  * Fake operations that answer `about` and record which pages the About
@@ -14,95 +15,13 @@ function fakeOperations({
 }: { about?: () => Promise<About>; openPage?: () => Promise<void> } = {}) {
   const calls = { opened: [] as AboutPage[] };
   const operations: Operations = {
-    library: async () => [],
-    readInstalledGames: async () => [],
-    steamInstallation: async () => ({ state: 'notFound' }),
-    exportData: async () => ({ outcome: 'cancelled' }),
-    playtimeAdjustment: async () => null,
-    setPlaytimeAdjustment: async () => {
-      throw new Error('this test adjusts no Playtime');
-    },
-    steamAccount: async () => null,
-    chooseSteamAccount: async () => ({ outcome: 'chosen' }),
-    coverUrl: (game) => `cover://localhost/${game.id}`,
-    launch: async () => ({ outcome: 'launched' }),
-    steamWebApiKeyStored: async () => false,
+    ...baseOperations(),
     storeSteamWebApiKey: async () => ({ outcome: 'invalid' }),
-    removeSteamWebApiKey: async () => {},
-    openSteamWebApiKeyPage: async () => {},
-    sync: async () => ({ outcome: 'noKey' }),
-    lastSync: async () => null,
-    onAutomaticSync: () => () => {},
-    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
-    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
-    onAutomaticSteamAppListFetch: () => () => {},
-    collections: async () => [],
-    createCollection: async () => ({ outcome: 'named', id: 1 }),
-    renameCollection: async (id) => ({ outcome: 'named', id }),
-    deleteCollection: async () => {},
-    theme: async () => 'system',
-    chooseTheme: async () => {},
-    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
-    addLocalGame: async () => ({ outcome: 'noTitle' }),
-    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
-    librarySort: async () => 'name',
-    chooseLibrarySort: async () => {},
-    filterLibrary: async () => [],
-    game: async () => null,
-    closeToTray: async () => true,
-    setCloseToTray: async () => {},
-    closeWindow: async () => {},
-    onTrayNotice: () => () => {},
-    showTrayMenu: async () => {},
-    setStatus: async () => {
-      throw new Error('this test sets no Status');
-    },
-    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
-    coverImageChosen: async () => false,
-    removeCoverImage: async () => {},
-    launchOptions: async () => null,
-    setLaunchOptions: async () => {},
-    achievements: async () => ({ state: 'notFetchedYet' }),
-    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
-    startsWithWindows: async () => false,
-    setStartWithWindows: async () => {},
-    hiddenGames: async () => [],
-    hideGame: async () => {},
-    unhideGame: async () => {},
-    onSession: () => () => {},
-    openLogFolder: async () => {},
-    localGame: async () => null,
-    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
-    editLocalGame: async () => ({ outcome: 'noTitle' }),
-    removeLocalGame: async () => {},
-    markFavorite: async () => {},
-    favoriteCount: async () => 0,
-    findSteamTitles: async () => [],
-    proposeCoverMatch: async () => null,
-    coverMatch: async () => null,
-    setCoverMatch: async () => {},
-    importData: async () => ({ outcome: 'cancelled' }),
-    gameCollections: async () => [],
-    addGameToCollection: async () => {},
-    removeGameFromCollection: async () => {},
-    libraryLayout: async () => 'coverGrid',
-    chooseLibraryLayout: async () => {},
-    coverHue: async () => null,
-    language: async () => 'system',
-    chooseLanguage: async () => {},
     about,
-    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
-    statistics: async () => {
-      throw new Error('this test shows no Statistics');
-    },
     openAboutPage: async (page) => {
       calls.opened.push(page);
       return openPage();
     },
-    install: async () => ({ outcome: 'started' }),
-    limitedMode: async () => ({ outcome: 'off' }),
-    openSteamPrivacySettings: async () => {},
-    sessions: async () => [],
   };
   return { operations, calls };
 }

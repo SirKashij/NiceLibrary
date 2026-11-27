@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
 import type { Game, Operations, SteamTitle } from './operations';
+import { baseOperations } from './test/operations';
 
 const EXECUTABLE = 'C:\\Games\\Hollow Knight\\hollow_knight.exe';
 
@@ -36,76 +37,23 @@ function fakeOperations({
   const calls = { setCoverMatch: [] as [string, number | null][] };
   const searchable = (text: string) => text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
   const operations: Operations = {
+    ...baseOperations(),
     library: async () => [...games],
     readInstalledGames: async () => [...games],
-    steamInstallation: async () => ({ state: 'notFound' }),
-    steamAccount: async () => null,
-    chooseSteamAccount: async () => ({ outcome: 'chosen' }),
     coverUrl: (game, revision) => `cover://localhost/${game.id}${revision ? `?revision=${revision}` : ''}`,
-    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
-    coverImageChosen: async () => false,
-    removeCoverImage: async () => {},
-    launch: async () => ({ outcome: 'launched' }),
     steamWebApiKeyStored: async () => appList.length > 0,
-    storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
-    removeSteamWebApiKey: async () => {},
-    openSteamWebApiKeyPage: async () => {},
-    openLogFolder: async () => {},
-    sync: async () => ({ outcome: 'noKey' }),
-    lastSync: async () => null,
-    closeToTray: async () => true,
-    setCloseToTray: async () => {},
-    closeWindow: async () => {},
-    onTrayNotice: () => () => {},
-    showTrayMenu: async () => {},
-    startsWithWindows: async () => false,
-    setStartWithWindows: async () => {},
-    onAutomaticSync: () => () => {},
     steamAppList: async () => ({ titles: appList.length, fetchedAt: null, unfinished: false }),
-    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
-    onAutomaticSteamAppListFetch: () => () => {},
-    theme: async () => 'system',
-    chooseTheme: async () => {},
-    language: async () => 'system',
-    chooseLanguage: async () => {},
-    about: async () => ({ version: '0.1.0', license: 'MIT' }),
-    openAboutPage: async () => {},
-    collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),
     renameCollection: async () => ({ outcome: 'emptyName' }),
-    deleteCollection: async () => {},
-    onSession: () => () => {},
-    hiddenGames: async () => [],
-    hideGame: async () => {},
-    unhideGame: async () => {},
-    gameCollections: async () => [],
-    addGameToCollection: async () => {},
-    removeGameFromCollection: async () => {},
     filterLibrary: async () => [...games],
-    libraryLayout: async () => 'coverGrid',
-    chooseLibraryLayout: async () => {},
-    librarySort: async () => 'name',
-    chooseLibrarySort: async () => {},
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     achievements: async () => ({ state: 'localGame' }),
-    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     chooseLocalGameExecutable: async () => ({ outcome: 'chosen', executable: EXECUTABLE, title: 'Hollow Knight' }),
     addLocalGame: async (_executable, title) => {
       const game = localGame(games.length + 1, title.trim());
       games.push(game);
       return { outcome: 'added', game };
     },
-    setStatus: async () => {
-      throw new Error('this test sets no Status');
-    },
-    launchOptions: async () => null,
-    setLaunchOptions: async () => {},
-    localGame: async () => null,
-    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
-    editLocalGame: async () => ({ outcome: 'noTitle' }),
-    removeLocalGame: async () => {},
-    markFavorite: async () => {},
-    favoriteCount: async () => 0,
     findSteamTitles: async (typed) =>
       searchable(typed) === '' ? [] : appList.filter((title) => searchable(title.name).includes(searchable(typed))),
     proposeCoverMatch: async (title) => {
@@ -114,28 +62,12 @@ function fakeOperations({
       return appList.find((steam) => searchable(steam.name) === search) ?? null;
     },
     coverMatch: async (gameId) => matched.get(gameId) ?? null,
-    importData: async () => ({ outcome: 'cancelled' }),
     setCoverMatch: async (gameId, appId) => {
       calls.setCoverMatch.push([gameId, appId]);
       const title = appList.find((steam) => steam.appId === appId);
       if (title) matched.set(gameId, title);
       else matched.delete(gameId);
     },
-    coverHue: async () => null,
-    install: async () => ({ outcome: 'started' }),
-    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
-    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
-    playtimeAdjustment: async () => null,
-    setPlaytimeAdjustment: async () => {
-      throw new Error('this test adjusts no Playtime');
-    },
-    statistics: async () => {
-      throw new Error('this test shows no Statistics');
-    },
-    exportData: async () => ({ outcome: 'cancelled' }),
-    limitedMode: async () => ({ outcome: 'off' }),
-    openSteamPrivacySettings: async () => {},
-    sessions: async () => [],
   };
   return { operations, calls };
 }

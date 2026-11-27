@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { App } from './App';
 import type { AddLocalGame, FolderSuggestions, Game, Operations } from './operations';
+import { baseOperations } from './test/operations';
 
 const FOLDER = 'C:\\Games';
 const CELESTE = 'C:\\Games\\Celeste\\Celeste.exe';
@@ -41,55 +42,14 @@ function fakeOperations({
   const added: { executable: string; title: string }[] = [];
   const matched: [string, number | null][] = [];
   const operations: Operations = {
+    ...baseOperations(),
     library: async () => [...games],
     readInstalledGames: async () => [...games],
-    steamInstallation: async () => ({ state: 'notFound' }),
-    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
-    playtimeAdjustment: async () => null,
-    setPlaytimeAdjustment: async () => {
-      throw new Error('this test adjusts no Playtime');
-    },
-    statistics: async () => {
-      throw new Error('this test shows no Statistics');
-    },
-    exportData: async () => ({ outcome: 'cancelled' }),
-    steamAccount: async () => null,
-    chooseSteamAccount: async () => ({ outcome: 'chosen' }),
-    coverUrl: (game) => `cover://localhost/${game.id}`,
-    launch: async () => ({ outcome: 'launched' }),
-    steamWebApiKeyStored: async () => false,
-    storeSteamWebApiKey: async () => ({ outcome: 'stored' }),
-    removeSteamWebApiKey: async () => {},
-    openSteamWebApiKeyPage: async () => {},
-    sync: async () => ({ outcome: 'noKey' }),
-    lastSync: async () => null,
-    onAutomaticSync: () => () => {},
-    steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
-    fetchSteamAppList: async () => ({ outcome: 'noKey' }),
-    onAutomaticSteamAppListFetch: () => () => {},
-    closeToTray: async () => true,
-    setCloseToTray: async () => {},
-    closeWindow: async () => {},
-    onTrayNotice: () => () => {},
-    showTrayMenu: async () => {},
-    theme: async () => 'system',
-    chooseTheme: async () => {},
-    collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),
     renameCollection: async () => ({ outcome: 'emptyName' }),
-    deleteCollection: async () => {},
     filterLibrary: async () => [...games],
-    librarySort: async () => 'name',
-    chooseLibrarySort: async () => {},
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
-    chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     suggestExecutablesInFolder: folder,
-    setStatus: async () => {
-      throw new Error('this test sets no Status');
-    },
-    openLogFolder: async () => {},
-    startsWithWindows: async () => false,
-    setStartWithWindows: async () => {},
     addLocalGame: async (executable, title) => {
       added.push({ executable, title });
       if (add) return add(executable, title);
@@ -97,45 +57,11 @@ function fakeOperations({
       games.push(game);
       return { outcome: 'added', game };
     },
-    gameCollections: async () => [],
-    addGameToCollection: async () => {},
-    removeGameFromCollection: async () => {},
-    libraryLayout: async () => 'coverGrid',
-    chooseLibraryLayout: async () => {},
-    language: async () => 'system',
-    chooseLanguage: async () => {},
-    chooseCoverImage: async () => ({ outcome: 'cancelled' }),
-    coverImageChosen: async () => false,
-    removeCoverImage: async () => {},
-    onSession: () => () => {},
-    achievements: async () => ({ state: 'notFetchedYet' }),
-    achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
-    launchOptions: async () => null,
-    setLaunchOptions: async () => {},
-    hiddenGames: async () => [],
-    hideGame: async () => {},
-    unhideGame: async () => {},
-    localGame: async () => null,
-    chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
-    editLocalGame: async () => ({ outcome: 'noTitle' }),
-    removeLocalGame: async () => {},
-    markFavorite: async () => {},
-    favoriteCount: async () => 0,
-    about: async () => ({ version: '0.1.0', license: 'MIT' }),
-    openAboutPage: async () => {},
-    coverHue: async () => null,
-    install: async () => ({ outcome: 'started' }),
-    findSteamTitles: async () => [],
     // Celeste matches a Steam title; Hades does not.
     proposeCoverMatch: async (title) => (title === 'Celeste' ? { appId: 504230, name: 'Celeste' } : null),
-    coverMatch: async () => null,
     setCoverMatch: async (gameId, appId) => {
       matched.push([gameId, appId]);
     },
-    importData: async () => ({ outcome: 'cancelled' }),
-    limitedMode: async () => ({ outcome: 'off' }),
-    openSteamPrivacySettings: async () => {},
-    sessions: async () => [],
   };
   return { operations, added, matched };
 }

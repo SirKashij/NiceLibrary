@@ -8,10 +8,11 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use nicelibrary_core::{
-    AddLocalGame, Clock, Core, CoverCache, Downloader, ExecutablePicker, LibraryFilter, OpenError, Opener, Ports,
-    SecretStore, Source, Status, SteamLocator, Store, SyncOutcome, Wakeup, WebAnswer, WebApi,
+    AddLocalGame, Core, CoverCache, LibraryFilter, Ports, SecretStore, Source, Status, SteamLocator, Store,
+    SyncOutcome, WebAnswer, WebApi,
 };
 use tempfile::TempDir;
+use nicelibrary_core::stand_ins;
 
 /// A key Steam accepts in these tests.
 const KEY: &str = "0123456789ABCDEF0123456789ABCDEF";
@@ -59,44 +60,6 @@ impl SteamLocator for SteamAt {
     }
 }
 
-/// No Covers are needed here.
-struct Offline;
-
-impl Downloader for Offline {
-    fn download(&self, _url: &str) -> Result<Option<Vec<u8>>, String> {
-        Err("no network connection".into())
-    }
-}
-
-/// These tests launch nothing.
-struct NoUrls;
-
-impl Opener for NoUrls {
-    fn open_url(&self, url: &str) -> Result<(), OpenError> {
-        Err(OpenError::Failed(format!("this test opens no URL, not even {url}")))
-    }
-}
-
-/// A clock that stands still; these tests do not depend on the time.
-struct StoppedClock;
-
-impl Clock for StoppedClock {
-    fn now(&self) -> std::time::SystemTime {
-        std::time::UNIX_EPOCH
-    }
-
-    fn sleep(&self, _duration: std::time::Duration, _wakeup: &Wakeup) {}
-}
-
-/// The user cancels every file dialog; Local Games are added by their path here.
-struct NoExecutableChosen;
-
-impl ExecutablePicker for NoExecutableChosen {
-    fn choose_executable(&self) -> Result<Option<PathBuf>, String> {
-        Ok(None)
-    }
-}
-
 /// The test computer: Steam with PLAYER logged in, Portal 2 and Hades
 /// Installed, Half-Life 2 owned but not Installed.
 struct Computer {
@@ -132,18 +95,9 @@ impl Computer {
         let core = Core::new(
             Ports {
                 steam_locator: Box::new(SteamAt(self.steam.path().to_path_buf())),
-                downloader: Box::new(Offline),
-                opener: Box::new(NoUrls),
                 secrets: Box::new(SteamOwning),
                 web_api: Box::new(SteamOwning),
-                clock: Box::new(StoppedClock),
-                executable_picker: Box::new(NoExecutableChosen),
-                icon_extractor: Box::new(NoIconsNoImages),
-                image_picker: Box::new(NoIconsNoImages),
-                data_file_picker: Box::new(NoExportFile),
-                autostart: Box::new(NoAutostart),
-                processes: Box::new(NothingRuns),
-                process_starter: Box::new(NothingStarted),
+                ..stand_ins::ports()
             },
             Store::open(&self.profile.path().join("nicelibrary.db")).expect("database opens"),
             CoverCache::new(self.profile.path().join("covers")),
@@ -329,73 +283,4 @@ fn a_local_game_starts_as_unplayed_and_takes_a_status_like_a_steam_game() {
     let local_and_completed =
         LibraryFilter { source: Some(Source::Local), status: Some(Status::Completed), ..Default::default() };
     assert_eq!(titles(&core, local_and_completed), ["Celeste"]);
-}
-
-/// A computer where the app does not start with Windows; these tests do not turn it on.
-struct NoAutostart;
-
-impl nicelibrary_core::Autostart for NoAutostart {
-    fn is_on(&self) -> Result<bool, String> {
-        Ok(false)
-    }
-
-    fn turn_on(&self, _arguments: &[&str]) -> Result<(), String> {
-        Err("this test does not start the app with Windows".into())
-    }
-
-    fn turn_off(&self) -> Result<(), String> {
-        Ok(())
-    }
-}
-
-/// A computer on which no process runs; these tests record no Sessions.
-struct NothingRuns;
-
-impl nicelibrary_core::ProcessList for NothingRuns {
-    fn running_executables(&self) -> Result<Vec<std::path::PathBuf>, String> {
-        Ok(Vec::new())
-    }
-}
-
-/// A computer that starts no process; these tests launch no Local Game.
-struct NothingStarted;
-
-impl nicelibrary_core::ProcessStarter for NothingStarted {
-    fn start(
-        &self,
-        executable: &std::path::Path,
-        _arguments: &[String],
-        _working_directory: &std::path::Path,
-    ) -> Result<(), String> {
-        Err(format!("this test starts no process, not even {}", executable.display()))
-    }
-}
-
-/// A computer whose executables show no icon and whose user chooses no
-/// image; these tests need neither.
-struct NoIconsNoImages;
-
-impl nicelibrary_core::IconExtractor for NoIconsNoImages {
-    fn largest_icon(&self, _executable: &std::path::Path) -> Result<Option<nicelibrary_core::Icon>, String> {
-        Ok(None)
-    }
-}
-
-impl nicelibrary_core::ImagePicker for NoIconsNoImages {
-    fn choose_image(&self) -> Result<Option<std::path::PathBuf>, String> {
-        Ok(None)
-    }
-}
-
-/// No export or import is made here: the user cancels every file dialog.
-struct NoExportFile;
-
-impl nicelibrary_core::DataFilePicker for NoExportFile {
-    fn choose_export_file(&self, _suggested_name: &str) -> Result<Option<std::path::PathBuf>, String> {
-        Ok(None)
-    }
-
-    fn choose_import_file(&self) -> Result<Option<std::path::PathBuf>, String> {
-        Ok(None)
-    }
 }
