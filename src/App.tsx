@@ -12,6 +12,7 @@ import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } f
 import { WindowSettings } from './settings/WindowSettings';
 import { Tray } from './Tray';
 import { SortChoice, useLibrarySort } from './library/LibrarySort';
+import { StatusBadge } from './library/Status';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -176,7 +177,9 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
   const t = useT();
   // How many Local Games were added here; each one changes the stored Library.
   const [additions, setAdditions] = useState(0);
-  const changes = syncs + additions;
+  // How often the user set a Status while the app runs; each one changes the stored Library.
+  const [statusChanges, setStatusChanges] = useState(0);
+  const changes = syncs + additions + statusChanges;
   // The stored Library answers at once; reading Steam again replaces it.
   const stored = useOperation(operations, (o) => o.library());
   const fromSteam = useOperation(operations, (o) => o.readInstalledGames());
@@ -300,6 +303,7 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           cover={(game) => <Cover key={game.id} title={game.title} src={operations.coverUrl(game)} />}
           notice={launchNotice}
           onPlay={launch}
+          onStatusSet={() => setStatusChanges((count) => count + 1)}
           onBack={back}
         />
       )}
@@ -345,6 +349,7 @@ function CoverGrid({
             )}
           </div>
           <h2 className="game-title">{game.title}</h2>
+          <StatusBadge status={game.status} />
           <Played game={game} />
           {!game.installed && <span className="muted">{t('library.notInstalled')}</span>}
         </li>

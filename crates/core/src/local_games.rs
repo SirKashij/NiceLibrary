@@ -67,6 +67,7 @@ impl Game {
             installed: true,
             playtime_minutes: Some(0),
             last_played: None,
+            status: crate::Status::Unplayed,
         }
     }
 }

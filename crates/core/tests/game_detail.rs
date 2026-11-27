@@ -6,7 +6,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use nicelibrary_core::{
-    Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, SteamLocator, Store, SyncOutcome,
+    Core, CoverCache, Downloader, Game, OpenError, Opener, Ports, SecretStore, Source, Status, SteamLocator, Store,
+    SyncOutcome,
     WebAnswer, WebApi,
 };
 use tempfile::TempDir;
@@ -176,6 +177,7 @@ fn an_installed_steam_game_shows_its_source_and_that_it_is_installed() {
             installed: true,
             playtime_minutes: None,
             last_played: None,
+            status: Status::Unplayed,
         }))
     );
 }

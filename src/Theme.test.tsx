@@ -51,6 +51,9 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     deleteCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
   };
   return { operations, calls };
 }

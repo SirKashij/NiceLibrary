@@ -48,6 +48,9 @@ function fakeOperations({
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    setStatus: async () => {
+      throw new Error('this test sets no Status');
+    },
     about,
     openAboutPage: async (page) => {
       calls.opened.push(page);
