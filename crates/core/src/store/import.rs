@@ -10,7 +10,7 @@ use crate::{playtime_adjustment, window};
 
 impl Store {
     /// Replaces everything that is the person's own with what `file` holds,
-    /// all at once: Local Games and all they keep, Sessions of Local Games,
+    /// all at once: Local Games and all they keep, Sessions of every Game,
     /// Statuses, Favorites, Hidden Games, Collections and the settings an
     /// Export File has. Steam Games, the Steam App List, the last Syncs and
     /// app-internal settings stay.
@@ -32,6 +32,7 @@ impl Store {
             transaction.prepare("SELECT id FROM local_games")?.query_map([], |row| row.get(0))?.collect::<Result<_, _>>()?;
         transaction.execute_batch(
             "DELETE FROM local_game_sessions;
+             DELETE FROM steam_game_sessions;
              DELETE FROM local_game_playtime_adjustments;
              DELETE FROM cover_matches;
              DELETE FROM local_games;
@@ -71,12 +72,18 @@ impl Store {
         };
 
         for session in &file.sessions {
-            // Sessions of Steam Games are not kept by this version.
-            let Some(number) = numbers.get(session.game_id.as_str()) else { continue };
-            transaction.execute(
-                "INSERT INTO local_game_sessions (local_game, started_at, ended_at) VALUES (?1, ?2, ?3)",
-                params![number, seconds_column(session.started_at)?, seconds_column(session.ended_at)?],
-            )?;
+            let (started_at, ended_at) = (seconds_column(session.started_at)?, seconds_column(session.ended_at)?);
+            if let Some(number) = numbers.get(session.game_id.as_str()) {
+                transaction.execute(
+                    "INSERT INTO local_game_sessions (local_game, started_at, ended_at) VALUES (?1, ?2, ?3)",
+                    params![number, started_at, ended_at],
+                )?;
+            } else if let Some(app_id) = session.game_id.strip_prefix("steam:").and_then(|app| app.parse::<u32>().ok()) {
+                transaction.execute(
+                    "INSERT INTO steam_game_sessions (app_id, steam_account, started_at, ended_at) VALUES (?1, ?2, ?3, ?4)",
+                    params![app_id, session.steam_account, started_at, ended_at],
+                )?;
+            }
         }
         for status in &file.statuses {
             transaction.execute(

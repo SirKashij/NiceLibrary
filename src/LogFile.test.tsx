@@ -59,6 +59,7 @@ function fakeOperations() {
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    sessions: async () => [],
     closeToTray: async () => true,
     setCloseToTray: async () => {},
     closeWindow: async () => {},
@@ -93,6 +94,8 @@ function fakeOperations() {
     language: async () => 'system',
     chooseLanguage: async () => {},
     coverHue: async () => null,
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
   };
   return { operations, calls };
 }

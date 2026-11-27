@@ -22,9 +22,9 @@ use crate::collections::{self, CollectionNaming};
 use crate::language::Language;
 use crate::library_layout::LibraryLayout;
 use crate::local_games::StoredLocalGame;
-use crate::sessions::Played;
+use crate::sessions::{Played, Tracked};
 use crate::statistics::Recorded;
-use crate::steam::InstalledApp;
+use crate::steam::{InstalledApp, LocalPlaytime};
 use crate::sync::OwnedGame;
 use crate::theme::Theme;
 use crate::{Error, Game, LaunchOptions, Status};
@@ -146,9 +146,29 @@ const MIGRATIONS: &[&str] = &[
          app_id     INTEGER NOT NULL,
          name       TEXT    NOT NULL
      );",
-    // 13: The Manual Progress of a Local Game, in percent; NULL while the user has set none.
+    // 13: The fallback Playtime and Last Played of Installed Steam Games, from Steam's local files.
+    "ALTER TABLE steam_games ADD COLUMN local_playtime_minutes INTEGER;
+     ALTER TABLE steam_games ADD COLUMN local_last_played INTEGER;",
+    // 14: Sessions of Steam Games, by app id, with the Steam Account the app worked with then, if any.
+    "CREATE TABLE steam_game_sessions (
+         id            INTEGER PRIMARY KEY AUTOINCREMENT,
+         app_id        INTEGER NOT NULL,
+         steam_account TEXT,
+         started_at    INTEGER NOT NULL,
+         ended_at      INTEGER NOT NULL
+     );
+     CREATE INDEX steam_game_sessions_by_game ON steam_game_sessions (app_id);",
+    // 15: The Rarity of Achievements, in percent, per Steam Game; it belongs
+    // to no Steam Account. An Achievement without a row has no known Rarity.
+    "CREATE TABLE steam_achievement_rarities (
+         app_id   INTEGER NOT NULL,
+         api_name TEXT    NOT NULL,
+         percent  REAL    NOT NULL,
+         PRIMARY KEY (app_id, api_name)
+     );",
+    // 16: The Manual Progress of a Local Game, in percent; NULL while the user has set none.
     "ALTER TABLE local_games ADD COLUMN manual_progress INTEGER;",
-    // 14: The Playtime Adjustment of a Local Game, in minutes, added to or (when negative) removed from its Sessions.
+    // 17: The Playtime Adjustment of a Local Game, in minutes, added to or (when negative) removed from its Sessions.
     "CREATE TABLE local_game_playtime_adjustments (
          local_game INTEGER PRIMARY KEY REFERENCES local_games (id) ON DELETE CASCADE,
          minutes    INTEGER NOT NULL
@@ -174,6 +194,10 @@ const LIBRARY_LAYOUT: &str = "library_layout";
 
 /// The setting that holds the interface language the user chose.
 const LANGUAGE: &str = "language";
+
+/// The start of the settings that hold, per Steam Account, why its last
+/// Sync left the app in Limited Mode; the SteamID follows.
+const LIMITED_MODE_PREFIX: &str = "limited_mode:";
 
 /// The local store.
 pub struct Store {
@@ -301,10 +325,44 @@ impl Store {
         Ok(())
     }
 
+    /// The name of the reason the last Sync of `account` left the app in
+    /// Limited Mode, if it did.
+    pub(crate) fn limited_mode_reason(&self, account: &str) -> Result<Option<String>, Error> {
+        self.setting(&format!("{LIMITED_MODE_PREFIX}{account}"))
+    }
+
+    /// Remembers `reason` as why the last Sync of `account` left the app in
+    /// Limited Mode; `None` forgets it.
+    pub(crate) fn record_limited_mode_reason(&self, account: &str, reason: Option<&str>) -> Result<(), Error> {
+        let key = format!("{LIMITED_MODE_PREFIX}{account}");
+        match reason {
+            Some(reason) => self.set_setting(&key, reason),
+            None => {
+                self.connection().execute("DELETE FROM settings WHERE key = ?1", [key])?;
+                Ok(())
+            }
+        }
+    }
+
+    /// Forgets why any Sync left the app in Limited Mode, for every Steam Account.
+    pub(crate) fn forget_limited_mode_reasons(&self) -> Result<(), Error> {
+        self.connection().execute(
+            "DELETE FROM settings WHERE substr(key, 1, length(?1)) = ?1",
+            [LIMITED_MODE_PREFIX],
+        )?;
+        Ok(())
+    }
+
     /// Records which Steam apps are Installed for `account`, all at once:
-    /// the given apps are Installed with their titles, every other Steam Game
-    /// of the account is not. `account` becomes the account read last.
-    pub(crate) fn record_installed_steam_games(&self, account: &str, apps: &[InstalledApp]) -> Result<(), Error> {
+    /// the given apps are Installed with their titles and the fallback
+    /// Playtime `local` holds for them, every other Steam Game of the account
+    /// is not. `account` becomes the account read last.
+    pub(crate) fn record_installed_steam_games(
+        &self,
+        account: &str,
+        apps: &[InstalledApp],
+        local: &BTreeMap<u32, LocalPlaytime>,
+    ) -> Result<(), Error> {
         let mut connection = self.connection();
         let transaction = connection.transaction()?;
         transaction.execute(
@@ -314,10 +372,15 @@ impl Store {
         )?;
         transaction.execute("UPDATE steam_games SET installed = 0 WHERE steam_account = ?1", [account])?;
         for app in apps {
+            let local = local.get(&app.app_id);
+            let last_played = local.and_then(|local| local.last_played).map(seconds_column).transpose()?;
             transaction.execute(
-                "INSERT INTO steam_games (steam_account, app_id, title, installed) VALUES (?1, ?2, ?3, 1)
-                 ON CONFLICT (steam_account, app_id) DO UPDATE SET title = excluded.title, installed = 1",
-                params![account, app.app_id, app.title],
+                "INSERT INTO steam_games (steam_account, app_id, title, installed, local_playtime_minutes, local_last_played)
+                 VALUES (?1, ?2, ?3, 1, ?4, ?5)
+                 ON CONFLICT (steam_account, app_id) DO UPDATE SET title = excluded.title, installed = 1,
+                     local_playtime_minutes = excluded.local_playtime_minutes,
+                     local_last_played = excluded.local_last_played",
+                params![account, app.app_id, app.title, local.map(|local| local.minutes), last_played],
             )?;
         }
         transaction.commit()?;
@@ -374,11 +437,15 @@ impl Store {
         Ok(rows.next().transpose()?.and_then(|seconds| u64::try_from(seconds).ok()))
     }
 
-    /// The Steam Games of `account`.
+    /// The Steam Games of `account`, with Steam's Playtime and Last Played
+    /// from a Sync, or else the fallback ones from Steam's local files.
     pub(crate) fn steam_games(&self, account: &str) -> Result<Vec<Game>, Error> {
         let connection = self.connection();
         let mut statement = connection.prepare(
-            "SELECT app_id, title, installed, playtime_minutes, last_played FROM steam_games WHERE steam_account = ?1",
+            "SELECT app_id, title, installed,
+                    COALESCE(playtime_minutes, local_playtime_minutes),
+                    CASE WHEN playtime_minutes IS NULL THEN local_last_played ELSE last_played END
+             FROM steam_games WHERE steam_account = ?1",
         )?;
         let games = statement
             .query_map([account], |row| {
@@ -574,13 +641,70 @@ impl Store {
         Ok(connection.last_insert_rowid())
     }
 
-    /// Moves the end of the Session `session` to `at`, never before where it is.
-    pub(crate) fn extend_session(&self, session: i64, at: u64) -> Result<(), Error> {
-        self.connection().execute(
-            "UPDATE local_game_sessions SET ended_at = MAX(ended_at, ?2) WHERE id = ?1",
-            params![session, seconds_column(at)?],
+    /// Stores a Session of the Steam Game `app_id`, played while the app
+    /// worked with `steam_account`, that began `at`, and ends there until
+    /// [`Self::extend_session`] moves its end, and answers its id. It never
+    /// changes the Game's Playtime, which stays Steam's figure.
+    pub(crate) fn begin_steam_session(&self, app_id: u32, steam_account: Option<&str>, at: u64) -> Result<i64, Error> {
+        let at = seconds_column(at)?;
+        let connection = self.connection();
+        connection.execute(
+            "INSERT INTO steam_game_sessions (app_id, steam_account, started_at, ended_at) VALUES (?1, ?2, ?3, ?3)",
+            params![app_id, steam_account, at],
         )?;
+        Ok(connection.last_insert_rowid())
+    }
+
+    /// Moves the end of the Session `session` of `game` to `at`, never
+    /// before where it is.
+    pub(crate) fn extend_session(&self, game: Tracked, session: i64, at: u64) -> Result<(), Error> {
+        let sql = match game {
+            Tracked::Local(_) => "UPDATE local_game_sessions SET ended_at = MAX(ended_at, ?2) WHERE id = ?1",
+            Tracked::Steam(_) => "UPDATE steam_game_sessions SET ended_at = MAX(ended_at, ?2) WHERE id = ?1",
+        };
+        self.connection().execute(sql, params![session, seconds_column(at)?])?;
         Ok(())
+    }
+
+    /// The Sessions of the Local Game `local_game`, newest first: each one's
+    /// id, start and end, in seconds since the Unix epoch.
+    pub(crate) fn local_game_sessions(&self, local_game: i64) -> Result<Vec<(i64, u64, u64)>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(
+            "SELECT id, started_at, ended_at FROM local_game_sessions WHERE local_game = ?1
+             ORDER BY started_at DESC, id DESC",
+        )?;
+        let sessions = statement
+            .query_map([local_game], |row| {
+                let started_at: i64 = row.get(1)?;
+                let ended_at: i64 = row.get(2)?;
+                Ok((row.get(0)?, u64::try_from(started_at).unwrap_or(0), u64::try_from(ended_at).unwrap_or(0)))
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(sessions)
+    }
+
+    /// The Sessions of the Steam Game `app_id` played while the app worked
+    /// with `steam_account`, newest first: each one's id, start and end, in
+    /// seconds since the Unix epoch.
+    pub(crate) fn steam_game_sessions(
+        &self,
+        app_id: u32,
+        steam_account: Option<&str>,
+    ) -> Result<Vec<(i64, u64, u64)>, Error> {
+        let connection = self.connection();
+        let mut statement = connection.prepare(
+            "SELECT id, started_at, ended_at FROM steam_game_sessions WHERE app_id = ?1 AND steam_account IS ?2
+             ORDER BY started_at DESC, id DESC",
+        )?;
+        let sessions = statement
+            .query_map(params![app_id, steam_account], |row| {
+                let started_at: i64 = row.get(1)?;
+                let ended_at: i64 = row.get(2)?;
+                Ok((row.get(0)?, u64::try_from(started_at).unwrap_or(0), u64::try_from(ended_at).unwrap_or(0)))
+            })?
+            .collect::<Result<_, _>>()?;
+        Ok(sessions)
     }
 
     /// What the Sessions of each Local Game that has any add up to, by its id.
@@ -617,7 +741,7 @@ impl Store {
                 let started_at: i64 = row.get(1)?;
                 let ended_at: i64 = row.get(2)?;
                 Ok(Recorded {
-                    game_id: crate::sessions::game_id(row.get(0)?),
+                    game_id: Tracked::Local(row.get(0)?).game_id(),
                     started_at: u64::try_from(started_at).unwrap_or(0),
                     ended_at: u64::try_from(ended_at).unwrap_or(0),
                 })

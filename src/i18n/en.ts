@@ -276,6 +276,21 @@ export const en = {
   'log.private': 'Nothing is sent. Your key and your SteamIDs are never written to the log.',
   'log.openFolder': 'Open log folder',
   'log.openFailed': 'The log folder could not be opened.',
+  'limited.title': 'Limited mode',
+  'limited.noKey':
+    'Without a Steam Web API key, the app shows only your installed Steam games, with the playtime Steam keeps on this computer. Add a key to see all your games.',
+  'limited.keyRejected':
+    'Steam rejected your Steam Web API key, so the app shows only your installed Steam games, with the playtime Steam keeps on this computer. Replace the key in the settings.',
+  'limited.gameDetailsPrivate':
+    'Steam does not share your games because your game details are private. "Game details" is a privacy setting of your Steam profile: it decides who may see which games you own and how long you played them. Set it to "Public" in your Steam privacy settings, then sync again. Until then the app shows only your installed Steam games, with the playtime Steam keeps on this computer.',
+  'limited.steamUnreachable':
+    'Steam could not be reached, so the app shows only your installed Steam games, with the playtime Steam keeps on this computer.',
+  'limited.setUp': 'Set up key',
+  'limited.openSettings': 'Open settings',
+  'limited.openPrivacySettings': 'Open privacy settings',
+  'limited.syncAgain': 'Sync again',
+  'limited.retry': 'Try again',
+  'limited.privacyFailed': 'Your Steam privacy settings could not be opened.',
   'autostart.startWithWindows': 'Start with Windows',
   'autostart.hint': 'When you sign in to Windows, NiceLibrary starts in the tray without opening its window.',
   'autostart.loadFailed': 'Whether NiceLibrary starts with Windows could not be read.',
@@ -295,6 +310,13 @@ export const en = {
   'adjustment.invalid': 'Enter the time in whole hours and minutes.',
   'adjustment.loadFailed': 'The playtime adjustment of {title} could not be read.',
   'adjustment.saveFailed': 'The playtime adjustment of {title} could not be saved.',
+  'sessions.title': 'Sessions',
+  'sessions.of': 'Sessions of {title}',
+  'sessions.none': 'No sessions yet. A session is recorded whenever {title} runs, however you start it.',
+  'sessions.running': 'Running',
+  'sessions.hoursMinutes': '{hours} h {minutes} min',
+  'sessions.underAMinute': 'under 1 min',
+  'sessions.loadFailed': 'The sessions of {title} could not be read.',
   'achievements.title': 'Achievements',
   'achievements.count': '{unlocked} / {total} unlocked',
   'achievements.list': 'Achievements of {title}',
@@ -305,6 +327,10 @@ export const en = {
   'achievements.none': '{title} has no achievements.',
   'achievements.notFetchedYet': 'The achievements have not been fetched yet. They arrive with one of the next syncs.',
   'achievements.loadFailed': 'The achievements could not be loaded.',
+  'achievements.secret': 'Secret achievement',
+  'achievements.secretHint': 'Unlock it to find out what it is.',
+  'achievements.revealSecrets': 'Show secret achievements',
+  'achievements.rarity': 'Unlocked by {percent} of players',
   'launch.executableNotFound':
     '{title} could not be launched because its executable was not found. It may have been moved or deleted.',
   'launch.workingDirectoryNotFound':

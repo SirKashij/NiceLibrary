@@ -66,7 +66,10 @@ function fakeOperations({ closeToTray = true } = {}) {
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    sessions: async () => [],
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },

@@ -133,6 +133,9 @@ function fakeOperations({
       throw new Error('this test shows no Statistics');
     },
     exportData: async () => ({ outcome: 'cancelled' }),
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, calls };
 }

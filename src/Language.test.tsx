@@ -119,6 +119,9 @@ function fakeOperations({
         calls.chosen.push(chosen);
         kept = chosen;
       }),
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, calls };
 }

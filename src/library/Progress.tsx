@@ -14,7 +14,7 @@ export function ProgressBadge({ progress }: Pick<Game, 'progress'>) {
   if (progress === null) return null;
   return (
     <span className="game-progress" data-complete={progress >= COMPLETE}>
-      {t('library.progress', { percent: format.percent(progress) })}
+      {t('library.progress', { percent: format.wholePercent(progress) })}
     </span>
   );
 }
@@ -24,7 +24,7 @@ export function ProgressValue({ progress }: { progress: number }) {
   const format = useFormat();
   return (
     <span className="progress-value" data-complete={progress >= COMPLETE}>
-      {format.percent(progress)}
+      {format.wholePercent(progress)}
     </span>
   );
 }

@@ -28,6 +28,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     closeToTray: async () => true,
@@ -52,6 +54,7 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    sessions: async () => [],
     filterLibrary: async () => [],
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},

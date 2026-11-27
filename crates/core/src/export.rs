@@ -19,7 +19,7 @@ use crate::language::Language;
 use crate::library_filter::LibrarySort;
 use crate::library_layout::LibraryLayout;
 use crate::local_covers;
-use crate::sessions;
+use crate::sessions::Tracked;
 use crate::store::Store;
 use crate::theme::Theme;
 use crate::{Error, Status, about, window};
@@ -126,10 +126,8 @@ pub(crate) struct ExportedImage {
     pub data: String,
 }
 
-/// One Session. Version 1 writes Sessions of Local Games only; Sessions of
-/// Steam Games (#39) will use the same entry with a `steam:<appid>` Game id
-/// and the Steam Account they were played with (docs/export-format.md),
-/// which an import reads already.
+/// One Session, of a Local Game or, with a `steam:<appid>` Game id and the
+/// Steam Account it was played with, of a Steam Game (docs/export-format.md).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ExportedSession {
@@ -177,7 +175,7 @@ pub(crate) fn contents(
                 .cover_match(game.id)?
                 .map(|title| ExportedCoverMatch { app_id: title.app_id, name: title.name });
             Ok(ExportedLocalGame {
-                id: sessions::game_id(game.id),
+                id: Tracked::Local(game.id).game_id(),
                 title: game.title,
                 executable: game.executable,
                 launch_arguments: game.launch_options.arguments,
@@ -189,16 +187,21 @@ pub(crate) fn contents(
             })
         })
         .collect::<Result<_, Error>>()?;
-    let sessions = store
-        .local_game_sessions()?
+    let mut sessions: Vec<_> = store
+        .all_local_game_sessions()?
         .into_iter()
         .map(|(game, started_at, ended_at)| ExportedSession {
-            game_id: sessions::game_id(game),
+            game_id: Tracked::Local(game).game_id(),
             started_at,
             ended_at,
             steam_account: None,
         })
+        .chain(store.all_steam_game_sessions()?.into_iter().map(|(app_id, steam_account, started_at, ended_at)| {
+            ExportedSession { game_id: Tracked::Steam(app_id).game_id(), started_at, ended_at, steam_account }
+        }))
         .collect();
+    // Oldest first, whatever the Source; a stable sort keeps each Source's own order on a tie.
+    sessions.sort_by_key(|session| session.started_at);
     let mut statuses: Vec<_> =
         store.statuses()?.into_iter().map(|(game_id, status)| ExportedStatus { game_id, status }).collect();
     statuses.sort_by(|a, b| a.game_id.cmp(&b.game_id));

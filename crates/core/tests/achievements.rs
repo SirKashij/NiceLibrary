@@ -42,14 +42,18 @@ struct Defined {
     description: Option<&'static str>,
     /// When the account unlocked it; `Some(0)` for unlocked at an unknown time.
     unlocked_at: Option<u64>,
+    /// Steam marks it hidden: a Secret Achievement.
+    secret: bool,
+    /// Its Rarity as Steam reports it; `None` when Steam does not list it.
+    rarity: Option<&'static str>,
 }
 
 fn unlocked(api_name: &'static str, name: &'static str, description: &'static str, at: u64) -> Defined {
-    Defined { api_name, name, description: Some(description), unlocked_at: Some(at) }
+    Defined { api_name, name, description: Some(description), unlocked_at: Some(at), secret: false, rarity: None }
 }
 
 fn locked(api_name: &'static str, name: &'static str, description: &'static str) -> Defined {
-    Defined { api_name, name, description: Some(description), unlocked_at: None }
+    Defined { api_name, name, description: Some(description), unlocked_at: None, secret: false, rarity: None }
 }
 
 /// One Steam Game the account owns in the fake Steam.
@@ -69,6 +73,10 @@ enum Network {
     Offline,
     /// Steam's achievement services fail, its list of owned games works.
     AchievementsDown,
+    /// Only Steam's service for the Rarity of Achievements fails.
+    RarityDown,
+    /// Steam refuses to tell the Rarity of any game's Achievements.
+    RarityRefused,
 }
 
 #[derive(Default)]
@@ -77,6 +85,8 @@ struct SteamState {
     network: Option<Network>,
     asked: Vec<String>,
     downloaded: Vec<String>,
+    /// Steam's older answers give the Rarity as a number instead of as text.
+    rarity_as_numbers: bool,
 }
 
 /// A fake of Steam: its Web API in the shape Steam answers with, and its
@@ -141,6 +151,30 @@ impl WebApi for FakeSteam {
         if network == Network::Offline {
             return Err("no connection to the server".into());
         }
+        // Steam reports the Rarity of every game's Achievements to anyone, without a key.
+        if url.starts_with("https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/?") {
+            if matches!(network, Network::AchievementsDown | Network::RarityDown) {
+                return Ok(WebAnswer { status: 503, body: b"<html><body>Service Unavailable</body></html>".to_vec() });
+            }
+            if network == Network::RarityRefused {
+                return Ok(WebAnswer { status: 403, body: b"<html><body>Forbidden</body></html>".to_vec() });
+            }
+            let Some(game) = query_value(url, "gameid").and_then(|id| self.game(&format!("?appid={id}"))) else {
+                return Ok(WebAnswer { status: 403, body: b"<html><body>Forbidden</body></html>".to_vec() });
+            };
+            let as_numbers = self.0.lock().unwrap().rarity_as_numbers;
+            let percentages: Vec<_> = game
+                .achievements
+                .unwrap_or_default()
+                .iter()
+                .filter_map(|a| {
+                    let percent = a.rarity?;
+                    let percent = if as_numbers { serde_json::json!(percent.parse::<f64>().unwrap()) } else { percent.into() };
+                    Some(serde_json::json!({ "name": a.api_name, "percent": percent }))
+                })
+                .collect();
+            return answer(200, serde_json::json!({ "achievementpercentages": { "achievements": percentages } }));
+        }
         if query_value(url, "key") != Some(KEY) {
             return Ok(WebAnswer { status: 403, body: b"<html><body>Forbidden</body></html>".to_vec() });
         }
@@ -200,7 +234,7 @@ impl WebApi for FakeSteam {
                 .iter()
                 .map(|a| {
                     let mut entry = serde_json::json!({
-                        "name": a.api_name, "defaultvalue": 0, "displayName": a.name, "hidden": 0,
+                        "name": a.api_name, "defaultvalue": 0, "displayName": a.name, "hidden": u8::from(a.secret),
                         "icon": image(icon(a.api_name, true)), "icongray": image(icon(a.api_name, false))
                     });
                     if let Some(description) = a.description {
@@ -372,6 +406,8 @@ fn achievement(api_name: &str, name: &str, description: &str, unlocked_at: Optio
         unlocked: unlocked_at.is_some(),
         unlocked_at,
         icon: Some(icon(api_name, unlocked_at.is_some())),
+        secret: false,
+        rarity: None,
     }
 }
 
@@ -711,15 +747,15 @@ fn the_achievements_reach_the_interface_in_the_shape_the_interface_expects() {
         unlocked: 1,
         total: 2,
         achievements: vec![
-            achievement("ACH_FINISH", "Lunacy", "Finish", Some(LAST_WEEK)),
-            Achievement { description: None, icon: None, ..achievement("ACH_X", "X", "", None) },
+            Achievement { rarity: Some(12.5), ..achievement("ACH_FINISH", "Lunacy", "Finish", Some(LAST_WEEK)) },
+            Achievement { description: None, icon: None, secret: true, ..achievement("ACH_X", "X", "", None) },
         ],
     };
     assert_eq!(
         serde_json::to_value(listed).unwrap(),
         serde_json::json!({ "state": "listed", "unlocked": 1, "total": 2, "achievements": [
-            { "id": "ACH_FINISH", "name": "Lunacy", "description": "Finish", "unlocked": true, "unlockedAt": LAST_WEEK, "icon": icon("ACH_FINISH", true) },
-            { "id": "ACH_X", "name": "X", "description": null, "unlocked": false, "unlockedAt": null, "icon": null }
+            { "id": "ACH_FINISH", "name": "Lunacy", "description": "Finish", "unlocked": true, "unlockedAt": LAST_WEEK, "icon": icon("ACH_FINISH", true), "secret": false, "rarity": 12.5 },
+            { "id": "ACH_X", "name": "X", "description": null, "unlocked": false, "unlockedAt": null, "icon": null, "secret": true, "rarity": null }
         ] })
     );
     for (state, json) in [
@@ -729,6 +765,188 @@ fn the_achievements_reach_the_interface_in_the_shape_the_interface_expects() {
     ] {
         assert_eq!(serde_json::to_value(state).unwrap(), serde_json::json!({ "state": json }));
     }
+}
+
+#[test]
+fn a_secret_achievement_is_marked_secret_and_keeps_its_name_and_description_for_revealing() {
+    let computer = Computer::new();
+    let mut game = portal_2();
+    game.achievements = Some(vec![
+        locked("ACH_SPEED_RUN", "Speed run", "Finish the game in under two hours"),
+        Defined { secret: true, ..locked("ACH_PARTNER", "Partner", "Finish the cooperative campaign") },
+    ]);
+    let steam = FakeSteam::owning(vec![game]);
+    let core = computer.start(&steam);
+    core.sync().unwrap();
+
+    let GameAchievements::Listed { achievements, .. } = core.achievements("steam:620").unwrap() else {
+        panic!("listed");
+    };
+    assert_eq!(
+        achievements,
+        vec![
+            achievement("ACH_SPEED_RUN", "Speed run", "Finish the game in under two hours", None),
+            Achievement { secret: true, ..achievement("ACH_PARTNER", "Partner", "Finish the cooperative campaign", None) },
+        ]
+    );
+}
+
+/// Portal 2 with the Rarity Steam reports for each of its Achievements.
+fn portal_2_with_rarity() -> Owned {
+    let mut game = portal_2();
+    for (achievement, rarity) in game.achievements.as_mut().unwrap().iter_mut().zip(["8.1", "92.30000305175781", "0.04", "41"]) {
+        achievement.rarity = Some(rarity);
+    }
+    game
+}
+
+/// The Rarity of each listed Achievement of `game_id`, by Steam's name for it.
+fn rarities(core: &Core, game_id: &str) -> Vec<(String, Option<f64>)> {
+    let GameAchievements::Listed { achievements, .. } = core.achievements(game_id).unwrap() else {
+        panic!("listed");
+    };
+    achievements.into_iter().map(|a| (a.id, a.rarity)).collect()
+}
+
+fn rarity_of(list: &[(String, Option<f64>)], id: &str) -> Option<f64> {
+    list.iter().find(|(name, _)| name == id).unwrap().1
+}
+
+#[test]
+fn after_a_sync_each_achievement_has_its_rarity() {
+    let computer = Computer::new();
+    let steam = FakeSteam::owning(vec![portal_2_with_rarity()]);
+    let core = computer.start(&steam);
+
+    core.sync().unwrap();
+
+    assert_eq!(
+        rarities(&core, "steam:620"),
+        [
+            ("ACH_FINISH".to_owned(), Some(41.0)),
+            ("ACH_WAKE_UP".to_owned(), Some(92.300_003_051_757_81)),
+            ("ACH_SPEED_RUN".to_owned(), Some(8.1)),
+            ("ACH_PARTNER".to_owned(), Some(0.04)),
+        ]
+    );
+}
+
+#[test]
+fn a_secret_achievement_stays_secret_once_unlocked_and_after_a_restart() {
+    let computer = Computer::new();
+    let mut game = portal_2();
+    game.achievements = Some(vec![Defined {
+        secret: true,
+        ..unlocked("ACH_FINISH", "Lunacy", "Finish the single-player campaign", LAST_WEEK)
+    }]);
+    let steam = FakeSteam::owning(vec![game]);
+    computer.start(&steam).sync().unwrap();
+    steam.becomes(Network::Offline);
+
+    let GameAchievements::Listed { achievements, .. } = computer.start(&steam).achievements("steam:620").unwrap() else {
+        panic!("listed");
+    };
+    assert_eq!(
+        achievements,
+        vec![Achievement {
+            secret: true,
+            ..achievement("ACH_FINISH", "Lunacy", "Finish the single-player campaign", Some(LAST_WEEK))
+        }]
+    );
+}
+
+#[test]
+fn the_rarity_is_read_from_steams_older_answers_too() {
+    let computer = Computer::new();
+    let steam = FakeSteam::owning(vec![portal_2_with_rarity()]);
+    steam.0.lock().unwrap().rarity_as_numbers = true;
+    let core = computer.start(&steam);
+
+    core.sync().unwrap();
+
+    assert_eq!(rarity_of(&rarities(&core, "steam:620"), "ACH_SPEED_RUN"), Some(8.1));
+}
+
+#[test]
+fn an_achievement_steam_reports_no_rarity_for_has_none_instead_of_zero() {
+    let computer = Computer::new();
+    let mut game = portal_2_with_rarity();
+    let achievements = game.achievements.as_mut().unwrap();
+    achievements[0].rarity = None;
+    achievements[1].rarity = Some("not a number");
+    achievements[2].rarity = Some("-3");
+    achievements[3].rarity = Some("0");
+    let steam = FakeSteam::owning(vec![game]);
+    let core = computer.start(&steam);
+
+    core.sync().unwrap();
+
+    let list = rarities(&core, "steam:620");
+    assert_eq!(rarity_of(&list, "ACH_SPEED_RUN"), None);
+    assert_eq!(rarity_of(&list, "ACH_WAKE_UP"), None);
+    assert_eq!(rarity_of(&list, "ACH_PARTNER"), None);
+    // Steam's figure of zero is a known Rarity: nobody has it yet.
+    assert_eq!(rarity_of(&list, "ACH_FINISH"), Some(0.0));
+}
+
+#[test]
+fn when_steam_refuses_to_tell_the_rarity_the_achievements_are_listed_without_it() {
+    let computer = Computer::new();
+    let steam = FakeSteam::owning(vec![portal_2_with_rarity()]);
+    steam.becomes(Network::RarityRefused);
+    let core = computer.start(&steam);
+
+    core.sync().unwrap();
+
+    assert_eq!(listed(&core, "steam:620"), Some((2, 4)));
+    assert!(rarities(&core, "steam:620").iter().all(|(_, rarity)| rarity.is_none()));
+}
+
+#[test]
+fn when_steam_cannot_give_the_rarity_the_stored_achievements_stay_until_the_next_sync() {
+    let computer = Computer::new();
+    let steam = FakeSteam::owning(vec![portal_2_with_rarity()]);
+    let core = computer.start(&steam);
+    core.sync().unwrap();
+    let mut game = portal_2_with_rarity();
+    game.minutes += 30;
+    game.achievements.as_mut().unwrap()[0].rarity = Some("9.5");
+    game.achievements.as_mut().unwrap()[2].unlocked_at = Some(NOW + 600);
+    steam.owns(vec![game]);
+    steam.becomes(Network::RarityDown);
+    computer.clock.advance(1_800);
+
+    assert_eq!(core.sync().unwrap(), SyncOutcome::Synced { at: NOW + 1_800 });
+    assert_eq!(listed(&core, "steam:620"), Some((2, 4)));
+    assert_eq!(rarity_of(&rarities(&core, "steam:620"), "ACH_SPEED_RUN"), Some(8.1));
+
+    steam.becomes(Network::Online);
+    computer.clock.advance(1_800);
+    core.sync().unwrap();
+    assert_eq!(listed(&core, "steam:620"), Some((3, 4)));
+    assert_eq!(rarity_of(&rarities(&core, "steam:620"), "ACH_SPEED_RUN"), Some(9.5));
+}
+
+#[test]
+fn the_rarity_is_kept_after_a_restart() {
+    let computer = Computer::new();
+    let steam = FakeSteam::owning(vec![portal_2_with_rarity()]);
+    computer.start(&steam).sync().unwrap();
+    steam.becomes(Network::Offline);
+
+    assert_eq!(rarity_of(&rarities(&computer.start(&steam), "steam:620"), "ACH_PARTNER"), Some(0.04));
+}
+
+#[test]
+fn the_rarity_is_asked_without_the_steam_web_api_key() {
+    let computer = Computer::new();
+    let steam = FakeSteam::owning(vec![portal_2_with_rarity()]);
+    computer.start(&steam).sync().unwrap();
+
+    let asked: Vec<_> = steam.asked().into_iter().filter(|url| url.contains("GetGlobalAchievementPercentagesForApp")).collect();
+    assert_eq!(asked.len(), 1, "{asked:?}");
+    assert!(!asked[0].contains(KEY), "{}", asked[0]);
+    assert_eq!(query_value(&asked[0], "gameid"), Some("620"));
 }
 
 /// A computer where the app does not start with Windows; these tests do not turn it on.

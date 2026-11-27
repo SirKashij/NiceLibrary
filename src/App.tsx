@@ -28,6 +28,7 @@ import { ImportReloadProvider, useImportReload } from './settings/importReload';
 import { LogSettings } from './settings/LogSettings';
 import { StatisticsPage } from './statistics/StatisticsPage';
 import { GameActionButton, useGameAction } from './library/GameAction';
+import { LimitedModeHint } from './LimitedModeHint';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -72,6 +73,16 @@ function Shell({ operations }: { operations: Operations }) {
   // How often Collections or what is in them changed while the app runs; each change may change the counts.
   const [collectionChanges, setCollectionChanges] = useState(0);
   const collectionsChanged = () => setCollectionChanges((n) => n + 1);
+  // How many Syncs ended while the app runs, successful or not; each one may end or change Limited Mode.
+  const [syncsEnded, setSyncsEnded] = useState(0);
+  // How often a Sync was asked for outside the sidebar; Sync now runs it.
+  const [syncRequests, setSyncRequests] = useState(0);
+  // Whether the settings open at the section of the Steam Web API key.
+  const [toKeySettings, setToKeySettings] = useState(false);
+  const show = (next: View) => {
+    setToKeySettings(false);
+    setView(next);
+  };
   // The Game whose detail page the Library opens with, chosen on another page such as the Statistics.
   const [opening, setOpening] = useState<Game>();
   useEffect(() => {
@@ -79,7 +90,7 @@ function Shell({ operations }: { operations: Operations }) {
   }, [view]);
   const openGame = (game: Game) => {
     setOpening(game);
-    setView('library');
+    show('library');
     setFavoritesOnly(false);
     setChosen(undefined);
   };
@@ -100,7 +111,7 @@ function Shell({ operations }: { operations: Operations }) {
                 view === v.view && !(v.view === 'library' && (favoritesOnly || chosen)) ? 'page' : undefined
               }
               onClick={() => {
-                setView(v.view);
+                show(v.view);
                 setFavoritesOnly(false);
                 if (v.view === 'library') setChosen(undefined);
               }}
@@ -133,7 +144,13 @@ function Shell({ operations }: { operations: Operations }) {
           onChanged={collectionsChanged}
         />
         {/* Starts over for each chosen account: shows its last Sync, never one of the account chosen before. */}
-        <SyncStatus key={accountChoices} operations={operations} onSynced={() => setSyncs((n) => n + 1)} />
+        <SyncStatus
+          key={accountChoices}
+          operations={operations}
+          requests={syncRequests}
+          onSynced={() => setSyncs((n) => n + 1)}
+          onEnded={() => setSyncsEnded((n) => n + 1)}
+        />
         <AboutButton operations={operations} />
       </aside>
       <main className="main">
@@ -149,11 +166,27 @@ function Shell({ operations }: { operations: Operations }) {
             collectionChanges={collectionChanges}
             onCollectionsChanged={collectionsChanged}
             opening={opening}
+            hint={
+              <LimitedModeHint
+                key={accountChoices}
+                operations={operations}
+                syncsEnded={syncsEnded}
+                onOpenKeySettings={() => {
+                  setView('settings');
+                  setToKeySettings(true);
+                }}
+                onSync={() => setSyncRequests((n) => n + 1)}
+              />
+            }
           />
         )}
         {view === 'statistics' && <StatisticsPage operations={operations} syncs={changes} onOpen={openGame} />}
         {view === 'settings' && (
-          <SettingsView operations={operations} onAccountChosen={() => setAccountChoices((n) => n + 1)} />
+          <SettingsView
+            operations={operations}
+            toKeySettings={toKeySettings}
+            onAccountChosen={() => setAccountChoices((n) => n + 1)}
+          />
         )}
       </main>
       <Tray operations={operations} />
@@ -192,7 +225,19 @@ const SYNC_PROBLEMS: Record<Exclude<SyncOutcome['outcome'], 'synced'>, MessageKe
 };
 
 /** At the bottom of the sidebar: when the last successful Sync happened, and Sync now. */
-function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced: () => void }) {
+function SyncStatus({
+  operations,
+  requests,
+  onSynced,
+  onEnded,
+}: {
+  operations: Operations;
+  /** How often a Sync was asked for elsewhere; each new one runs as Sync now does. */
+  requests: number;
+  onSynced: () => void;
+  /** Hears each Sync shown here end, successful or not. */
+  onEnded: () => void;
+}) {
   const t = useT();
   const format = useFormat();
   const loaded = useOperation(operations, (o) => o.lastSync());
@@ -223,6 +268,7 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
     } else {
       setProblem(SYNC_PROBLEMS[answer.outcome]);
     }
+    onEnded();
   };
   // The latest render's handlers, for the listener that lives as long as the view.
   const handlers = useRef({ begin, settle });
@@ -242,6 +288,14 @@ function SyncStatus({ operations, onSynced }: { operations: Operations; onSynced
     begin();
     operations.sync().then(settle, () => settle('failed'));
   };
+
+  // The requests this view has answered; one made before it appeared is not its to run.
+  const answered = useRef(requests);
+  useEffect(() => {
+    if (requests === answered.current) return;
+    answered.current = requests;
+    sync();
+  });
 
   return (
     <section className="sync" aria-label={t('sync.title')}>
@@ -269,6 +323,7 @@ function LibraryView({
   collectionChanges,
   onCollectionsChanged,
   opening,
+  hint,
 }: {
   operations: Operations;
   syncs: number;
@@ -287,6 +342,8 @@ function LibraryView({
   onCollectionsChanged: () => void;
   /** The Game whose detail page shows when the Library opens. */
   opening?: Game;
+  /** The Limited Mode hint, shown above the Library. */
+  hint: ReactNode;
 }) {
   const t = useT();
   // How many Local Games were added, edited or removed here; each one changes the stored Library.
@@ -421,6 +478,7 @@ function LibraryView({
     <>
       <div ref={libraryView} hidden={opened !== undefined || showingHidden}>
         <Page title={favoritesOnly ? 'favorites.title' : 'nav.library'} heading={collection?.name}>
+          {hint}
           <div className="library-actions">
             <AddLocalGameButton operations={operations} onAdded={changed} />
             <AddFromFolderButton operations={operations} onAdded={changed} />
@@ -626,7 +684,19 @@ function Cover({ title, src }: { title: string; src: string }) {
   );
 }
 
-function SettingsView({ operations, onAccountChosen }: { operations: Operations; onAccountChosen: () => void }) {
+function SettingsView({
+  operations,
+  toKeySettings,
+  onAccountChosen,
+}: {
+  operations: Operations;
+  /** Whether to open at the section of the Steam Web API key. */
+  toKeySettings: boolean;
+  onAccountChosen: () => void;
+}) {
+  useEffect(() => {
+    if (toKeySettings) document.getElementById('settings-key')?.scrollIntoView?.({ block: 'start' });
+  }, [toKeySettings]);
   return (
     <Page title="nav.settings">
       <SteamSettings operations={operations} onAccountChosen={onAccountChosen} />

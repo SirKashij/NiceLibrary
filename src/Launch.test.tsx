@@ -27,6 +27,8 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     theme: async () => 'system',
@@ -65,6 +67,7 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    sessions: async () => [],
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},

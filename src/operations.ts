@@ -226,11 +226,22 @@ export interface LibraryFilter {
 }
 
 /**
- * A Session of a Local Game that began or ended, noticed by the core however
- * the Game was started. Mirrors `Tracking` in crates/core; a failed look at
+ * A Session of a Local Game or an Installed Steam Game that began or ended,
+ * noticed by the core however the Game was started. Mirrors `Tracking` in crates/core; a failed look at
  * the running processes never reaches the interface.
  */
 export type SessionEvent = { state: 'started'; gameId: string } | { state: 'ended'; gameId: string };
+
+/** One Session of a Game, as the detail page lists it. Mirrors `Session` in crates/core. */
+export interface Session {
+  /** When it began, in seconds since the Unix epoch. */
+  startedAt: number;
+  /** How long it lasted, or has lasted so far while it runs, in seconds. */
+  seconds: number;
+  /** Whether its process still runs. */
+  running: boolean;
+}
+
 
 /** One Achievement of a Steam Game, with whether the Steam Account unlocked it. Mirrors `Achievement` in crates/core. */
 export interface Achievement {
@@ -243,6 +254,10 @@ export interface Achievement {
   unlockedAt: number | null;
   /** The icon as the Achievement looks now, for `achievementIconUrl`; `null` when Steam has none. */
   icon: string | null;
+  /** A Secret Achievement: its name, description and icon stay concealed while locked, unless revealed. */
+  secret: boolean;
+  /** Its Rarity: percent of all players worldwide who have unlocked it; `null` when not known. */
+  rarity: number | null;
 }
 
 /** The Achievements of one Game. Mirrors `GameAchievements` in crates/core. */
@@ -259,6 +274,13 @@ export type GameAchievements =
     };
 /** How the Library shows its Games: a grid of Covers or one row per Game. Mirrors `LibraryLayout` in crates/core. */
 export type LibraryLayout = 'coverGrid' | 'list';
+/** Whether the app runs in Limited Mode, and why. Mirrors `LimitedMode` in crates/core. */
+export type LimitedMode =
+  | { outcome: 'off' }
+  | { outcome: 'noKey' }
+  | { outcome: 'keyRejected' }
+  | { outcome: 'gameDetailsPrivate' }
+  | { outcome: 'steamUnreachable' };
 
 export interface Operations {
   /** All Games in the Library as last stored, ordered by title. Answers at once. */
@@ -431,6 +453,13 @@ export interface Operations {
    */
   openLogFolder(): Promise<void>;
   /**
+   * Whether the app runs in Limited Mode, and why: no key stored, or what the
+   * last Sync of the Steam Account found. A successful Sync ends it.
+   */
+  limitedMode(): Promise<LimitedMode>;
+  /** Opens Steam's privacy settings of the signed-in profile in the browser. Rejects when it could not be opened. */
+  openSteamPrivacySettings(): Promise<void>;
+  /**
    * Whether the app starts with Windows, hidden in the Tray: what the current
    * user's autostart entry says, also after it was changed outside the app.
    */
@@ -438,9 +467,11 @@ export interface Operations {
   /** Adds or removes the current user's autostart entry. */
   setStartWithWindows(on: boolean): Promise<void>;
   /**
-   * Hears each Session of a Local Game begin and end while the app runs;
-   * each one changes the Game's Playtime and Last Played. Answers the
-   * function that stops listening.
+   * Hears each Session of a Local Game or a Steam Game begin and end while
+   * the app runs; each one changes a Local Game's Playtime and Last Played.
+   * A Steam Game's Playtime stays Steam's figure: the Sync each ended
+   * Session starts (`onAutomaticSync`) brings it. Answers the function that
+   * stops listening.
    */
   onSession(listener: (event: SessionEvent) => void): () => void;
   /**
@@ -455,6 +486,11 @@ export interface Operations {
    * refused.
    */
   setPlaytimeAdjustment(gameId: string, minutes: number | null): Promise<Game>;
+  /**
+   * The Sessions of a Game, newest first; one whose process still runs is
+   * marked as running. Empty for a Game without Sessions.
+   */
+  sessions(gameId: string): Promise<Session[]>;
   /** The Achievements of the Game as the last Syncs fetched them. Answers from the store at once. */
   achievements(gameId: string): Promise<GameAchievements>;
   /**
@@ -691,6 +727,8 @@ export const tauriOperations: Operations = {
   chooseLanguage: (language) => invoke<void>('choose_language', { language }),
   setStatus: (gameId, status) => invoke<Game>('set_status', { gameId, status }),
   openLogFolder: () => invoke<void>('open_log_folder'),
+  limitedMode: () => invoke<LimitedMode>('limited_mode'),
+  openSteamPrivacySettings: () => invoke<void>('open_steam_privacy_settings'),
   startsWithWindows: () => invoke<boolean>('starts_with_windows'),
   setStartWithWindows: (on) => invoke<void>('set_start_with_windows', { on }),
   onSession: (listener) => {
@@ -702,6 +740,7 @@ export const tauriOperations: Operations = {
   },
   playtimeAdjustment: (gameId) => invoke<number | null>('playtime_adjustment', { gameId }),
   setPlaytimeAdjustment: (gameId, minutes) => invoke<Game>('set_playtime_adjustment', { gameId, minutes }),
+  sessions: (gameId) => invoke<Session[]>('sessions', { gameId }),
   achievements: (gameId) => invoke<GameAchievements>('achievements', { gameId }),
   // Under the Game's address in the `cover` URL scheme (`cover_response` in src-tauri/src/lib.rs).
   achievementIconUrl: (game, icon) => convertFileSrc(`${game.id}/achievements/${icon}`, 'cover'),

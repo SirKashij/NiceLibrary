@@ -69,7 +69,7 @@ function Figures({ statistics, onOpen }: { statistics: Statistics; onOpen: (game
       : t('statistics.achievementsOf', {
           unlocked: format.count(statistics.achievementsUnlocked),
           total: format.count(statistics.achievementsTotal),
-          share: format.percent(statistics.achievementShare),
+          share: format.wholePercent(statistics.achievementShare),
         });
 
   return (

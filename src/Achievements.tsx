@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from 'react';
 import { useFormat, useT } from './i18n';
 import type { Achievement, Game, GameAchievements, Operations } from './operations';
+import { RevealSecrets, useShown } from './SecretAchievements';
 
 /**
  * The Achievements section of a Game's detail page: every Achievement with
@@ -13,6 +14,8 @@ export function Achievements({ operations, game, syncs }: { operations: Operatio
   const format = useFormat();
   const headingId = useId();
   const [answer, setAnswer] = useState<GameAchievements | 'loading' | 'failed'>('loading');
+  const [revealed, setRevealed] = useState(false);
+  const shown = useShown(revealed);
 
   useEffect(() => {
     let active = true;
@@ -36,12 +39,15 @@ export function Achievements({ operations, game, syncs }: { operations: Operatio
           </span>
         )}
       </div>
+      {typeof answer === 'object' && answer.state === 'listed' && (
+        <RevealSecrets achievements={answer.achievements} revealed={revealed} onChange={setRevealed} />
+      )}
       {answer === 'failed' && <p role="alert">{t('achievements.loadFailed')}</p>}
       {typeof answer === 'object' &&
         (answer.state === 'listed' ? (
           <ul className="achievement-list" aria-label={t('achievements.list', { title: game.title })}>
             {answer.achievements.map((achievement) => (
-              <AchievementItem key={achievement.id} achievement={achievement} iconUrl={(icon) => operations.achievementIconUrl(game, icon)} />
+              <AchievementItem key={achievement.id} achievement={shown(achievement)} iconUrl={(icon) => operations.achievementIconUrl(game, icon)} />
             ))}
           </ul>
         ) : (
@@ -79,6 +85,9 @@ function AchievementItem({ achievement, iconUrl }: { achievement: Achievement; i
         <h3>{achievement.name}</h3>
         {achievement.description !== null && <p>{achievement.description}</p>}
         <p className="achievement-status">{status}</p>
+        {achievement.rarity !== null && (
+          <p className="achievement-rarity">{t('achievements.rarity', { percent: format.percent(achievement.rarity) })}</p>
+        )}
       </div>
     </li>
   );

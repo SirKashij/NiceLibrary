@@ -107,6 +107,9 @@ function fakeOperations(initial: Game[]) {
     coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   const send = (event: SessionEvent) => act(() => listeners.forEach((listener) => listener(event)));
   return { operations, send, listening: () => listeners.size, change: (next: Game[]) => (games = next) };

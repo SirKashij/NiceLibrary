@@ -9,7 +9,7 @@ use crate::store::Store;
 use crate::steam_web_api::WebApi;
 
 /// The Achievements of one Game, for its detail page.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(tag = "state", rename_all = "camelCase")]
 pub enum GameAchievements {
     /// A Local Game; Local Games have no Achievements.
@@ -24,7 +24,7 @@ pub enum GameAchievements {
 }
 
 /// One Achievement of a Steam Game, with whether the Steam Account unlocked it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Achievement {
     /// Steam's name for it, unique within the Game.
@@ -39,6 +39,12 @@ pub struct Achievement {
     /// when locked: Steam's name for the image (see
     /// [`crate::Core::achievement_icon`]); `None` when Steam has none.
     pub icon: Option<String>,
+    /// A Secret Achievement: the interface conceals its name and description
+    /// while it is locked, unless the person reveals them.
+    pub secret: bool,
+    /// Its Rarity: the percent of all players worldwide who have unlocked
+    /// it, as the last Sync fetched it; `None` when Steam reports none.
+    pub rarity: Option<f64>,
 }
 
 /// At most this many Steam Games have their Achievements fetched in one Sync;
@@ -81,13 +87,16 @@ pub(crate) struct Definition {
 }
 
 /// What one Sync fetched for one Steam Game.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Fetched {
     pub game: DueGame,
     /// Empty for a game without Achievements.
     pub achievements: Vec<PlayerAchievement>,
     /// New definitions, when the stored ones were missing or incomplete.
     pub definitions: Option<Vec<Definition>>,
+    /// The Rarity of each Achievement Steam reports one for, by Steam's name
+    /// for it; these replace the game's stored ones.
+    pub rarities: Vec<(String, f64)>,
 }
 
 /// Why fetching stops for this Sync; the games not fetched stay due.
@@ -111,8 +120,9 @@ pub(crate) fn fetch(
     let mut calls = calls_before;
     let mut fetched = Vec::new();
     for game in store.games_with_achievements_due(account, GAMES_PER_SYNC)? {
-        // A game can need two calls: the account's Achievements and their definitions.
-        if calls_today + 2 > WEB_API_CALLS_PER_DAY {
+        // A game can need three calls: the account's Achievements, their
+        // definitions and their Rarity.
+        if calls_today + 3 > WEB_API_CALLS_PER_DAY {
             break;
         }
         calls += 1;
@@ -131,7 +141,17 @@ pub(crate) fn fetch(
             };
             Some(definitions)
         };
-        fetched.push(Fetched { game, achievements, definitions });
+        let rarities = if achievements.is_empty() {
+            Vec::new()
+        } else {
+            calls += 1;
+            calls_today += 1;
+            let Ok(rarities) = rarities(api, game.app_id) else {
+                break;
+            };
+            rarities
+        };
+        fetched.push(Fetched { game, achievements, definitions, rarities });
     }
     store.record_achievements(account, &fetched, now, day, calls)
 }
@@ -233,6 +253,56 @@ fn definitions(api: &dyn WebApi, key: &str, app_id: u32) -> Result<Vec<Definitio
             icon_locked: entry.icongray.as_deref().and_then(icon_name),
         })
         .collect())
+}
+
+#[derive(Deserialize)]
+struct RarityAnswer {
+    achievementpercentages: RarityList,
+}
+
+#[derive(Deserialize)]
+struct RarityList {
+    #[serde(default)]
+    achievements: Vec<RarityEntry>,
+}
+
+#[derive(Deserialize)]
+struct RarityEntry {
+    name: String,
+    percent: serde_json::Value,
+}
+
+/// The Rarity of the Achievements of the Steam Game `app_id`, by Steam's
+/// name for each. Steam tells it to anyone, so the key is not sent. When
+/// Steam refuses to tell it, no Rarity is known; when it does not answer,
+/// fetching stops for this Sync.
+fn rarities(api: &dyn WebApi, app_id: u32) -> Result<Vec<(String, f64)>, Stop> {
+    let url = format!(
+        "https://api.steampowered.com/ISteamUserStats/GetGlobalAchievementPercentagesForApp/v2/?gameid={app_id}&format=json"
+    );
+    let answer = api.get(&url).map_err(|_| Stop)?;
+    match answer.status {
+        200 => {}
+        400..=499 => return Ok(Vec::new()),
+        _ => return Err(Stop),
+    }
+    let answer: RarityAnswer = serde_json::from_slice(&answer.body).map_err(|_| Stop)?;
+    Ok(answer
+        .achievementpercentages
+        .achievements
+        .into_iter()
+        .filter_map(|entry| Some((entry.name, percent(&entry.percent)?)))
+        .collect())
+}
+
+/// A percent as Steam writes it, as text or as a number; `None` for
+/// anything that is no percent.
+fn percent(value: &serde_json::Value) -> Option<f64> {
+    let percent = match value {
+        serde_json::Value::String(text) => text.trim().parse().ok()?,
+        value => value.as_f64()?,
+    };
+    (0.0..=100.0).contains(&percent).then_some(percent)
 }
 
 /// Steam's name for the image at `url`: the file name without `.jpg`, if it

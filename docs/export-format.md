@@ -111,7 +111,7 @@ Every recorded Session, oldest first. A Game's Playtime is the sum of its Sessio
 | `startedAt` | integer | When the Session began. |
 | `endedAt` | integer | When it ended; never before `startedAt`. |
 
-Version 1 of the app writes Sessions of Local Games only. Sessions of Steam Games (#39) are to be written into the same list with a `steam:<appid>` Game id and an extra field `steamAccount` (the SteamID64 as a string, or `null` when no Steam Account was known then). An import of version 1 must therefore accept entries with a `steam:` Game id and the optional `steamAccount` field.
+Sessions of Steam Games are in the same list with a `steam:<appid>` Game id and an extra field `steamAccount`: the SteamID64 of the Steam Account the app worked with then, as a string. It is left out (or `null`) when no Steam Account was known then, and for Sessions of Local Games. The app version 0.1.0 wrote Sessions of Local Games only; their files read the same.
 
 ## `statuses`
 
@@ -137,8 +137,8 @@ The Collections in the order they were created.
 
 ## Importing
 
-An import replaces, all at once, everything that is the person's own with what the file holds: the Local Games (with their Launch Options, Manual Progress, Playtime Adjustments, Cover Matches and chosen Cover images), every Session, Status, Favorite, Hidden Game and Collection, and the settings above, including whether the app starts with Windows. What was there before is gone; the interface says so and asks before it opens the file. It keeps the Steam Games and Steam's figures (they come from Steam), the Steam App List, the last Sync, the Log and app-internal bookkeeping, and it never reads, writes or removes the Steam Web API key.
+An import replaces, all at once, everything that is the person's own with what the file holds: the Local Games (with their Launch Options, Manual Progress, Playtime Adjustments, Cover Matches and chosen Cover images), every Session of a Local or a Steam Game, Status, Favorite, Hidden Game and Collection, and the settings above, including whether the app starts with Windows. What was there before is gone; the interface says so and asks before it opens the file. It keeps the Steam Games and Steam's figures (they come from Steam), the Steam App List, the last Sync, the Log and app-internal bookkeeping, and it never reads, writes or removes the Steam Web API key.
 
 - Each Local Game gets a new number on this computer; every `local:<n>` in the file is rewritten to it. The executable paths are kept as they are, even when they do not exist here.
-- Sessions with a `steam:` Game id are accepted but not kept yet: this version stores Sessions of Local Games only.
+- Sessions of Steam Games are kept with the Steam Account they name; they count for that Steam Account only.
 - The file is refused, and nothing changes, when it is not JSON, its `format` is not `nicelibrary-export`, its `version` is missing, below 1 or newer than the app knows, a required field is missing or has a value the format does not allow (an unknown Status or setting, a Manual Progress over 100, a Session that ends before it begins, a Cover image that is not valid Base64 PNG or JPEG of the stated type), two Local Games share an `id` or an `executable`, two Collections share a name in any case, or a Game id names neither a Steam Game nor a Local Game of the file.

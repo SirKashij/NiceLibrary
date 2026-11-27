@@ -103,6 +103,8 @@ function fakeOperations({
     setStartWithWindows: async () => {},
     install: async () => ({ outcome: 'started' }),
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },
@@ -133,6 +135,7 @@ function fakeOperations({
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    sessions: async () => [],
   };
   const automatic = {
     start: () => heard({ state: 'started' }),

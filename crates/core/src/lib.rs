@@ -20,6 +20,7 @@ pub mod keyvalues;
 mod language;
 mod launch;
 mod local_covers;
+mod limited_mode;
 mod local_games;
 mod library_filter;
 mod progress;
@@ -37,6 +38,7 @@ mod sync;
 mod theme;
 mod window;
 
+use std::collections::BTreeSet;
 use std::fmt;
 use std::ops::ControlFlow;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
@@ -44,6 +46,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use serde::{Deserialize, Serialize, Serializer};
 
 use log::Level;
+use sessions::Tracked;
 
 pub use about::{About, AboutPage};
 pub use achievements::{Achievement, GameAchievements};
@@ -57,12 +60,13 @@ pub use export::{DataExport, ExportFilePicker};
 pub use import::DataImport;
 pub use language::Language;
 pub use launch::{Install, Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
+pub use limited_mode::LimitedMode;
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
 pub use local_games::{AddLocalGame, EditLocalGame, ExecutableChoice, ExecutablePicker, LocalGame};
 pub use progress::ManualProgress;
 pub use log::Log;
-pub use sessions::{ProcessList, Tracking};
+pub use sessions::{ProcessList, Session, Tracking};
 pub use statistics::{GamesByStatus, PlayedWeek, Statistics};
 pub use status::Status;
 pub use library_layout::LibraryLayout;
@@ -195,6 +199,9 @@ pub struct Core {
     steam_title_index: Mutex<Option<Arc<steam_app_list::TitleIndex>>>,
     /// Where errors and notable events are written.
     log: Log,
+    /// The stored Sessions whose process the tracking found at its last
+    /// look, by their id; empty while the tracking does not run.
+    running_sessions: Mutex<std::collections::BTreeSet<(Tracked, i64)>>,
 }
 
 impl Core {
@@ -209,6 +216,7 @@ impl Core {
             steam_app_list_soon: Wakeup::new(),
             steam_title_index: Mutex::new(None),
             log: Log::none(),
+            running_sessions: Mutex::default(),
         }
     }
 
@@ -385,7 +393,8 @@ impl Core {
             && let Some(account) = self.chosen_steam_account_or(|| Ok(most_recent_account(&folder)))?
             && let Some(apps) = steam::installed_apps(&folder)
         {
-            self.store.record_installed_steam_games(&account, &apps)?;
+            let local = steam::local_playtimes(&folder, &account);
+            self.store.record_installed_steam_games(&account, &apps, &local)?;
         }
         self.stored_library()
     }
@@ -555,22 +564,59 @@ impl Core {
         let Some(account) = self.current_steam_account()?.filter(|id| steam::personal_steam_id(id).is_some()) else {
             return Ok(SyncOutcome::NoSteamAccount);
         };
-        let games = match sync::owned_games(self.ports.web_api.as_ref(), &key, &account) {
-            Ok(games) => games,
-            Err(failed) => return Ok(failed),
+        let outcome = match sync::owned_games(self.ports.web_api.as_ref(), &key, &account) {
+            Ok(games) => {
+                let at = clock::seconds_since_epoch(self.ports.clock.now());
+                self.store.record_steam_sync(&account, &games, at)?;
+                // One call so far: the owned games.
+                achievements::fetch(self.ports.web_api.as_ref(), &self.store, &key, &account, at, 1)?;
+                SyncOutcome::Synced { at }
+            }
+            Err(failed) => failed,
         };
-        let at = clock::seconds_since_epoch(self.ports.clock.now());
-        self.store.record_steam_sync(&account, &games, at)?;
-        // One call so far: the owned games.
-        achievements::fetch(self.ports.web_api.as_ref(), &self.store, &key, &account, at, 1)?;
-        Ok(SyncOutcome::Synced { at })
+        if let Some(reason) = LimitedMode::after_sync(outcome) {
+            self.store.record_limited_mode_reason(&account, reason.stored_name())?;
+        }
+        Ok(outcome)
+    }
+
+    /// Whether the app runs in Limited Mode, and why: without a stored Steam
+    /// Web API key, or when the last Sync of the Steam Account the app works
+    /// with found Steam refusing the key, its game details private, or Steam
+    /// unreachable. A successful Sync, or storing a key Steam accepts, ends
+    /// it.
+    pub fn limited_mode(&self) -> Result<LimitedMode, Error> {
+        self.logged("limited_mode", self.current_limited_mode())
+    }
+
+    fn current_limited_mode(&self) -> Result<LimitedMode, Error> {
+        if !self.key_stored()? {
+            return Ok(LimitedMode::NoKey);
+        }
+        let Some(account) = self.current_steam_account()? else {
+            return Ok(LimitedMode::Off);
+        };
+        Ok(self.store.limited_mode_reason(&account)?.map_or(LimitedMode::Off, |name| LimitedMode::from_stored_name(&name)))
+    }
+
+    /// Opens the Steam page where the user makes their game details
+    /// public, in the browser.
+    pub fn open_steam_privacy_settings(&self) -> Result<(), Error> {
+        let page = limited_mode::PRIVACY_SETTINGS_PAGE;
+        let opened = self
+            .ports
+            .opener
+            .open_url(page)
+            .map_err(|error| Error::new(format!("{page} could not be opened: {error}")));
+        self.logged("open_steam_privacy_settings", opened)
     }
 
     /// Syncs on its own while the app runs: shortly after the start, then
     /// every 30 minutes, each time as long after the previous Sync ended,
     /// waiting on the clock. A round without a stored Steam Web API key
-    /// starts no Sync. Storing a key that Steam accepts starts the next
-    /// round right away, or once the Sync that runs has ended. `report`
+    /// starts no Sync. Storing a key that Steam accepts, and the end of any
+    /// Session (see [`Self::track_sessions`]), start the next round right
+    /// away, or once the Sync that runs has ended. `report`
     /// hears what happens in each round as it happens; the Syncs go on until
     /// it answers `Break`, otherwise for good.
     pub fn sync_automatically(&self, mut report: impl FnMut(AutomaticSync) -> ControlFlow<()>) {
@@ -639,6 +685,8 @@ impl Core {
         let check = steam_web_api::check_key(self.ports.web_api.as_ref(), &key);
         if check == SteamWebApiKeyCheck::Stored {
             self.ports.secrets.write(steam_web_api::KEY_SECRET, &key).map_err(secret_store_error)?;
+            // Steam accepts this key; why an earlier Sync failed is for the next Sync to tell.
+            self.store.forget_limited_mode_reasons()?;
             self.sync_soon.ring();
             self.steam_app_list_soon.ring();
         }
@@ -747,11 +795,15 @@ impl Core {
 
     /// Records Sessions while the app runs: looks at the running processes
     /// every few seconds, waiting on the clock, and finds the Local Games
-    /// whose executable runs, however they were started. A Session begins at
-    /// the first look that finds its Game and is stored at once; each later
-    /// look that finds it again moves its end there, so it is kept up to the
-    /// last look even if the app is closed or crashes. A Game still running
-    /// when tracking starts again begins a new Session. `report` hears each
+    /// whose executable runs and the Installed Steam Games with an
+    /// executable running from their install folder, however they were
+    /// started. A Session begins at the first look that finds its Game and
+    /// is stored at once; each later look that finds it again moves its end
+    /// there, so it is kept up to the last look even if the app is closed or
+    /// crashes. A Game still running when tracking starts again begins a new
+    /// Session. Each Session that ends starts a Sync (see
+    /// [`Self::sync_automatically`]). A Steam Game's Sessions never change
+    /// its Playtime, which stays Steam's figure. `report` hears each
     /// Session that begins or ends and each look that failed; tracking goes
     /// on until it answers `Break`, otherwise for good.
     pub fn track_sessions(&self, mut report: impl FnMut(Tracking) -> ControlFlow<()>) {
@@ -777,6 +829,8 @@ impl Core {
             });
             failing = failed;
             if flow.is_break() {
+                // Nothing looks any more, so no Session is known to run.
+                self.show_running(&sessions::OpenSessions::new());
                 return;
             }
             self.ports.clock.sleep(sessions::LOOK_EVERY, &never);
@@ -799,22 +853,38 @@ impl Core {
             Ok(games) => games,
             Err(reason) => return report(Tracking::Failed { reason }),
         };
-        let running = sessions::running_games(&games, &running);
-        let ended: Vec<i64> = open.keys().copied().filter(|game| !running.contains(game)).collect();
+        let steam_games = match self.ports.steam_locator.steam_folder() {
+            Some(folder) => sessions::running_steam_games(&folder, &running),
+            None => BTreeSet::new(),
+        };
+        let running: BTreeSet<Tracked> = sessions::running_games(&games, &running)
+            .into_iter()
+            .map(Tracked::Local)
+            .chain(steam_games.into_iter().map(Tracked::Steam))
+            .collect();
+        let ended: Vec<Tracked> = open.keys().copied().filter(|game| !running.contains(game)).collect();
         for game in ended {
             open.remove(&game);
-            report(Tracking::Ended { game_id: sessions::game_id(game) })?;
+            self.show_running(open);
+            // So Playtime and Achievements are current after playing (see `sync_automatically`).
+            self.sync_soon.ring();
+            report(Tracking::Ended { game_id: game.game_id() })?;
         }
         for game in running {
-            let recorded = match open.get(&game) {
-                Some(&session) => self.store.extend_session(session, at).map(|()| None),
-                None => self.store.begin_session(game, at).map(Some),
+            let recorded = match (open.get(&game), game) {
+                (Some(&session), _) => self.store.extend_session(game, session, at).map(|()| None),
+                (None, Tracked::Local(local_game)) => self.store.begin_session(local_game, at).map(Some),
+                (None, Tracked::Steam(app_id)) => self
+                    .current_steam_account()
+                    .and_then(|account| self.store.begin_steam_session(app_id, account.as_deref(), at))
+                    .map(Some),
             };
             match recorded {
                 Ok(None) => {}
                 Ok(Some(session)) => {
                     open.insert(game, session);
-                    report(Tracking::Started { game_id: sessions::game_id(game) })?;
+                    self.show_running(open);
+                    report(Tracking::Started { game_id: game.game_id() })?;
                 }
                 Err(reason) => report(Tracking::Failed { reason })?,
             }
@@ -907,6 +977,40 @@ impl Core {
         };
         let executables = executables_in_folder::suggestions(&folder, &self.store.local_games()?);
         Ok(FolderSuggestions::Suggested { folder: text.to_owned(), executables })
+    }
+
+    /// Makes the Sessions in `open` the ones [`Self::sessions`] marks as running.
+    fn show_running(&self, open: &sessions::OpenSessions) {
+        *self.running_sessions.lock().unwrap_or_else(PoisonError::into_inner) =
+            open.iter().map(|(&game, &session)| (game, session)).collect();
+    }
+
+    /// The Sessions of the Game `game_id`, newest first, each with when it
+    /// began and how long it lasted; one whose process still runs is marked
+    /// as running and lasts up to the last look that found it. A Game with
+    /// no Sessions, or not in the Library, has none.
+    pub fn sessions(&self, game_id: &str) -> Result<Vec<Session>, Error> {
+        self.logged("sessions", self.stored_sessions(game_id))
+    }
+
+    fn stored_sessions(&self, game_id: &str) -> Result<Vec<Session>, Error> {
+        let (game, stored) = if let Some(local_game) = sessions::local_game_id(game_id) {
+            (Tracked::Local(local_game), self.store.local_game_sessions(local_game)?)
+        } else if let Some(app_id) = steam_app_id(game_id) {
+            let account = self.current_steam_account()?;
+            (Tracked::Steam(app_id), self.store.steam_game_sessions(app_id, account.as_deref())?)
+        } else {
+            return Ok(Vec::new());
+        };
+        let running = self.running_sessions.lock().unwrap_or_else(PoisonError::into_inner).clone();
+        Ok(stored
+            .into_iter()
+            .map(|(id, started_at, ended_at)| Session {
+                started_at,
+                seconds: ended_at.saturating_sub(started_at),
+                running: running.contains(&(game, id)),
+            })
+            .collect())
     }
 
     /// Opens the Steam page where the user creates their Steam Web API key,

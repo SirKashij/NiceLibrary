@@ -4,7 +4,7 @@
 //!
 //! Replaced: the Local Games with how they are launched, their Manual
 //! Progress, Playtime Adjustments, Cover Matches and the Cover images the
-//! person chose, every Session, Status, Favorite, Hidden Game and
+//! person chose, every Session (of Local and Steam Games), Status, Favorite, Hidden Game and
 //! Collection, and the settings. Kept as they are: the Steam Games and
 //! Steam's figures (they come from Steam), the Steam App List, the last Sync,
 //! the Log, and the Steam Web API key, which an import never touches.
@@ -12,8 +12,7 @@
 //! Each Local Game gets a new number here, and every entry that names it by
 //! the number in the file follows. A file that is no Export File, is
 //! damaged, or names a version this app does not know is refused before
-//! anything changes. Sessions of Steam Games are accepted but not kept yet:
-//! this version stores Sessions of Local Games only.
+//! anything changes.
 
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -27,7 +26,8 @@ use crate::covers::{Cover, CoverCache};
 use crate::export::{ExportFile, FORMAT, VERSION};
 use crate::local_covers;
 use crate::store::Store;
-use crate::{Error, collections, local_games, sessions};
+use crate::sessions::Tracked;
+use crate::{Error, collections, local_games};
 
 /// How importing the data went, when nothing failed. Every outcome but
 /// `Imported` changed nothing.
@@ -155,7 +155,7 @@ pub(crate) fn replace(
     match replaced {
         Ok(removed) => {
             for number in removed {
-                covers.forget(&sessions::game_id(number));
+                covers.forget(&Tracked::Local(number).game_id());
             }
             Ok(())
         }

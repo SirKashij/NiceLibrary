@@ -70,6 +70,8 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     install: async () => ({ outcome: 'started' }),
     openLogFolder: async () => {},
     coverHue: async () => null,
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),
     renameCollection: async () => ({ outcome: 'emptyName' }),
@@ -85,6 +87,7 @@ function fakeOperations(options: { setStatus?: Operations['setStatus'] } = {}) {
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    sessions: async () => [],
     closeToTray: async () => true,
     setCloseToTray: async () => {},
     closeWindow: async () => {},

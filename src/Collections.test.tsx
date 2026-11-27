@@ -70,6 +70,7 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    sessions: async () => [],
     filterLibrary: async () => library,
     libraryLayout: async () => 'coverGrid',
     chooseLibraryLayout: async () => {},
@@ -95,6 +96,8 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     },
     setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },

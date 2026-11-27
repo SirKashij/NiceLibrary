@@ -81,6 +81,7 @@ function fakeOperations({ stored = false } = {}) {
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    sessions: async () => [],
     game: async () => null,
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
@@ -111,6 +112,8 @@ function fakeOperations({ stored = false } = {}) {
     coverMatch: async () => null,
     setCoverMatch: async () => {},
     importData: async () => ({ outcome: 'cancelled' }),
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
   };
   return { operations, calls };
 }

@@ -54,12 +54,15 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    sessions: async () => [],
     librarySort: async () => 'name',
     chooseLibrarySort: async () => {},
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     onAutomaticSync: () => () => {},
     filterLibrary: async () => [],
     game: async () => null,

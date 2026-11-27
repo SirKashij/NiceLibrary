@@ -117,6 +117,9 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, hidden };
 }

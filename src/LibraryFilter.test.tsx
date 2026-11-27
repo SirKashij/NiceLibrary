@@ -33,6 +33,8 @@ function fakeOperations(library: Game[] = LIBRARY) {
     removeSteamWebApiKey: async () => {},
     openSteamWebApiKeyPage: async () => {},
     openLogFolder: async () => {},
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     theme: async () => 'system',
@@ -68,6 +70,7 @@ function fakeOperations(library: Game[] = LIBRARY) {
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    sessions: async () => [],
     filterLibrary: async (filter) => {
       asked.push(filter);
       return library.filter(

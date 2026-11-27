@@ -1,5 +1,7 @@
 //! Tracker: looks at the running processes again and again while the app
-//! runs, matches them to the Local Games and records their Sessions.
+//! runs, matches them to the Local Games and the Installed Steam Games and
+//! records their Sessions. A Local Game runs when its executable does, a
+//! Steam Game when any executable in its install folder does.
 //!
 //! A Session begins at the first look that finds its Game's executable
 //! running and is stored at once; every later look that still finds it moves
@@ -48,17 +50,89 @@ pub enum Tracking {
     Failed { reason: Error },
 }
 
+/// One Session of a Game, as the detail page lists it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Session {
+    /// When it began, in seconds since the Unix epoch.
+    pub started_at: u64,
+    /// How long it lasted, or has lasted so far while it runs, in seconds.
+    pub seconds: u64,
+    /// Whether its process still runs: the last look found it and tracking goes on.
+    pub running: bool,
+}
+
+/// The id of the Local Game whose Game id is `game_id`, if it is one.
+pub(crate) fn local_game_id(game_id: &str) -> Option<i64> {
+    game_id.strip_prefix("local:")?.parse().ok()
+}
+
 /// How long after one look at the running processes the next one happens.
 /// A Session may begin and end up to this much later than its process.
 pub(crate) const LOOK_EVERY: Duration = Duration::from_secs(5);
 
-/// The Sessions that run, as the tracking knows them: the stored Session of
-/// each Local Game whose process ran at the last look, by the Game's id.
-pub(crate) type OpenSessions = BTreeMap<i64, i64>;
+/// A Game whose Sessions are recorded.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum Tracked {
+    /// The Local Game stored under this id.
+    Local(i64),
+    /// The Steam Game with this app id.
+    Steam(u32),
+}
 
-/// The Game id of the Local Game stored under `id` (see [`crate::Game::id`]).
-pub(crate) fn game_id(id: i64) -> String {
-    format!("local:{id}")
+impl Tracked {
+    /// Its Game id (see [`crate::Game::id`]).
+    pub(crate) fn game_id(self) -> String {
+        match self {
+            Self::Local(id) => format!("local:{id}"),
+            Self::Steam(app_id) => format!("steam:{app_id}"),
+        }
+    }
+}
+
+/// The Sessions that run, as the tracking knows them: the stored Session of
+/// each Game whose process ran at the last look, by the Game.
+pub(crate) type OpenSessions = BTreeMap<Tracked, i64>;
+
+/// The app ids of the Installed Steam Games of the Steam installation in
+/// `steam_folder` that have an executable in their install folder among
+/// `running`, by whatever spelling of its path.
+///
+/// Steam's library folders are only read when a process runs from some
+/// `steamapps/common` folder, so most looks touch no Steam file.
+pub(crate) fn running_steam_games(steam_folder: &Path, running: &[PathBuf]) -> BTreeSet<u32> {
+    let candidates: Vec<&PathBuf> = running.iter().filter(|process| in_a_steam_install_folder(process)).collect();
+    if candidates.is_empty() {
+        return BTreeSet::new();
+    }
+    let Some(apps) = crate::steam::installed_apps(steam_folder) else {
+        return BTreeSet::new();
+    };
+    let folders: Vec<(u32, PathBuf)> = apps
+        .into_iter()
+        .filter_map(|app| {
+            let folder = app.install_folder?;
+            Some((app.app_id, fs::canonicalize(&folder).unwrap_or(folder)))
+        })
+        .collect();
+    let mut found = BTreeSet::new();
+    for process in candidates {
+        let process = fs::canonicalize(process).unwrap_or_else(|_| process.clone());
+        for (app_id, folder) in &folders {
+            if process.starts_with(folder) {
+                found.insert(*app_id);
+            }
+        }
+    }
+    found
+}
+
+/// Whether `path` lies below a `steamapps/common` folder, whatever the case
+/// of its names: where Steam installs Games.
+fn in_a_steam_install_folder(path: &Path) -> bool {
+    let names: Vec<String> =
+        path.components().map(|part| part.as_os_str().to_string_lossy().to_lowercase()).collect();
+    names.windows(3).any(|names| names[0] == "steamapps" && names[1] == "common")
 }
 
 /// The ids of the Local Games in `games` whose executable is one of

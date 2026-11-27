@@ -278,6 +278,21 @@ export const de: Record<MessageKey, string> = {
   'log.private': 'Nichts wird gesendet. Dein Schlüssel und deine SteamIDs landen nie im Protokoll.',
   'log.openFolder': 'Protokollordner öffnen',
   'log.openFailed': 'Der Protokollordner konnte nicht geöffnet werden.',
+  'limited.title': 'Eingeschränkter Modus',
+  'limited.noKey':
+    'Ohne Steam-Web-API-Schlüssel zeigt die App nur deine installierten Steam-Spiele, mit der Spielzeit, die Steam auf diesem Computer speichert. Hinterlege einen Schlüssel, um alle deine Spiele zu sehen.',
+  'limited.keyRejected':
+    'Steam hat deinen Steam-Web-API-Schlüssel abgelehnt. Deshalb zeigt die App nur deine installierten Steam-Spiele, mit der Spielzeit, die Steam auf diesem Computer speichert. Ersetze den Schlüssel in den Einstellungen.',
+  'limited.gameDetailsPrivate':
+    'Steam gibt deine Spiele nicht heraus, weil deine Spieldetails privat sind. „Spieldetails“ ist eine Privatsphäre-Einstellung deines Steam-Profils: Sie legt fest, wer sehen darf, welche Spiele du besitzt und wie lange du sie gespielt hast. Stelle sie in deinen Steam-Privatsphäre-Einstellungen auf „Öffentlich“ und synchronisiere dann erneut. Bis dahin zeigt die App nur deine installierten Steam-Spiele, mit der Spielzeit, die Steam auf diesem Computer speichert.',
+  'limited.steamUnreachable':
+    'Steam war nicht erreichbar. Deshalb zeigt die App nur deine installierten Steam-Spiele, mit der Spielzeit, die Steam auf diesem Computer speichert.',
+  'limited.setUp': 'Schlüssel einrichten',
+  'limited.openSettings': 'Einstellungen öffnen',
+  'limited.openPrivacySettings': 'Privatsphäre-Einstellungen öffnen',
+  'limited.syncAgain': 'Erneut synchronisieren',
+  'limited.retry': 'Erneut versuchen',
+  'limited.privacyFailed': 'Deine Steam-Privatsphäre-Einstellungen konnten nicht geöffnet werden.',
   'autostart.startWithWindows': 'Mit Windows starten',
   'autostart.hint': 'Wenn du dich bei Windows anmeldest, startet NiceLibrary im Infobereich, ohne sein Fenster zu öffnen.',
   'autostart.loadFailed': 'Ob NiceLibrary mit Windows startet, konnte nicht gelesen werden.',
@@ -297,6 +312,13 @@ export const de: Record<MessageKey, string> = {
   'adjustment.invalid': 'Gib die Zeit in ganzen Stunden und Minuten ein.',
   'adjustment.loadFailed': 'Die Spielzeit-Korrektur von {title} konnte nicht gelesen werden.',
   'adjustment.saveFailed': 'Die Spielzeit-Korrektur von {title} konnte nicht gespeichert werden.',
+  'sessions.title': 'Spielsitzungen',
+  'sessions.of': 'Spielsitzungen von {title}',
+  'sessions.none': 'Noch keine Spielsitzungen. Eine Spielsitzung wird aufgezeichnet, sobald {title} läuft, egal wie du es startest.',
+  'sessions.running': 'Läuft',
+  'sessions.hoursMinutes': '{hours} Std. {minutes} Min.',
+  'sessions.underAMinute': 'unter 1 Min.',
+  'sessions.loadFailed': 'Die Spielsitzungen von {title} konnten nicht gelesen werden.',
   'achievements.title': 'Trophäen',
   'achievements.count': '{unlocked} / {total} freigeschaltet',
   'achievements.list': 'Trophäen von {title}',
@@ -307,6 +329,10 @@ export const de: Record<MessageKey, string> = {
   'achievements.none': '{title} hat keine Trophäen.',
   'achievements.notFetchedYet': 'Die Trophäen wurden noch nicht abgerufen. Sie kommen mit einer der nächsten Synchronisierungen.',
   'achievements.loadFailed': 'Die Trophäen konnten nicht geladen werden.',
+  'achievements.secret': 'Geheime Trophäe',
+  'achievements.secretHint': 'Schalte sie frei, um zu sehen, was sie ist.',
+  'achievements.revealSecrets': 'Geheime Trophäen zeigen',
+  'achievements.rarity': 'Von {percent} der Spieler freigeschaltet',
   'launch.executableNotFound':
     '{title} konnte nicht gestartet werden, weil seine ausführbare Datei nicht gefunden wurde. Vielleicht wurde sie verschoben oder gelöscht.',
   'launch.workingDirectoryNotFound':

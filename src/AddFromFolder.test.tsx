@@ -133,6 +133,9 @@ function fakeOperations({
       matched.push([gameId, appId]);
     },
     importData: async () => ({ outcome: 'cancelled' }),
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, added, matched };
 }

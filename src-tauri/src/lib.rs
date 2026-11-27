@@ -8,10 +8,10 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     About, AboutPage, AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
-    CoverHue, CoverImageChoice, DataExport, DataImport, EditLocalGame, Error, ExecutableChoice, FolderSuggestions, Game, GameAchievements,
-    Install, Language, Launch, LaunchOptions, LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, ManualProgress,
-    Statistics, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch, SteamInstallation, SteamTitle, SteamWebApiKeyCheck,
-    Store, SyncOutcome, Theme, Tracking, started_with_windows,
+    CoverHue, CoverImageChoice, DataExport, DataImport, EditLocalGame, Error, ExecutableChoice, FolderSuggestions, Game,
+    GameAchievements, Install, Language, Launch, LaunchOptions, LibraryFilter, LibraryLayout, LimitedMode, LibrarySort,
+    LocalGame, Log, ManualProgress, Session, Statistics, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
+    SteamInstallation, SteamTitle, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -380,6 +380,11 @@ fn about(core: tauri::State<'_, Core>) -> About {
     core.about()
 }
 
+#[tauri::command]
+fn limited_mode(core: tauri::State<'_, Core>) -> Result<LimitedMode, Error> {
+    core.limited_mode()
+}
+
 /// Async, so a slow start of the browser does not block the window.
 #[tauri::command]
 async fn open_about_page(core: tauri::State<'_, Core>, page: AboutPage) -> Result<(), Error> {
@@ -400,6 +405,17 @@ fn choose_language(core: tauri::State<'_, Core>, language: Language) -> Result<(
 #[tauri::command]
 async fn cover_hue(core: tauri::State<'_, Core>, game_id: String) -> Result<Option<CoverHue>, Error> {
     core.cover_hue(&game_id)
+}
+
+/// Async, so a slow start of the browser does not block the window.
+#[tauri::command]
+async fn open_steam_privacy_settings(core: tauri::State<'_, Core>) -> Result<(), Error> {
+    core.open_steam_privacy_settings()
+}
+
+#[tauri::command]
+fn sessions(core: tauri::State<'_, Core>, game_id: String) -> Result<Vec<Session>, Error> {
+    core.sessions(&game_id)
 }
 
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
@@ -509,6 +525,8 @@ pub fn run() {
             set_cover_match,
             set_status,
             open_log_folder,
+            limited_mode,
+            open_steam_privacy_settings,
             starts_with_windows,
             set_start_with_windows,
             achievements,
@@ -534,7 +552,8 @@ pub fn run() {
             playtime_adjustment,
             set_playtime_adjustment,
             export_data,
-            import_data
+            import_data,
+            sessions
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
@@ -605,8 +624,9 @@ fn start_automatic_steam_app_list_fetches(app: &App) -> std::io::Result<()> {
 /// (`onSession` in src/operations.ts). A failed look tells the interface nothing.
 const SESSION_EVENT: &str = "session";
 
-/// Records the Sessions of Local Games on a thread of its own for as long as
-/// the app runs.
+/// Records the Sessions of Local Games and Installed Steam Games on a thread
+/// of its own for as long as the app runs. Each Session that ends starts an
+/// automatic Sync, which the interface hears through `AUTOMATIC_SYNC_EVENT`.
 fn start_session_tracking(app: &App) -> std::io::Result<()> {
     let app = app.handle().clone();
     std::thread::Builder::new().name("session-tracking".into()).spawn(move || {

@@ -23,6 +23,8 @@ function achievement(id: string, name: string, unlockedAt: number | null, detail
     unlocked: unlockedAt !== null,
     unlockedAt,
     icon: `${id.toLowerCase()}${unlockedAt === null ? '-grey' : ''}`,
+    secret: false,
+    rarity: null,
     ...details,
   };
 }
@@ -133,6 +135,9 @@ function fakeOperations(games: Game[], achievements: Record<string, GameAchievem
     setPlaytimeAdjustment: async () => {
       throw new Error('this test adjusts no Playtime');
     },
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, asked };
 }
@@ -254,6 +259,51 @@ describe('The Achievements on the detail page of a Steam Game', () => {
     const items = within(within(section).getByRole('list', { name: 'Trophäen von Portal 2' })).getAllByRole('listitem');
     expect(items[0]).toHaveTextContent('Freigeschaltet am 20.11.2026');
     expect(items[2]).toHaveTextContent('Noch nicht freigeschaltet');
+  });
+});
+
+describe('The Rarity of each Achievement', () => {
+  const WITH_RARITY: GameAchievements = {
+    state: 'listed',
+    unlocked: 1,
+    total: 4,
+    achievements: [
+      achievement('ACH_FINISH', 'Lunacy', LAST_WEEK, { rarity: 41 }),
+      achievement('ACH_SPEED_RUN', 'Speed run', null, { rarity: 8.149 }),
+      achievement('ACH_PARTNER', 'Partner', null, { rarity: 0.04 }),
+      achievement('ACH_UNKNOWN', 'Unknown', null, { rarity: null }),
+    ],
+  };
+
+  async function items(lang: 'en' | 'de') {
+    const { operations } = fakeOperations([PORTAL_2], { 'steam:620': WITH_RARITY });
+    render(<App operations={operations} lang={lang} />);
+    const { page } = await openDetailPage('Portal 2', lang === 'de' ? 'Details zu Portal 2' : undefined);
+    const name = lang === 'de' ? 'Trophäen von Portal 2' : 'Achievements of Portal 2';
+    return within(await within(page).findByRole('list', { name })).getAllByRole('listitem');
+  }
+
+  it('is shown in percent with one decimal', async () => {
+    const [finish, speedRun, partner] = await items('en');
+
+    expect(finish).toHaveTextContent('Unlocked by 41.0% of players');
+    expect(speedRun).toHaveTextContent('Unlocked by 8.1% of players');
+    expect(partner).toHaveTextContent('Unlocked by 0.0% of players');
+  });
+
+  it('is written the German way for a German interface', async () => {
+    const [finish, speedRun] = await items('de');
+
+    // German puts a space before the percent sign and writes a decimal comma.
+    expect(finish).toHaveTextContent(/Von 41,0\s%\sder Spieler freigeschaltet/);
+    expect(speedRun).toHaveTextContent(/Von 8,1\s%\sder Spieler freigeschaltet/);
+  });
+
+  it('is not shown, not even as zero, when it is not known', async () => {
+    const unknown = (await items('en'))[3];
+
+    expect(unknown).not.toHaveTextContent('%');
+    expect(unknown).not.toHaveTextContent('of players');
   });
 });
 

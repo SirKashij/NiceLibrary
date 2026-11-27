@@ -121,6 +121,9 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     statistics: async () => {
       throw new Error('this test shows no Statistics');
     },
+    limitedMode: async () => ({ outcome: 'off' }),
+    openSteamPrivacySettings: async () => {},
+    sessions: async () => [],
   };
   return { operations, chosen, launched, installed, marks, failWhenChoosing: () => (failChoosing = true) };
 }

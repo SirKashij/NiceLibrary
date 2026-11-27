@@ -266,6 +266,16 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
   width: var(--adjustment-field-width); font: inherit; color: var(--color-text); background: var(--color-surface);
   border: var(--hairline) solid var(--color-control-border); border-radius: var(--radius-control); padding: var(--space-1) var(--space-2);
 }
+
+/* Sessions on the detail page (src/library/SessionList.tsx): hairline rows, the running one marked in words. */
+.game-sessions { display: grid; gap: var(--space-3); padding-top: var(--space-7); max-width: var(--note-max-width); }
+.game-sessions h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.session-list { display: grid; margin: 0; padding: 0; list-style: none; }
+.session-list li { display: flex; gap: var(--space-4); padding: var(--space-2) 0; border-top: var(--hairline) solid var(--color-line); }
+.session-list time { flex: 1; color: var(--color-text-muted); }
+.session-list li[data-running='true'] time { color: var(--color-text); }
+.session-running { font-size: var(--text-size-label); font-weight: var(--weight-medium); }
+
 /* Achievements on the detail page: hairlines between them, locked ones dimmed and marked as locked. */
 .achievements { display: grid; gap: var(--space-3); padding-top: var(--space-7); max-width: var(--note-max-width); }
 .achievements-heading { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-4); }
@@ -277,7 +287,8 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .achievement-text { display: grid; gap: var(--space-1); min-width: 0; }
 .achievement-text h3 { font-size: var(--text-size-body); font-weight: var(--weight-medium); }
 .achievement-text p { color: var(--color-text-muted); }
-.achievement-status { font-size: var(--text-size-label); }
+.achievement-status,
+.achievement-rarity { font-size: var(--text-size-label); }
 .achievement[data-unlocked='false'] .achievement-icon,
 .achievement[data-unlocked='false'] .achievement-text { opacity: var(--achievement-locked-opacity); }
 /* Launch Options of a Local Game, on its detail page below the facts. */
@@ -386,3 +397,6 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .cover-match-results { display: grid; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
 .cover-match-result { text-align: left; color: var(--color-text-muted); }
 .cover-match-result:hover, .cover-match-result:focus-visible { color: var(--color-text); }
+/* The Limited Mode hint above the Library: quiet, a hairline beside it, no card (ADR-0007). */
+.limited-mode { display: grid; gap: var(--space-2); max-width: var(--note-max-width); padding-left: var(--space-3); border-left: var(--hairline) solid var(--color-line); }
+.limited-mode h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }

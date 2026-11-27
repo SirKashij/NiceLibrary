@@ -14,6 +14,9 @@ use crate::keyvalues;
 pub(crate) struct InstalledApp {
     pub app_id: u32,
     pub title: String,
+    /// Its install folder, `steamapps/common/<installdir>` in its library
+    /// folder; `None` when its manifest names none.
+    pub install_folder: Option<PathBuf>,
 }
 
 /// Port: where Steam is installed on this computer.
@@ -161,7 +164,7 @@ pub(crate) fn installed_apps(steam_folder: &Path) -> Option<Vec<InstalledApp>> {
             if !(name.starts_with("appmanifest_") && name.ends_with(".acf")) {
                 continue;
             }
-            if let Some(app) = read_manifest(&entry.path()).filter(|app| !is_steam_tool(app)) {
+            if let Some(app) = read_manifest(&entry.path(), &folder).filter(|app| !is_steam_tool(app)) {
                 apps.entry(app.app_id).or_insert(app);
             }
         }
@@ -200,9 +203,9 @@ fn library_folders(steam_folder: &Path) -> Option<Vec<PathBuf>> {
 /// update waits or downloads.
 const FULLY_INSTALLED: u32 = 4;
 
-/// The app in one `appmanifest_<id>.acf`, if it is fully installed. A
-/// manifest that cannot be read is skipped.
-fn read_manifest(path: &Path) -> Option<InstalledApp> {
+/// The app in one `appmanifest_<id>.acf` of the library folder `library`,
+/// if it is fully installed. A manifest that cannot be read is skipped.
+fn read_manifest(path: &Path, library: &Path) -> Option<InstalledApp> {
     let bytes = fs::read(path).ok()?;
     let doc = keyvalues::parse(&String::from_utf8_lossy(&bytes)).ok()?;
     let state = doc.block("AppState")?;
@@ -217,7 +220,12 @@ fn read_manifest(path: &Path) -> Option<InstalledApp> {
         .map(str::trim)
         .find(|title| !title.is_empty())?
         .to_owned();
-    Some(InstalledApp { app_id, title })
+    let install_folder = state
+        .string("installdir")
+        .map(str::trim)
+        .filter(|dir| !dir.is_empty())
+        .map(|dir| library.join("steamapps").join("common").join(dir));
+    Some(InstalledApp { app_id, title, install_folder })
 }
 
 /// Steam's own redistributables and runtimes, which Steam installs next to
@@ -244,4 +252,50 @@ fn is_steam_tool(app: &InstalledApp) -> bool {
         || title.starts_with("Steamworks Common Redistributables")
         || title.starts_with("Steam Linux Runtime")
         || proton_version
+}
+
+/// What Steam's local files say about one app the account has played on
+/// this computer: the fallback Playtime, used while Steam's own figure from
+/// a Sync is not known.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct LocalPlaytime {
+    /// Playtime in minutes.
+    pub minutes: u32,
+    /// Last Played in seconds since the Unix epoch; `None` for never.
+    pub last_played: Option<u64>,
+}
+
+/// The SteamID64 of the first personal Steam Account, whose account number is 0.
+const FIRST_STEAM_ID: u64 = 76_561_197_960_265_728;
+
+/// The fallback Playtime of each app in the account `steam_id`'s
+/// `userdata/<account number>/config/localconfig.vdf`, by app id. Empty when
+/// the file is missing or cannot be read.
+pub(crate) fn local_playtimes(steam_folder: &Path, steam_id: &str) -> BTreeMap<u32, LocalPlaytime> {
+    let mut playtimes = BTreeMap::new();
+    let Some(account_number) = steam_id.parse::<u64>().ok().and_then(|id| id.checked_sub(FIRST_STEAM_ID)) else {
+        return playtimes;
+    };
+    let path = steam_folder.join("userdata").join(account_number.to_string()).join("config").join("localconfig.vdf");
+    let Ok(bytes) = fs::read(path) else {
+        return playtimes;
+    };
+    let Ok(doc) = keyvalues::parse(&String::from_utf8_lossy(&bytes)) else {
+        return playtimes;
+    };
+    let apps = ["UserLocalConfigStore", "Software", "Valve", "Steam", "apps"]
+        .into_iter()
+        .try_fold(&doc, |block, key| block.block(key));
+    for (app_id, value) in apps.into_iter().flat_map(keyvalues::Block::entries) {
+        let (Ok(app_id), keyvalues::Value::Block(app)) = (app_id.parse::<u32>(), value) else {
+            continue;
+        };
+        let Some(minutes) = app.string("Playtime").and_then(|text| text.trim().parse::<u32>().ok()) else {
+            continue;
+        };
+        let last_played =
+            app.string("LastPlayed").and_then(|text| text.trim().parse::<u64>().ok()).filter(|&at| at > 0);
+        playtimes.insert(app_id, LocalPlaytime { minutes, last_played });
+    }
+    playtimes
 }

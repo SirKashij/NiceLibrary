@@ -161,7 +161,7 @@ fn the_settings_are_imported_and_the_app_starts_with_windows_as_the_file_says() 
 }
 
 #[test]
-fn steam_sessions_in_the_file_are_accepted() {
+fn steam_sessions_come_back_with_the_steam_account_they_were_played_with() {
     let app = App::start();
     let file = app.write_file(json!({
         "sessions": [
@@ -171,6 +171,13 @@ fn steam_sessions_in_the_file_are_accepted() {
     }));
 
     assert!(matches!(app.import(&file), DataImport::Imported { local_games: 0, .. }));
+    assert_eq!(
+        app.export()["sessions"],
+        json!([
+            { "gameId": "steam:620", "startedAt": at(10, 0), "endedAt": at(11, 0), "steamAccount": "76561197960287930" },
+            { "gameId": "steam:400", "startedAt": at(12, 0), "endedAt": at(13, 0) },
+        ])
+    );
 }
 
 #[test]
