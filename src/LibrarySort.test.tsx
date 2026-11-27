@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LibraryFilter, LibrarySort, Operations } from './operations';
 
 function steamGame(appId: number, title: string, playtimeMinutes: number | null, lastPlayed: number | null): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed: true, playtimeMinutes, lastPlayed, status: 'unplayed' };
+  return { id: `steam:${appId}`, title, source: 'steam', installed: true, playtimeMinutes, lastPlayed, progress: null, status: 'unplayed' };
 }
 
 // Ordered by title, as `library` answers.
@@ -59,6 +59,7 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     openLogFolder: async () => {},

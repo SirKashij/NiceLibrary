@@ -193,6 +193,12 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 }
 .tray-notice h2 { font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display); }
 
+/* Manual Progress of a Local Game, on its detail page. */
+.manual-progress { display: grid; gap: var(--space-2); width: 100%; max-width: var(--note-max-width); }
+.manual-progress h2 { font-size: var(--text-size-label); font-weight: var(--weight-medium); color: var(--color-text-muted); }
+.manual-progress form { display: grid; gap: var(--space-2); }
+.manual-progress .field-row { align-items: center; }
+.field-row .manual-progress-field { flex: none; width: calc(var(--space-7) + var(--space-5)); text-align: right; }
 /* Status: a quiet label under each Cover, a choice on the detail page, a select in the toolbar. */
 .status-badge { color: var(--color-text-muted); font-size: var(--text-size-label); }
 .status-badge[data-status='playing'] { color: var(--color-text); }

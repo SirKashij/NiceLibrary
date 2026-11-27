@@ -8,9 +8,9 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache, Error,
-    ExecutableChoice, Game, GameAchievements, Launch, LaunchOptions, LibraryFilter, LibrarySort, Log, Status,
-    SteamAccountChoice, SteamAppList, SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome,
-    Theme, Tracking, started_with_windows,
+    ExecutableChoice, Game, GameAchievements, Launch, LaunchOptions, LibraryFilter, LibrarySort, Log, ManualProgress,
+    Status, SteamAccountChoice, SteamAppList, SteamAppListFetch, SteamInstallation, SteamWebApiKeyCheck, Store,
+    SyncOutcome, Theme, Tracking, started_with_windows,
 };
 use percent_encoding::percent_decode_str;
 use tauri::http::{Response, StatusCode, header};
@@ -196,6 +196,15 @@ async fn fetch_steam_app_list(core: tauri::State<'_, Core>) -> Result<SteamAppLi
     core.fetch_steam_app_list()
 }
 
+#[tauri::command]
+fn set_manual_progress(
+    core: tauri::State<'_, Core>,
+    game_id: String,
+    percent: Option<i64>,
+) -> Result<ManualProgress, Error> {
+    core.set_manual_progress(&game_id, percent)
+}
+
 /// Async, so a slow start of File Explorer does not block the window.
 #[tauri::command]
 async fn open_log_folder(core: tauri::State<'_, Core>) -> Result<(), Error> {
@@ -300,6 +309,7 @@ pub fn run() {
             set_close_to_tray,
             close_window,
             show_tray_menu,
+            set_manual_progress,
             set_status,
             open_log_folder,
             starts_with_windows,

@@ -13,6 +13,7 @@ pub mod keyvalues;
 mod launch;
 mod local_games;
 mod library_filter;
+mod progress;
 mod log;
 mod sessions;
 mod status;
@@ -40,6 +41,7 @@ pub use covers::{Cover, CoverCache, Downloader};
 pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
+pub use progress::ManualProgress;
 pub use log::Log;
 pub use sessions::{ProcessList, Tracking};
 pub use status::Status;
@@ -76,14 +78,18 @@ pub struct Game {
     /// Last Played, in seconds since the Unix epoch; `None` for never or
     /// not known.
     pub last_played: Option<u64>,
+    /// Progress in percent, from 0 to 100, as its Source works it out (see
+    /// `progress`): for a Local Game its Manual Progress. `None` when the
+    /// Game has none.
+    pub progress: Option<u8>,
     /// The person's own judgement of where they stand with the Game;
     /// Unplayed until they set it. No Sync changes it.
     pub status: Status,
 }
 
 impl Game {
-    /// The Steam Game with Steam's app id `app_id`, without Playtime and
-    /// Last Played.
+    /// The Steam Game with Steam's app id `app_id`, without Playtime, Last
+    /// Played and Progress.
     pub(crate) fn steam(app_id: u32, title: String, installed: bool) -> Self {
         Self {
             id: format!("steam:{app_id}"),
@@ -92,6 +98,7 @@ impl Game {
             installed,
             playtime_minutes: None,
             last_played: None,
+            progress: None,
             status: Status::Unplayed,
         }
     }
@@ -234,8 +241,9 @@ impl Core {
         };
         let played = self.store.local_games_played()?;
         games.extend(self.store.local_games()?.into_iter().map(|game| {
-            let unplayed = Game::local(game.id, game.title);
-            match played.get(&game.id) {
+            let id = game.id;
+            let unplayed = Game::from_stored_local(game);
+            match played.get(&id) {
                 Some(played) => played.into_game(unplayed),
                 None => unplayed,
             }
@@ -740,6 +748,31 @@ impl Core {
         match local_game_id(game_id) {
             Some(id) if self.store.set_launch_options(id, &options)? => Ok(()),
             _ => Err(Error::new(format!("no such Local Game in the library: {game_id}"))),
+        }
+    }
+
+    /// Sets the Manual Progress of the Local Game `game_id` to `percent`, a
+    /// whole number from 0 to 100, or clears it with `None`; it is then the
+    /// Game's Progress. Anything outside 0 to 100, and any Game that is not a
+    /// Local Game, is refused and changes nothing. Fails when there is no
+    /// such Local Game.
+    pub fn set_manual_progress(&self, game_id: &str, percent: Option<i64>) -> Result<ManualProgress, Error> {
+        let Some(id) = local_game_id(game_id) else {
+            return Ok(ManualProgress::NotALocalGame);
+        };
+        let manual_progress = match percent {
+            Some(percent) => match progress::percent_in(percent) {
+                Some(percent) => Some(percent),
+                None => return Ok(ManualProgress::OutOfRange),
+            },
+            None => None,
+        };
+        if !self.store.set_manual_progress(id, manual_progress)? {
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
+        }
+        match self.game(game_id)? {
+            Some(game) => Ok(ManualProgress::Set { game }),
+            None => Err(Error::new(format!("no such game in the library: {game_id}"))),
         }
     }
 

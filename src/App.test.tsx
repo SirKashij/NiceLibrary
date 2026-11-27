@@ -54,6 +54,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     launchOptions: async () => null,
     setLaunchOptions: async () => {},
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
   };
 }
 
@@ -61,7 +62,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
 const pending = <T,>() => new Promise<T>(() => {});
 
 function steamGame(appId: number, title: string, installed = true): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed' };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, progress: null, status: 'unplayed' };
 }
 
 function gameTitles() {

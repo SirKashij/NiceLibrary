@@ -13,7 +13,7 @@ const LAST_WEEK = 1_795_205_700;
 const pending = <T,>() => new Promise<T>(() => {});
 
 function steamGame(appId: number, title: string, installed: boolean, minutes: number | null, lastPlayed: number | null): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: minutes, lastPlayed, status: 'unplayed' };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: minutes, lastPlayed, progress: null, status: 'unplayed' };
 }
 
 /**
@@ -102,6 +102,7 @@ function fakeOperations({
     chooseLibrarySort: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     setStatus: async () => {
       throw new Error('this test sets no Status');
     },

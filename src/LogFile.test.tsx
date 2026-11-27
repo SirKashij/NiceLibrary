@@ -32,6 +32,7 @@ function fakeOperations() {
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     collections: async () => [],

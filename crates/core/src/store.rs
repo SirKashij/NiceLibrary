@@ -120,6 +120,8 @@ const MIGRATIONS: &[&str] = &[
     // its Working Directory, NULL for the executable's folder.
     "ALTER TABLE local_games ADD COLUMN launch_arguments TEXT NOT NULL DEFAULT '';
      ALTER TABLE local_games ADD COLUMN working_directory TEXT;",
+    // 10: The Manual Progress of a Local Game, in percent; NULL while the user has set none.
+    "ALTER TABLE local_games ADD COLUMN manual_progress INTEGER;",
 ];
 
 /// The setting that names the Steam Account whose Games were read last, from
@@ -376,6 +378,15 @@ impl Store {
         Ok(changed > 0)
     }
 
+    /// Stores `manual_progress` as the Manual Progress of the Local Game
+    /// `id`, or clears it with `None`. Answers whether there is such a Game.
+    pub(crate) fn set_manual_progress(&self, id: i64, manual_progress: Option<u8>) -> Result<bool, Error> {
+        let changed = self
+            .connection()
+            .execute("UPDATE local_games SET manual_progress = ?1 WHERE id = ?2", params![manual_progress, id])?;
+        Ok(changed > 0)
+    }
+
     /// Adds the Local Game `title` with its `executable` and answers its id.
     pub(crate) fn add_local_game(&self, title: &str, executable: &str) -> Result<i64, Error> {
         let connection = self.connection();
@@ -490,7 +501,7 @@ impl Store {
 
 /// The columns [`stored_local_game`] reads, from every Local Game.
 const SELECT_LOCAL_GAMES: &str =
-    "SELECT id, title, executable, launch_arguments, working_directory FROM local_games";
+    "SELECT id, title, executable, launch_arguments, working_directory, manual_progress FROM local_games";
 
 fn stored_local_game(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredLocalGame> {
     Ok(StoredLocalGame {
@@ -498,6 +509,7 @@ fn stored_local_game(row: &rusqlite::Row<'_>) -> rusqlite::Result<StoredLocalGam
         title: row.get(1)?,
         executable: row.get(2)?,
         launch_options: LaunchOptions { arguments: row.get(3)?, working_directory: row.get(4)? },
+        manual_progress: row.get(5)?,
     })
 }
 

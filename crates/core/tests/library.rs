@@ -83,6 +83,7 @@ fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
         installed: true,
         playtime_minutes: Some(1_234),
         last_played: Some(1_795_205_700),
+        progress: Some(42),
         status: Status::Unplayed,
     };
 
@@ -95,13 +96,14 @@ fn a_game_reaches_the_interface_in_the_shape_the_interface_expects() {
             "installed": true,
             "playtimeMinutes": 1234,
             "lastPlayed": 1795205700,
+            "progress": 42,
             "status": "unplayed"
         })
     );
 }
 
 #[test]
-fn a_game_without_playtime_and_last_played_reaches_the_interface_with_null() {
+fn a_game_without_playtime_last_played_and_progress_reaches_the_interface_with_null() {
     let game = Game {
         id: "steam:620".into(),
         title: "Portal 2".into(),
@@ -109,6 +111,7 @@ fn a_game_without_playtime_and_last_played_reaches_the_interface_with_null() {
         installed: true,
         playtime_minutes: None,
         last_played: None,
+        progress: None,
         status: Status::Unplayed,
     };
 
@@ -116,6 +119,7 @@ fn a_game_without_playtime_and_last_played_reaches_the_interface_with_null() {
 
     assert_eq!(json["playtimeMinutes"], serde_json::Value::Null);
     assert_eq!(json["lastPlayed"], serde_json::Value::Null);
+    assert_eq!(json["progress"], serde_json::Value::Null);
 }
 
 /// A clock that stands still; these tests do not depend on the time.

@@ -22,9 +22,24 @@ export interface Game {
   playtimeMinutes: number | null;
   /** Last Played, in seconds since the Unix epoch; `null` for never or not known. */
   lastPlayed: number | null;
+  /**
+   * Progress in percent, from 0 to 100, as the Game's Source works it out:
+   * for a Local Game its Manual Progress. `null` when the Game has none.
+   */
+  progress: number | null;
   /** Set by hand only, `unplayed` until then; no Sync changes it. */
   status: Status;
 }
+
+/**
+ * How setting or clearing a Local Game's Manual Progress went, when nothing
+ * failed. Every outcome but `set` changed nothing. Mirrors `ManualProgress`
+ * in crates/core.
+ */
+export type ManualProgress =
+  | { outcome: 'set'; /** The Game as the Library shows it now. */ game: Game }
+  | { outcome: 'outOfRange' }
+  | { outcome: 'notALocalGame' };
 
 /** How a Sync went, when nothing failed. Every outcome but `synced` changed nothing. Mirrors `SyncOutcome` in crates/core. */
 export type SyncOutcome =
@@ -325,6 +340,12 @@ export interface Operations {
   /** Makes `sort` the order of the Library, also after a restart. */
   chooseLibrarySort(sort: LibrarySort): Promise<void>;
   /**
+   * Sets a Local Game's Manual Progress to a whole number from 0 to 100, or
+   * clears it with `null`; it is then the Game's Progress. Anything outside
+   * 0 to 100 is `outOfRange`, a Steam Game `notALocalGame`; both change nothing.
+   */
+  setManualProgress(gameId: string, percent: number | null): Promise<ManualProgress>;
+  /**
    * Sets the Status of a Game, also after a restart, and answers the Game as
    * the Library now shows it. Rejects for a Game that is not in the Library.
    */
@@ -429,6 +450,7 @@ export const tauriOperations: Operations = {
   showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
   librarySort: () => invoke<LibrarySort>('library_sort'),
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
+  setManualProgress: (gameId, percent) => invoke<ManualProgress>('set_manual_progress', { gameId, percent }),
   setStatus: (gameId, status) => invoke<Game>('set_status', { gameId, status }),
   openLogFolder: () => invoke<void>('open_log_folder'),
   startsWithWindows: () => invoke<boolean>('starts_with_windows'),

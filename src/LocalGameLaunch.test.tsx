@@ -11,6 +11,7 @@ const CELESTE: Game = {
   installed: true,
   playtimeMinutes: 0,
   lastPlayed: null,
+  progress: null,
   status: 'unplayed',
 };
 
@@ -21,6 +22,7 @@ const PORTAL_2: Game = {
   installed: true,
   playtimeMinutes: null,
   lastPlayed: null,
+  progress: null,
   status: 'unplayed',
 };
 
@@ -73,6 +75,7 @@ function fakeOperations({
     game: async (gameId) => games.find((game) => game.id === gameId) ?? null,
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
+    setManualProgress: async () => ({ outcome: 'notALocalGame' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),

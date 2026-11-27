@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Achievements } from './Achievements';
 import { useFormat, useT, type MessageKey } from './i18n';
 import { LaunchOptionsForm } from './LaunchOptions';
+import { ManualProgressForm } from './ManualProgress';
 import { StatusChoice } from './library/Status';
 import type { Game, Operations, Source, Status } from './operations';
 
@@ -12,10 +13,11 @@ const SOURCES: Record<Source, MessageKey> = {
 
 /**
  * The detail page of one Game: its large Cover, title, Source, whether it is
- * Installed, its Status to set, Playtime, Last Played and the main action, its
- * Achievements, and the way back to the Library. Shows the Game as opened at
- * once and as the core answers it
- * then, again after each Sync.
+ * Installed, its Status to set, Playtime, Last Played, Progress when it has
+ * one, the main action, for a Local Game its Launch Options and Manual
+ * Progress, its Achievements, and the way back to the Library. Shows the Game
+ * as opened at once and as the core answers it then, again after each Sync
+ * and after each change of its Manual Progress.
  */
 export function GameDetail({
   operations,
@@ -130,6 +132,12 @@ export function GameDetail({
                   <dt>{t('game.lastPlayed')}</dt>
                   <dd>{lastPlayed}</dd>
                 </div>
+                {game.progress !== null && (
+                  <div>
+                    <dt>{t('game.progress')}</dt>
+                    <dd>{format.percent(game.progress)}</dd>
+                  </div>
+                )}
               </dl>
               {statusFailed && (
                 <p className="note" role="alert">
@@ -137,6 +145,9 @@ export function GameDetail({
                 </p>
               )}
               {game.source === 'local' && <LaunchOptionsForm operations={operations} game={game} />}
+              {game.source === 'local' && (
+                <ManualProgressForm operations={operations} game={game} onSet={setGame} />
+              )}
             </>
           )}
         </div>
