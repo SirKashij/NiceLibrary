@@ -42,6 +42,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     setStartWithWindows: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: () => () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),

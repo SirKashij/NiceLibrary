@@ -83,6 +83,7 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     coverHue: async () => null,
     language: async () => 'system',
     chooseLanguage: async () => {},
+    install: async () => ({ outcome: 'started' }),
   };
   const removeOutsideTheApp = () => {
     entry = false;

@@ -141,6 +141,10 @@ _Avoid_: Command line, parameters (in English text)
 The folder a Local Game's executable is started in. Without one, the executable's own folder.
 _Avoid_: Start folder, current directory
 
+**Install**:
+Asking Steam, from the app, to install a Steam Game that is owned but not Installed. Steam shows its own install dialog and does the installing; the Game counts as Installed once Steam reports it so.
+_Avoid_: Download, setup
+
 **Log**:
 The files on this computer the app writes its errors and notable events to, for the person to attach to a bug report themselves. It never holds the Steam Web API key or a full SteamID, and the app never sends it.
 _Avoid_: Crash report, telemetry, diagnostics

@@ -81,6 +81,9 @@ export interface LaunchOptions {
   workingDirectory: string | null;
 }
 
+/** How starting the installation of a Steam Game went, when nothing failed. Mirrors `Install` in crates/core. */
+export type InstallOutcome = { outcome: 'started' } | { outcome: 'steamNotFound' };
+
 /** How storing the Steam Web API key went, when nothing failed. Mirrors `SteamWebApiKeyCheck` in crates/core. */
 export type SteamWebApiKeyCheck = { outcome: 'stored' } | { outcome: 'invalid' } | { outcome: 'steamUnreachable' };
 
@@ -456,6 +459,11 @@ export interface Operations {
    * its Tint; `null` when it has no Cover or one without colour to speak of.
    */
   coverHue(gameId: string): Promise<CoverHue | null>;
+  /**
+   * Starts the installation of a Steam Game that is owned but not Installed:
+   * Steam shows its install dialog for it. Rejects when that could not be done.
+   */
+  install(game: Game): Promise<InstallOutcome>;
 }
 
 /** The hue most of a Cover's colourful pixels share. Mirrors `CoverHue` in crates/core. */
@@ -591,4 +599,5 @@ export const tauriOperations: Operations = {
   about: () => invoke<About>('about'),
   openAboutPage: (page) => invoke<void>('open_about_page', { page }),
   coverHue: (gameId) => invoke<CoverHue | null>('cover_hue', { gameId }),
+  install: (game) => invoke<InstallOutcome>('install', { gameId: game.id }),
 };

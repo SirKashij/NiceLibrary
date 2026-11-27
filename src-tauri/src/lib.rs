@@ -8,7 +8,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     About, AboutPage, AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
-    CoverHue, CoverImageChoice, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Language, Launch, LaunchOptions,
+    CoverHue, CoverImageChoice, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Install, Language, Launch, LaunchOptions,
     LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
     SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
 };
@@ -32,6 +32,12 @@ async fn read_installed_games(core: tauri::State<'_, Core>) -> Result<Vec<Game>,
 #[tauri::command]
 async fn launch(core: tauri::State<'_, Core>, game_id: String) -> Result<Launch, Error> {
     core.launch(&game_id)
+}
+
+/// Async, like `launch`: it opens a `steam://` URL too.
+#[tauri::command]
+async fn install(core: tauri::State<'_, Core>, game_id: String) -> Result<Install, Error> {
+    core.install(&game_id)
 }
 
 #[tauri::command]
@@ -451,7 +457,8 @@ pub fn run() {
             open_about_page,
             language,
             choose_language,
-            cover_hue
+            cover_hue,
+            install
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

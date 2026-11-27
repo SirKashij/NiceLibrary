@@ -46,7 +46,7 @@ pub use collections::{Collection, CollectionNaming};
 pub use cover_hue::CoverHue;
 pub use covers::{Cover, CoverCache, Downloader};
 pub use language::Language;
-pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
+pub use launch::{Install, Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
 pub use local_games::{AddLocalGame, EditLocalGame, ExecutableChoice, ExecutablePicker, LocalGame};
@@ -445,6 +445,34 @@ impl Core {
             Ok(()) => Ok(Launch::Launched),
             Err(OpenError::NoProgram) => Ok(Launch::SteamNotFound),
             Err(error) => Err(Error::new(format!("{} could not be launched: {error}", game.title))),
+        }
+    }
+
+    /// Starts the installation of the Steam Game `game_id`, which is owned
+    /// but not Installed, by opening its `steam://install/` URL: Steam shows
+    /// its install dialog and installs the Game. The next reading of the
+    /// Installed Games finds it once Steam is done.
+    pub fn install(&self, game_id: &str) -> Result<Install, Error> {
+        self.logged_outcome("install", self.install_game(game_id))
+    }
+
+    fn install_game(&self, game_id: &str) -> Result<Install, Error> {
+        let Some(game) = self.stored_library()?.into_iter().find(|game| game.id == game_id) else {
+            return Err(Error::new(format!("no such game in the library: {game_id}")));
+        };
+        if game.installed {
+            return Err(Error::new(format!("already installed: {}", game.title)));
+        }
+        let Some(app_id) = steam_app_id(&game.id) else {
+            return Err(Error::new(format!("only Steam Games can be installed: {}", game.title)));
+        };
+        if self.ports.steam_locator.steam_folder().is_none() {
+            return Ok(Install::SteamNotFound);
+        }
+        match self.ports.opener.open_url(&launch::steam_install_url(app_id)) {
+            Ok(()) => Ok(Install::Started),
+            Err(OpenError::NoProgram) => Ok(Install::SteamNotFound),
+            Err(error) => Err(Error::new(format!("the installation of {} could not be started: {error}", game.title))),
         }
     }
 

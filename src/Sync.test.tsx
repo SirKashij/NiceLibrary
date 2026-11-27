@@ -96,6 +96,7 @@ function fakeOperations({
     setStartWithWindows: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

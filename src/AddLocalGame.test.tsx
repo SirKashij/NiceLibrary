@@ -49,6 +49,7 @@ function fakeOperations({
     showTrayMenu: async () => {},
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
+    install: async () => ({ outcome: 'started' }),
     onAutomaticSync: () => () => {},
     steamAppList: async () => ({ titles: 0, fetchedAt: null, unfinished: false }),
     fetchSteamAppList: async () => ({ outcome: 'noKey' }),

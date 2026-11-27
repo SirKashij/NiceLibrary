@@ -4,6 +4,7 @@ import { useCoverTint } from './coverTint';
 import { useFormat, useT, type MessageKey } from './i18n';
 import { FavoriteToggle } from './Favorites';
 import { LaunchOptionsForm } from './LaunchOptions';
+import { GameActionButton } from './library/GameAction';
 import { HideGameButton } from './library/HiddenGames';
 import { StatusChoice } from './library/Status';
 import { LocalGameCoverChoice } from './LocalGameCover';
@@ -30,6 +31,7 @@ export function GameDetail({
   collections,
   notice,
   onPlay,
+  onInstall,
   onStatusSet,
   onFavorite,
   onBack,
@@ -47,9 +49,11 @@ export function GameDetail({
   cover: (game: Game) => ReactNode;
   /** Which Collections the Game is in, shown while it is in the Library. */
   collections?: ReactNode;
-  /** Why the last Launch did not start, if it did not. */
+  /** Why the last Launch or Install did not work, if it did not. */
   notice?: ReactNode;
   onPlay: (game: Game) => void;
+  /** Starts the installation of a Steam Game that is not Installed. */
+  onInstall: (game: Game) => void;
   /** Hears that the Game's Status was set, which changes the Library. */
   onStatusSet: (game: Game) => void;
   /** Marks the Game as a Favorite, or unmarks it. */
@@ -144,16 +148,7 @@ export function GameDetail({
             <p className="note">{t('game.gone', { title: opened.title })}</p>
           ) : (
             <>
-              {game.installed && (
-                <button
-                  type="button"
-                  className="button play-main"
-                  aria-label={t('library.playGame', { title: game.title })}
-                  onClick={() => onPlay(game)}
-                >
-                  {t('library.play')}
-                </button>
-              )}
+              <GameActionButton game={game} className="button play-main" onPlay={onPlay} onInstall={onInstall} />
               <dl className="game-facts" aria-label={t('game.facts', { title: game.title })}>
                 <div>
                   <dt>{t('game.source')}</dt>
