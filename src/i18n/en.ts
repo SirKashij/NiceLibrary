@@ -174,6 +174,12 @@ export const en = {
   'tray.notice':
     'When you close the window, NiceLibrary keeps running in the tray so it can go on tracking your playtime. Click its tray icon to open it again, or quit it from the icon’s menu. You can change this in the Settings under Window.',
   'tray.ok': 'OK',
+  'settings.language': 'Language',
+  'language.choose': 'Interface language',
+  'language.system': 'Match system',
+  'language.de': 'Deutsch',
+  'language.en': 'English',
+  'language.saveFailed': 'The language could not be saved.',
 } as const;
 
 export type MessageKey = keyof typeof en;

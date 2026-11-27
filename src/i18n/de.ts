@@ -176,4 +176,10 @@ export const de: Record<MessageKey, string> = {
   'tray.notice':
     'Wenn du das Fenster schließt, läuft NiceLibrary im Infobereich der Taskleiste weiter und erfasst weiter deine Spielzeit. Ein Klick auf das Symbol dort öffnet es wieder, über sein Menü beendest du es. Ändern kannst du das in den Einstellungen unter Fenster.',
   'tray.ok': 'OK',
+  'settings.language': 'Sprache',
+  'language.choose': 'Sprache der Oberfläche',
+  'language.system': 'Wie im System',
+  'language.de': 'Deutsch',
+  'language.en': 'English',
+  'language.saveFailed': 'Die Sprache konnte nicht gespeichert werden.',
 };

@@ -37,6 +37,8 @@ function fakeOperations({ closeToTray = true } = {}) {
     renameCollection: async (id) => ({ outcome: 'named', id }),
     deleteCollection: async () => {},
     theme: async () => 'system',
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),

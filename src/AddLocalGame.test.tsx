@@ -48,6 +48,8 @@ function fakeOperations({
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
     theme: async () => 'system',
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async () => {},
     collections: async () => [],
     createCollection: async () => ({ outcome: 'emptyName' }),

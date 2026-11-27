@@ -52,6 +52,8 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     },
     game: async (gameId) => LIBRARY.find((game) => game.id === gameId) ?? null,
     theme: async () => 'system',
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),

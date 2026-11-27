@@ -9,11 +9,8 @@ import { App } from './App';
 import { systemLang } from './i18n';
 import { tauriOperations } from './operations';
 
-const lang = systemLang();
-document.documentElement.lang = lang;
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App operations={tauriOperations} lang={lang} />
+    <App operations={tauriOperations} lang={systemLang()} />
   </StrictMode>,
 );

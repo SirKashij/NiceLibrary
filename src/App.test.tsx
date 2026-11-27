@@ -22,6 +22,8 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => null,
     theme: async () => 'system',
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async () => {},
     filterLibrary: async () => [],
     closeToTray: async () => true,

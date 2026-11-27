@@ -267,7 +267,17 @@ export interface Operations {
   librarySort(): Promise<LibrarySort>;
   /** Makes `sort` the order of the Library, also after a restart. */
   chooseLibrarySort(sort: LibrarySort): Promise<void>;
+  /** The interface language the user chose; `system` until they choose. */
+  language(): Promise<Language>;
+  /** Makes `language` the interface language, also after a restart. */
+  chooseLanguage(language: Language): Promise<void>;
 }
+
+/**
+ * The interface language the user chose; `system` follows the system language, English for anything
+ * but German. Mirrors `Language` in crates/core.
+ */
+export type Language = 'system' | 'de' | 'en';
 
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
 export interface TrayMenuTexts {
@@ -333,4 +343,6 @@ export const tauriOperations: Operations = {
   showTrayMenu: (texts) => invoke<void>('show_tray_menu', { texts }),
   librarySort: () => invoke<LibrarySort>('library_sort'),
   chooseLibrarySort: (sort) => invoke<void>('choose_library_sort', { sort }),
+  language: () => invoke<Language>('language'),
+  chooseLanguage: (language) => invoke<void>('choose_language', { language }),
 };

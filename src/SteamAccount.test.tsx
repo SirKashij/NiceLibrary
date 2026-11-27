@@ -58,6 +58,8 @@ function fakeOperations(
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => (account && lastSyncs[account]) || null,
     theme: async () => 'system',
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async () => {},
     filterLibrary: async () => [],
     closeToTray: async () => true,

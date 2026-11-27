@@ -39,6 +39,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     chooseLibrarySort: async () => {},
     game: async () => null,
     theme: async () => theme,
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async (chosen) => {
       calls.chosen.push(chosen);
       theme = chosen;

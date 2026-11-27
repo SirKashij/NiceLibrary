@@ -8,6 +8,7 @@ mod clock;
 mod collections;
 mod covers;
 pub mod keyvalues;
+mod language;
 mod launch;
 mod local_games;
 mod library_filter;
@@ -28,6 +29,7 @@ use serde::{Deserialize, Serialize, Serializer};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
+pub use language::Language;
 pub use launch::{Launch, OpenError, Opener};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_games::{AddLocalGame, ExecutableChoice, ExecutablePicker};
@@ -453,6 +455,19 @@ impl Core {
     /// restart.
     pub fn choose_theme(&self, theme: Theme) -> Result<(), Error> {
         self.store.choose_theme(theme)
+    }
+
+    /// The interface language the user chose; until they choose,
+    /// [`Language::System`]: the interface follows the system language, and
+    /// English for anything but German.
+    pub fn language(&self) -> Result<Language, Error> {
+        self.store.language()
+    }
+
+    /// Makes `language` the interface language, from now on and after every
+    /// restart.
+    pub fn choose_language(&self, language: Language) -> Result<(), Error> {
+        self.store.choose_language(language)
     }
 
     /// Every Collection with how many Games of the Library are in it,

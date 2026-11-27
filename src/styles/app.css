@@ -192,3 +192,7 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
   background: var(--color-surface-raised); border: var(--hairline) solid var(--color-line); border-radius: var(--radius-control);
 }
 .tray-notice h2 { font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display); }
+
+/* Language settings: the same column of choices as the theme. */
+.language-choice { display: grid; gap: var(--space-1); }
+.language-choice label { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) 0; cursor: pointer; }

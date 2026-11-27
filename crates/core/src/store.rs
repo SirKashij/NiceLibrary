@@ -14,6 +14,7 @@ use std::sync::{Mutex, MutexGuard};
 use rusqlite::{Connection, params};
 
 use crate::collections::{self, CollectionNaming};
+use crate::language::Language;
 use crate::local_games::StoredLocalGame;
 use crate::steam::InstalledApp;
 use crate::sync::OwnedGame;
@@ -80,6 +81,9 @@ const LIBRARY_SORT: &str = "library_sort";
 
 /// The setting that holds the theme the user chose.
 const THEME: &str = "theme";
+
+/// The setting that holds the interface language the user chose.
+const LANGUAGE: &str = "language";
 
 /// The local store.
 pub struct Store {
@@ -171,6 +175,21 @@ impl Store {
             "INSERT INTO settings (key, value) VALUES (?1, ?2)
              ON CONFLICT (key) DO UPDATE SET value = excluded.value",
             params![THEME, theme.as_setting()],
+        )?;
+        Ok(())
+    }
+
+    /// The interface language the user chose; [`Language::System`] until they choose.
+    pub(crate) fn language(&self) -> Result<Language, Error> {
+        Ok(self.setting(LANGUAGE)?.map_or(Language::System, |setting| Language::from_setting(&setting)))
+    }
+
+    /// Remembers `language` as the interface language the user chose.
+    pub(crate) fn choose_language(&self, language: Language) -> Result<(), Error> {
+        self.connection().execute(
+            "INSERT INTO settings (key, value) VALUES (?1, ?2)
+             ON CONFLICT (key) DO UPDATE SET value = excluded.value",
+            params![LANGUAGE, language.as_setting()],
         )?;
         Ok(())
     }
