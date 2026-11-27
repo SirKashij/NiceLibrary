@@ -89,6 +89,8 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, calls };
 }
@@ -288,7 +290,7 @@ describe('Deleting a Collection', () => {
 
   it('removes no Game from the Library', async () => {
     const user = userEvent.setup();
-    const portal: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed' };
+    const portal: Game = { id: 'steam:620', title: 'Portal 2', source: 'steam', installed: true, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
     render(<App operations={fakeOperations([BACKLOG], [portal]).operations} lang="en" />);
 
     await user.click(await screen.findByRole('button', { name: 'Delete Backlog' }));

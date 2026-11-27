@@ -64,6 +64,8 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
 }
 
@@ -71,7 +73,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
 const pending = <T,>() => new Promise<T>(() => {});
 
 function steamGame(appId: number, title: string, installed = true): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed' };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
 }
 
 function gameTitles() {

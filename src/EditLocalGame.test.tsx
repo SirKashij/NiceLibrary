@@ -12,6 +12,7 @@ const CELESTE: Game = {
   playtimeMinutes: 0,
   lastPlayed: null,
   status: 'unplayed',
+  favorite: false,
 };
 
 const PORTAL_2: Game = {
@@ -22,6 +23,7 @@ const PORTAL_2: Game = {
   playtimeMinutes: 1_260,
   lastPlayed: null,
   status: 'unplayed',
+  favorite: false,
 };
 
 const CELESTE_EXE = 'C:\\Games\\Celeste\\Celeste.exe';
@@ -114,6 +116,8 @@ function fakeOperations(
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     launchOptions: async () => null,
     setLaunchOptions: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, calls };
 }

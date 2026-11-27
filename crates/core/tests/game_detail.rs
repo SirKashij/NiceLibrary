@@ -183,6 +183,7 @@ fn an_installed_steam_game_shows_its_source_and_that_it_is_installed() {
             playtime_minutes: None,
             last_played: None,
             status: Status::Unplayed,
+            favorite: false,
         }))
     );
 }

@@ -257,4 +257,10 @@ export const de: Record<MessageKey, string> = {
   'hidden.unhideFailed': '{title} konnte nicht eingeblendet werden.',
   'hidden.none': 'Kein Spiel ist ausgeblendet.',
   'hidden.loadFailed': 'Deine ausgeblendeten Spiele konnten nicht geladen werden.',
+  'favorites.title': 'Favoriten',
+  'favorites.entryOne': 'Favoriten, 1 Spiel',
+  'favorites.entry': 'Favoriten, {count} Spiele',
+  'favorites.toggle': '{title} als Favorit',
+  'favorites.none': 'Noch keine Favoriten. Markiere ein Spiel mit seinem Stern, um es hier zu finden.',
+  'favorites.failed': '{title} konnte nicht als Favorit markiert oder entfernt werden.',
 };

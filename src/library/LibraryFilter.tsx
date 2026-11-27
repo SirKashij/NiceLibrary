@@ -8,11 +8,17 @@ import { STATUS_LABELS, STATUSES } from './Status';
 export type Narrowing = Omit<LibraryFilter, 'sort'>;
 
 /** The filter that narrows nothing: the whole Library. */
-export const NO_FILTER: Narrowing = { search: '', source: null, installedOnly: false, status: null };
+export const NO_FILTER: Narrowing = { search: '', source: null, installedOnly: false, status: null, favoritesOnly: false };
 
 /** Whether `filter` narrows the Library at all. */
 export function isFiltering(filter: Narrowing): boolean {
-  return filter.search !== '' || filter.source !== null || filter.installedOnly || filter.status !== null;
+  return (
+    filter.search !== '' ||
+    filter.source !== null ||
+    filter.installedOnly ||
+    filter.status !== null ||
+    filter.favoritesOnly
+  );
 }
 
 /** What the Library shows for a filter: the Games, or that the core could not filter. */

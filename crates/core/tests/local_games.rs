@@ -200,6 +200,7 @@ fn a_local_game_is_installed_belongs_to_the_local_source_and_has_not_been_played
             playtime_minutes: Some(0),
             last_played: None,
             status: Status::Unplayed,
+            favorite: false,
         }
     );
     assert!(game.id.starts_with("local:"), "{}", game.id);

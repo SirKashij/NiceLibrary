@@ -269,6 +269,16 @@ fn unhide_game(core: tauri::State<'_, Core>, game_id: String) -> Result<(), Erro
     core.unhide_game(&game_id)
 }
 
+#[tauri::command]
+fn mark_favorite(core: tauri::State<'_, Core>, game_id: String, favorite: bool) -> Result<(), Error> {
+    core.mark_favorite(&game_id, favorite)
+}
+
+#[tauri::command]
+fn favorite_count(core: tauri::State<'_, Core>) -> Result<u32, Error> {
+    core.favorite_count()
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 /// Achievement icons come from `<game id>/achievements/<icon>` under the same scheme
@@ -377,7 +387,9 @@ pub fn run() {
             local_game,
             choose_executable_for,
             edit_local_game,
-            remove_local_game
+            remove_local_game,
+            mark_favorite,
+            favorite_count
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

@@ -5,7 +5,7 @@ import { App } from './App';
 import type { Game, LaunchOutcome, Operations } from './operations';
 
 function steamGame(appId: number, title: string, installed = true): Game {
-  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed' };
+  return { id: `steam:${appId}`, title, source: 'steam', installed, playtimeMinutes: null, lastPlayed: null, status: 'unplayed', favorite: false };
 }
 
 /** Fake operations over a stored Library; `launch` records each Game it is asked to launch. */
@@ -70,6 +70,8 @@ function fakeOperations(games: Game[], launch: (game: Game) => Promise<LaunchOut
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, requested };
 }

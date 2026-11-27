@@ -12,7 +12,7 @@ function steamGame(appId: number, title: string, details: Partial<Game> = {}): G
     installed: true,
     playtimeMinutes: null,
     lastPlayed: null,
-    status: 'unplayed',
+    status: 'unplayed',    favorite: false,
     ...details,
   };
 }
@@ -98,6 +98,8 @@ function fakeOperations(
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, calls, change: (next: Game[]) => (games = next) };
 }

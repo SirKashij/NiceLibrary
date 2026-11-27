@@ -254,6 +254,12 @@ export const en = {
   'hidden.unhideFailed': '{title} could not be unhidden.',
   'hidden.none': 'No game is hidden.',
   'hidden.loadFailed': 'Your hidden games could not be loaded.',
+  'favorites.title': 'Favorites',
+  'favorites.entryOne': 'Favorites, 1 game',
+  'favorites.entry': 'Favorites, {count} games',
+  'favorites.toggle': 'Favorite {title}',
+  'favorites.none': 'No favorites yet. Mark a game with its star to find it here.',
+  'favorites.failed': '{title} could not be marked or unmarked as a favorite.',
 } as const;
 
 export type MessageKey = keyof typeof en;

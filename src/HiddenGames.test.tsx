@@ -13,6 +13,7 @@ function steamGame(appId: number, title: string): Game {
     playtimeMinutes: null,
     lastPlayed: null,
     status: 'unplayed',
+    favorite: false,
   };
 }
 
@@ -87,6 +88,8 @@ function fakeOperations(games: Game[], options: { hidden?: string[]; hideFails?:
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, hidden };
 }

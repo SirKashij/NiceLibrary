@@ -169,6 +169,7 @@ fn installed(app_id: u32, title: &str) -> Game {
         playtime_minutes: None,
         last_played: None,
         status: Status::Unplayed,
+        favorite: false,
     }
 }
 

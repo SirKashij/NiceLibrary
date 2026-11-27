@@ -8,7 +8,7 @@ import type { Game, Operations, SessionEvent } from './operations';
 const THIS_MORNING = 1_795_776_300;
 
 function localGame(id: number, title: string, details: Partial<Game> = {}): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', ...details };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false, ...details };
 }
 
 const CELESTE = localGame(1, 'Celeste');
@@ -79,6 +79,8 @@ function fakeOperations(initial: Game[]) {
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   const send = (event: SessionEvent) => act(() => listeners.forEach((listener) => listener(event)));
   return { operations, send, listening: () => listeners.size, change: (next: Game[]) => (games = next) };

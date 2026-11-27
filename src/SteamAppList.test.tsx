@@ -71,6 +71,8 @@ function fakeOperations({
     closeWindow: async () => {},
     onTrayNotice: () => () => {},
     showTrayMenu: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
     collections: async () => [],
     createCollection: async () => ({ outcome: 'named', id: 1 }),
     renameCollection: async (id) => ({ outcome: 'named', id }),

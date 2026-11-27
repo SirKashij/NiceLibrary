@@ -12,6 +12,7 @@ const CELESTE: Game = {
   playtimeMinutes: 0,
   lastPlayed: null,
   status: 'unplayed',
+  favorite: false,
 };
 const PORTAL_2: Game = {
   id: 'steam:620',
@@ -21,6 +22,7 @@ const PORTAL_2: Game = {
   playtimeMinutes: null,
   lastPlayed: null,
   status: 'unplayed',
+  favorite: false,
 };
 
 /**
@@ -105,6 +107,8 @@ function fakeOperations({
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, calls };
 }

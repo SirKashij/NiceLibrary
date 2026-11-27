@@ -7,7 +7,7 @@ import type { AddLocalGame, ExecutableChoice, Game, Operations } from './operati
 const CELESTE = 'C:\\Games\\Celeste\\Celeste.exe';
 
 function localGame(id: number, title: string): Game {
-  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed' };
+  return { id: `local:${id}`, title, source: 'local', installed: true, playtimeMinutes: 0, lastPlayed: null, status: 'unplayed', favorite: false };
 }
 
 /**
@@ -86,6 +86,8 @@ function fakeOperations({
     chooseExecutableFor: async () => ({ outcome: 'cancelled' }),
     editLocalGame: async () => ({ outcome: 'noTitle' }),
     removeLocalGame: async () => {},
+    markFavorite: async () => {},
+    favoriteCount: async () => 0,
   };
   return { operations, added };
 }

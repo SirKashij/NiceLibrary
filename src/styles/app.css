@@ -232,3 +232,23 @@ input[type='checkbox'] { margin: 0; accent-color: var(--color-accent); }
 .hidden-games-list { display: grid; max-width: var(--note-max-width); padding-top: var(--space-3); }
 .hidden-games-list li { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); padding: var(--space-2) 0; border-top: var(--hairline) solid var(--color-line); }
 .hidden-games h1:focus { outline: none; }
+
+/* Favorites: the sidebar entry with its count, and the star on a Cover that marks a Favorite. */
+.favorites-entry {
+  display: flex; align-items: center; justify-content: space-between; margin-right: var(--space-3);
+  height: var(--nav-item-height); padding-left: var(--space-4);
+  color: var(--color-text-muted); font-weight: var(--weight-medium);
+}
+.favorites-entry:hover { color: var(--color-text); }
+.favorites-entry[aria-current='page'] { color: var(--color-text); box-shadow: inset var(--nav-indicator) 0 0 var(--color-text); }
+.favorites-count { font-size: var(--text-size-label); font-variant-numeric: tabular-nums; }
+.game-detail-cover { position: relative; }
+.favorite-toggle {
+  position: absolute; top: var(--space-2); right: var(--space-2); display: inline-flex; padding: var(--space-1);
+  border-radius: var(--radius-control); background: var(--color-bg); color: var(--color-text);
+  opacity: 0;
+}
+.favorite-toggle[aria-pressed='true'] { opacity: 1; }
+.favorite-toggle[aria-pressed='true'] .icon { fill: currentColor; }
+.game:hover .favorite-toggle, .game:focus-within .favorite-toggle,
+.game-detail-cover .favorite-toggle, .favorite-toggle:focus-visible { opacity: 1; }

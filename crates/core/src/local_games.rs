@@ -101,6 +101,7 @@ impl Game {
             playtime_minutes: Some(0),
             last_played: None,
             status: crate::Status::Unplayed,
+            favorite: false,
         }
     }
 }
