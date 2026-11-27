@@ -49,6 +49,7 @@ function fakeOperations({ closeToTray = true } = {}) {
     language: async () => 'system',
     chooseLanguage: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     onSession: () => () => {},
     openLogFolder: async () => {},

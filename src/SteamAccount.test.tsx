@@ -104,6 +104,7 @@ function fakeOperations(
     coverHue: async () => null,
     launch: async () => ({ outcome: 'launched' }),
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     launchOptions: async () => null,
     setLaunchOptions: async () => {},

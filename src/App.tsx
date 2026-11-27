@@ -8,6 +8,7 @@ import { useFormat, useT, type Lang, type MessageKey } from './i18n';
 import { LanguageProvider } from './language';
 import { LanguageSettings } from './settings/LanguageSettings';
 import { AddLocalGameButton } from './library/AddLocalGame';
+import { AddFromFolderButton } from './library/AddFromFolder';
 import { HiddenGamesPage } from './library/HiddenGames';
 import { useSessionChanges } from './library/Sessions';
 import { LocalGameActions } from './library/LocalGameActions';
@@ -396,6 +397,7 @@ function LibraryView({
         <Page title={favoritesOnly ? 'favorites.title' : 'nav.library'} heading={collection?.name}>
           <div className="library-actions">
             <AddLocalGameButton operations={operations} onAdded={changed} />
+            <AddFromFolderButton operations={operations} onAdded={changed} />
             <button type="button" className="button" onClick={showHidden}>
               {t('hidden.title')}
             </button>

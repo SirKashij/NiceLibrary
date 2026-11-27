@@ -8,7 +8,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     About, AboutPage, AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
-    CoverHue, CoverImageChoice, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Install, Language, Launch, LaunchOptions,
+    CoverHue, CoverImageChoice, EditLocalGame, Error, ExecutableChoice, FolderSuggestions, Game, GameAchievements, Install, Language, Launch, LaunchOptions,
     LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
     SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
 };
@@ -173,6 +173,12 @@ fn library_layout(core: tauri::State<'_, Core>) -> Result<LibraryLayout, Error> 
 #[tauri::command]
 fn choose_library_layout(core: tauri::State<'_, Core>, layout: LibraryLayout) -> Result<(), Error> {
     core.choose_library_layout(layout)
+}
+
+/// Async, so the window stays responsive while the folder dialog is open.
+#[tauri::command]
+async fn suggest_executables_in_folder(core: tauri::State<'_, Core>) -> Result<FolderSuggestions, Error> {
+    core.suggest_executables_in_folder()
 }
 
 #[tauri::command]
@@ -458,7 +464,8 @@ pub fn run() {
             language,
             choose_language,
             cover_hue,
-            install
+            install,
+            suggest_executables_in_folder
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();

@@ -87,6 +87,7 @@ function fakeOperations({
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},

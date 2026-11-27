@@ -71,6 +71,7 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     setStatus: async () => {
       throw new Error('this test sets no Status');

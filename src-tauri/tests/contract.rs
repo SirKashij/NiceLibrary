@@ -824,12 +824,15 @@ mod executable_picker {
     use nicelibrary_lib::ports::{WindowsExecutablePicker, WindowsImagePicker};
     use windows_sys::Win32::Foundation::{HWND, LPARAM, WPARAM};
     use windows_sys::Win32::UI::WindowsAndMessaging::{
-        EnumWindows, GetClassNameW, GetDlgItem, GetWindowThreadProcessId, IDCANCEL, IDOK, IsWindowVisible,
-        PostMessageW, SendMessageW, WM_COMMAND, WM_SETTEXT,
+        BM_CLICK, EnumChildWindows, EnumWindows, GetClassNameW, GetDlgCtrlID, GetDlgItem, GetWindowThreadProcessId,
+        IDCANCEL, IDOK, IsWindowVisible, PostMessageW, SendMessageW, WM_COMMAND, WM_SETTEXT,
     };
 
-    /// The id of the file name box in Windows' file dialogs (`cmb13`).
+    /// The id of the file name box in Windows' "Open" dialog (`cmb13`).
     const FILE_NAME_BOX: i32 = 0x47c;
+
+    /// The id of the box labelled "Folder" in Windows' "Select Folder" dialog (`edt1`).
+    const FOLDER_BOX: i32 = 0x480;
 
     /// One dialog at a time, so each test finds its own.
     static ONE_DIALOG: Mutex<()> = Mutex::new(());
@@ -846,12 +849,46 @@ mod executable_picker {
             // SAFETY: the callback only writes through the pointer it is given, which outlives the call.
             unsafe { EnumWindows(Some(remember_dialog), &mut found as *mut HWND as LPARAM) };
             // The file name box exists once the dialog is ready for input.
-            if !found.is_null() && !unsafe { GetDlgItem(found, FILE_NAME_BOX) }.is_null() {
+            if !found.is_null() && !file_name_box(found).is_null() {
                 return found;
             }
             std::thread::sleep(Duration::from_millis(100));
         }
         panic!("no file dialog appeared");
+    }
+
+    /// The file name box of `dialog`, or null: in the "Open" dialog a child
+    /// of its own, in the "Select Folder" dialog one further down.
+    fn file_name_box(dialog: HWND) -> HWND {
+        // SAFETY: a plain Win32 call on a window handle Windows gave us.
+        let open = unsafe { GetDlgItem(dialog, FILE_NAME_BOX) };
+        if open.is_null() { visible_control(dialog, FOLDER_BOX) } else { open }
+    }
+
+    /// The visible control with the id `id` anywhere below `dialog`, or null.
+    fn visible_control(dialog: HWND, id: i32) -> HWND {
+        let mut search: (i32, HWND) = (id, std::ptr::null_mut());
+        // SAFETY: the callback only uses the pointer it is given, which outlives the call.
+        unsafe { EnumChildWindows(dialog, Some(remember_control), &mut search as *mut (i32, HWND) as LPARAM) };
+        search.1
+    }
+
+    unsafe extern "system" fn remember_control(window: HWND, search: LPARAM) -> i32 {
+        // SAFETY: `search` is the `&mut (i32, HWND)` handed to EnumChildWindows.
+        let search = unsafe { &mut *(search as *mut (i32, HWND)) };
+        // SAFETY: plain Win32 calls on a window handle Windows just gave us.
+        if unsafe { GetDlgCtrlID(window) } == search.0 && unsafe { IsWindowVisible(window) } != 0 {
+            search.1 = window;
+            return 0;
+        }
+        1
+    }
+
+    /// Types `path` into the file name box of `dialog`, as the user would.
+    fn type_path(dialog: HWND, path: &std::path::Path) {
+        let typed: Vec<u16> = path.display().to_string().encode_utf16().chain([0]).collect();
+        // SAFETY: SendMessageW returns only once the dialog has copied the text.
+        unsafe { SendMessageW(file_name_box(dialog), WM_SETTEXT, 0, typed.as_ptr() as LPARAM) };
     }
 
     unsafe extern "system" fn remember_dialog(window: HWND, found: LPARAM) -> i32 {
@@ -871,9 +908,18 @@ mod executable_picker {
         1
     }
 
+    /// Clicks `button` of `dialog`. The "Select Folder" dialog does not hear
+    /// a command sent to the dialog itself, only a click on the button.
     fn press(dialog: HWND, button: i32) {
-        // SAFETY: plain Win32 call; the message carries no pointers.
-        unsafe { PostMessageW(dialog, WM_COMMAND, button as WPARAM, 0) };
+        let target = visible_control(dialog, button);
+        // SAFETY: plain Win32 calls; the messages carry no pointers.
+        unsafe {
+            if target.is_null() {
+                PostMessageW(dialog, WM_COMMAND, button as WPARAM, 0);
+            } else {
+                PostMessageW(target, BM_CLICK, 0, 0);
+            }
+        }
     }
 
     #[test]
@@ -885,9 +931,7 @@ mod executable_picker {
         let answer = open_dialog();
 
         let dialog = the_dialog();
-        let typed: Vec<u16> = game.display().to_string().encode_utf16().chain([0]).collect();
-        // SAFETY: SendMessageW returns only once the dialog has copied the text.
-        unsafe { SendMessageW(GetDlgItem(dialog, FILE_NAME_BOX), WM_SETTEXT, 0, typed.as_ptr() as LPARAM) };
+        type_path(dialog, &game);
         press(dialog, IDOK);
 
         let chosen = answer.join().unwrap().unwrap().expect("a chosen file");
@@ -914,9 +958,53 @@ mod executable_picker {
         let answer = open_dialog();
 
         let dialog = the_dialog();
-        let typed: Vec<u16> = game.display().to_string().encode_utf16().chain([0]).collect();
-        // SAFETY: SendMessageW returns only once the dialog has copied the text.
-        unsafe { SendMessageW(GetDlgItem(dialog, FILE_NAME_BOX), WM_SETTEXT, 0, typed.as_ptr() as LPARAM) };
+        type_path(dialog, &game);
+        press(dialog, IDOK);
+        answer.join().unwrap().unwrap();
+
+        assert_eq!(std::env::current_dir().unwrap(), before);
+    }
+
+    fn open_folder_dialog() -> JoinHandle<Result<Option<PathBuf>, String>> {
+        std::thread::spawn(|| WindowsExecutablePicker.choose_folder())
+    }
+
+    #[test]
+    fn answers_the_folder_the_user_chose() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let disk = tempfile::tempdir().unwrap();
+        let games = disk.path().join("Games");
+        fs::create_dir(&games).unwrap();
+        let answer = open_folder_dialog();
+
+        let dialog = the_dialog();
+        type_path(dialog, &games);
+        press(dialog, IDOK);
+
+        let chosen = answer.join().unwrap().unwrap().expect("a chosen folder");
+        assert!(chosen.is_absolute(), "{}", chosen.display());
+        assert_eq!(fs::canonicalize(chosen).unwrap(), fs::canonicalize(&games).unwrap());
+    }
+
+    #[test]
+    fn answers_no_folder_when_the_user_cancels() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let answer = open_folder_dialog();
+
+        press(the_dialog(), IDCANCEL);
+
+        assert_eq!(answer.join().unwrap(), Ok(None));
+    }
+
+    #[test]
+    fn choosing_a_folder_leaves_the_working_folder_where_it_was() {
+        let _one = ONE_DIALOG.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+        let before = std::env::current_dir().unwrap();
+        let disk = tempfile::tempdir().unwrap();
+        let answer = open_folder_dialog();
+
+        let dialog = the_dialog();
+        type_path(dialog, disk.path());
         press(dialog, IDOK);
         answer.join().unwrap().unwrap();
 

@@ -81,6 +81,7 @@ function fakeOperations({
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     chooseLocalGameExecutable: choice,
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async (executable, title) => {
       added.push({ executable, title });
       if (add) return add(executable, title);

@@ -83,6 +83,7 @@ function fakeOperations(initial: Collection[] = [], library: Game[] = []) {
     chooseLanguage: async () => {},
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     openLogFolder: async () => {},
     setStatus: async () => {

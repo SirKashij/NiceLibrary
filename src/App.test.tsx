@@ -68,6 +68,7 @@ function fakeOperations(games: Game[] = [], steam: SteamInstallation = NO_STEAM)
     coverHue: async () => null,
     launch: async () => ({ outcome: 'launched' }),
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     launchOptions: async () => null,
     setLaunchOptions: async () => {},

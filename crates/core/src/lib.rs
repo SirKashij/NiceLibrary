@@ -11,6 +11,7 @@ mod clock;
 mod collections;
 mod cover_hue;
 mod covers;
+mod executables_in_folder;
 mod favorites;
 pub mod keyvalues;
 mod language;
@@ -45,6 +46,7 @@ pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use cover_hue::CoverHue;
 pub use covers::{Cover, CoverCache, Downloader};
+pub use executables_in_folder::{FolderSuggestions, SuggestedExecutable};
 pub use language::Language;
 pub use launch::{Install, Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
@@ -810,6 +812,30 @@ impl Core {
             Some(id) if self.store.set_launch_options(id, &options)? => Ok(()),
             _ => Err(Error::new(format!("no such Local Game in the library: {game_id}"))),
         }
+    }
+
+    /// Asks the user to choose a folder of Games and suggests the executables
+    /// in it as Local Games, each with a proposed title; those already in the
+    /// Library are marked. Adds nothing: the user adds the ones they tick
+    /// with [`Self::add_local_game`].
+    pub fn suggest_executables_in_folder(&self) -> Result<FolderSuggestions, Error> {
+        self.logged_outcome("suggest_executables_in_folder", self.suggest_executables())
+    }
+
+    fn suggest_executables(&self) -> Result<FolderSuggestions, Error> {
+        let chosen = self
+            .ports
+            .executable_picker
+            .choose_folder()
+            .map_err(|reason| Error::new(format!("folder dialog: {reason}")))?;
+        let Some(folder) = chosen else {
+            return Ok(FolderSuggestions::Cancelled);
+        };
+        let Some(text) = folder.to_str() else {
+            return Err(Error::new(format!("not a path that can be stored: {}", folder.display())));
+        };
+        let executables = executables_in_folder::suggestions(&folder, &self.store.local_games()?);
+        Ok(FolderSuggestions::Suggested { folder: text.to_owned(), executables })
     }
 
     /// Opens the Steam page where the user creates their Steam Web API key,

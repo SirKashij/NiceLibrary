@@ -65,6 +65,7 @@ function fakeOperations(stored: LibrarySort = 'recentlyPlayed') {
     chooseLanguage: async () => {},
     chooseTheme: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
+    suggestExecutablesInFolder: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     startsWithWindows: async () => false,
     setStartWithWindows: async () => {},
