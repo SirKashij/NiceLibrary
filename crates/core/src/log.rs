@@ -197,7 +197,7 @@ fn replace_ignoring_case(text: &str, needle: &str, with: &str) -> String {
 }
 
 /// `message` with every user folder under the folder `parent` replaced,
-/// such as `C:\Users\Kevin` for `users`, but not `C:\Program Files\Users\x`:
+/// such as `C:\Users\Alex` for `users`, but not `C:\Program Files\Users\x`:
 /// `parent` must follow a drive or start a path.
 fn redact_user_folders(message: &str, parent: &str) -> String {
     let lower = message.to_ascii_lowercase();
