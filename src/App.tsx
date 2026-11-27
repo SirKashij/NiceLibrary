@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
 import type { Game, Operations, SteamAccount, SyncOutcome } from './operations';
+import { isFiltering, LibraryToolbar, NO_FILTER, NoMatch, useFilteredLibrary } from './library/LibraryFilter';
 
 type View = 'library' | 'statistics' | 'settings';
 
@@ -179,7 +180,10 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
     };
   }, [operations, syncs]);
 
-  const games = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
+  const library = fresh ?? (stored.state === 'ready' ? stored.value : undefined);
+  const [filter, setFilter] = useState(NO_FILTER);
+  const filtered = useFilteredLibrary(operations, filter, library);
+  const games = filtered.state === 'ready' ? filtered.games : undefined;
   const failure: MessageKey | undefined =
     fromSteam.state !== 'failed'
       ? undefined
@@ -204,6 +208,12 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
 
   return (
     <Page title="nav.library">
+      <LibraryToolbar filter={filter} onChange={setFilter} />
+      {filtered.state === 'failed' && (
+        <p className="note" role="alert">
+          {t('filter.failed')}
+        </p>
+      )}
       {failure && (
         <p className="note" role="alert">
           {t(failure)}
@@ -214,7 +224,10 @@ function LibraryView({ operations, syncs }: { operations: Operations; syncs: num
           {t(launchProblem.message, { title: launchProblem.title })}
         </p>
       )}
-      {fromSteam.state === 'ready' && games?.length === 0 && <p className="note">{t('library.empty')}</p>}
+      {!isFiltering(filter) && fromSteam.state === 'ready' && games?.length === 0 && (
+        <p className="note">{t('library.empty')}</p>
+      )}
+      {isFiltering(filter) && games?.length === 0 && <NoMatch onReset={() => setFilter(NO_FILTER)} />}
       {games && games.length > 0 && <CoverGrid games={games} coverUrl={operations.coverUrl} onPlay={launch} />}
     </Page>
   );

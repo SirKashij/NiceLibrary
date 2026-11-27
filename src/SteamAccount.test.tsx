@@ -57,6 +57,7 @@ function fakeOperations(
     openSteamWebApiKeyPage: async () => {},
     sync: async () => ({ outcome: 'noKey' }),
     lastSync: async () => (account && lastSyncs[account]) || null,
+    filterLibrary: async () => [],
     onAutomaticSync: () => () => {},
     launch: async () => ({ outcome: 'launched' }),
   };
