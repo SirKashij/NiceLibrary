@@ -362,6 +362,10 @@ export interface Operations {
   librarySort(): Promise<LibrarySort>;
   /** Makes `sort` the order of the Library, also after a restart. */
   chooseLibrarySort(sort: LibrarySort): Promise<void>;
+  /** The interface language the user chose; `system` until they choose. */
+  language(): Promise<Language>;
+  /** Makes `language` the interface language, also after a restart. */
+  chooseLanguage(language: Language): Promise<void>;
   /**
    * Asks the user to choose an image in the operating system's file dialog
    * and makes it the Cover of a Local Game, in place of its executable's
@@ -463,6 +467,12 @@ export interface About {
 /** A page the About dialog links to. Mirrors `AboutPage` in crates/core. */
 export type AboutPage = 'project' | 'license';
 
+/**
+ * The interface language the user chose; `system` follows the system language, English for anything
+ * but German. Mirrors `Language` in crates/core.
+ */
+export type Language = 'system' | 'de' | 'en';
+
 /** The texts of the Tray icon. Mirrors `TrayMenuTexts` in src-tauri/src/tray.rs. */
 export interface TrayMenuTexts {
   tooltip: string;
@@ -537,6 +547,8 @@ export const tauriOperations: Operations = {
   chooseCoverImage: (gameId) => invoke<CoverImageChoice>('choose_cover_image', { gameId }),
   coverImageChosen: (gameId) => invoke<boolean>('cover_image_chosen', { gameId }),
   removeCoverImage: (gameId) => invoke<void>('remove_cover_image', { gameId }),
+  language: () => invoke<Language>('language'),
+  chooseLanguage: (language) => invoke<void>('choose_language', { language }),
   setStatus: (gameId, status) => invoke<Game>('set_status', { gameId, status }),
   openLogFolder: () => invoke<void>('open_log_folder'),
   startsWithWindows: () => invoke<boolean>('starts_with_windows'),

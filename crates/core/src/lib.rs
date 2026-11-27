@@ -12,6 +12,7 @@ mod collections;
 mod covers;
 mod favorites;
 pub mod keyvalues;
+mod language;
 mod launch;
 mod local_covers;
 mod local_games;
@@ -42,6 +43,7 @@ pub use autostart::{AUTOSTART_ARGUMENT, Autostart, started_with_windows};
 pub use clock::{Clock, Wakeup};
 pub use collections::{Collection, CollectionNaming};
 pub use covers::{Cover, CoverCache, Downloader};
+pub use language::Language;
 pub use launch::{Launch, LaunchOptions, OpenError, Opener, ProcessStarter};
 pub use library_filter::{LibraryFilter, LibrarySort};
 pub use local_covers::{CoverImageChoice, Icon, IconExtractor, ImagePicker};
@@ -825,6 +827,19 @@ impl Core {
     /// Makes `layout` the Library Layout, from now on and after every restart.
     pub fn choose_library_layout(&self, layout: LibraryLayout) -> Result<(), Error> {
         self.logged("choose_library_layout", self.store.choose_library_layout(layout))
+    }
+
+    /// The interface language the user chose; until they choose,
+    /// [`Language::System`]: the interface follows the system language, and
+    /// English for anything but German.
+    pub fn language(&self) -> Result<Language, Error> {
+        self.logged("language", self.store.language())
+    }
+
+    /// Makes `language` the interface language, from now on and after every
+    /// restart.
+    pub fn choose_language(&self, language: Language) -> Result<(), Error> {
+        self.logged("choose_language", self.store.choose_language(language))
     }
 
     /// Every Collection with how many Games of the Library are in it,

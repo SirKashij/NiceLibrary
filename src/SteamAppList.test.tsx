@@ -67,6 +67,8 @@ function fakeOperations({
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     theme: async () => 'system',
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async () => {},
     closeToTray: async () => true,
     setCloseToTray: async () => {},

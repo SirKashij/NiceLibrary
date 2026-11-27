@@ -4,7 +4,9 @@ import { Collections } from './Collections';
 import { FavoritesEntry, FavoriteToggle, NoFavorites, useFavoriteMarking } from './Favorites';
 import { GameCollections } from './GameCollections';
 import { GameDetail } from './GameDetail';
-import { I18nProvider, useFormat, useT, type Lang, type MessageKey } from './i18n';
+import { useFormat, useT, type Lang, type MessageKey } from './i18n';
+import { LanguageProvider } from './language';
+import { LanguageSettings } from './settings/LanguageSettings';
 import { AddLocalGameButton } from './library/AddLocalGame';
 import { HiddenGamesPage } from './library/HiddenGames';
 import { useSessionChanges } from './library/Sessions';
@@ -30,13 +32,14 @@ const VIEWS: { view: View; label: MessageKey }[] = [
   { view: 'settings', label: 'nav.settings' },
 ];
 
+/** The whole interface; `lang` is the system language, shown until the user chooses another. */
 export function App({ operations, lang }: { operations: Operations; lang: Lang }) {
   return (
-    <I18nProvider lang={lang}>
+    <LanguageProvider operations={operations} system={lang}>
       <ThemeProvider operations={operations}>
         <Shell operations={operations} />
       </ThemeProvider>
-    </I18nProvider>
+    </LanguageProvider>
   );
 }
 
@@ -618,6 +621,7 @@ function SettingsView({ operations, onAccountChosen }: { operations: Operations;
       <SteamSettings operations={operations} onAccountChosen={onAccountChosen} />
       <SteamWebApiKeySettings operations={operations} />
       <ThemeSettings />
+      <LanguageSettings />
       <WindowSettings operations={operations} />
       <SteamAppListSettings operations={operations} />
       <LogSettings operations={operations} />

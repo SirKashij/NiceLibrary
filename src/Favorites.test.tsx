@@ -106,6 +106,8 @@ function fakeOperations({ favorites = [], marking = 'works' }: { favorites?: str
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    language: async () => 'system',
+    chooseLanguage: async () => {},
   };
   return { operations, asked, marks };
 }

@@ -46,6 +46,8 @@ function fakeOperations({ closeToTray = true } = {}) {
     gameCollections: async () => [],
     addGameToCollection: async () => {},
     removeGameFromCollection: async () => {},
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseLocalGameExecutable: async () => ({ outcome: 'cancelled' }),
     addLocalGame: async () => ({ outcome: 'noTitle' }),
     onSession: () => () => {},

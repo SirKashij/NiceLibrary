@@ -58,6 +58,8 @@ function fakeOperations(
     sync: options.sync ?? (async () => ({ outcome: 'noKey' })),
     lastSync: async () => null,
     theme: async () => 'system',
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async () => {},
     closeToTray: async () => true,
     setCloseToTray: async () => {},

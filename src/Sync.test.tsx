@@ -80,6 +80,8 @@ function fakeOperations({
     },
     lastSync: async () => last,
     theme: async () => 'system',
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async () => {},
     hiddenGames: async () => [],
     hideGame: async () => {},

@@ -80,6 +80,8 @@ function fakeOperations({ startsWithWindows = false } = {}) {
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    language: async () => 'system',
+    chooseLanguage: async () => {},
   };
   const removeOutsideTheApp = () => {
     entry = false;

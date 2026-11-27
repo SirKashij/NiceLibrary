@@ -55,6 +55,8 @@ function fakeOperations({ stored = 'system' as Theme } = {}) {
     achievements: async () => ({ state: 'notFetchedYet' }),
     achievementIconUrl: (game, icon) => `cover://localhost/${game.id}/achievements/${icon}`,
     theme: async () => theme,
+    language: async () => 'system',
+    chooseLanguage: async () => {},
     chooseTheme: async (chosen) => {
       calls.chosen.push(chosen);
       theme = chosen;

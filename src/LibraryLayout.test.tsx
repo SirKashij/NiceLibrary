@@ -98,6 +98,8 @@ function fakeOperations(stored: Promise<LibraryLayout> = Promise.resolve('coverG
     favoriteCount: async () => 0,
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
+    language: async () => 'system',
+    chooseLanguage: async () => {},
   };
   return { operations, chosen, launched, marks, failWhenChoosing: () => (failChoosing = true) };
 }

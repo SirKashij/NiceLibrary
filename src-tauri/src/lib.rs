@@ -8,7 +8,7 @@ use std::ops::ControlFlow;
 
 use nicelibrary_core::{
     About, AboutPage, AddLocalGame, AutomaticSteamAppListFetch, AutomaticSync, Collection, CollectionNaming, Core, CoverCache,
-    CoverImageChoice, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Launch, LaunchOptions,
+    CoverImageChoice, EditLocalGame, Error, ExecutableChoice, Game, GameAchievements, Language, Launch, LaunchOptions,
     LibraryFilter, LibraryLayout, LibrarySort, LocalGame, Log, Status, SteamAccountChoice, SteamAppList, SteamAppListFetch,
     SteamInstallation, SteamWebApiKeyCheck, Store, SyncOutcome, Theme, Tracking, started_with_windows,
 };
@@ -315,6 +315,16 @@ async fn open_about_page(core: tauri::State<'_, Core>, page: AboutPage) -> Resul
     core.open_about_page(page)
 }
 
+#[tauri::command]
+fn language(core: tauri::State<'_, Core>) -> Result<Language, Error> {
+    core.language()
+}
+
+#[tauri::command]
+fn choose_language(core: tauri::State<'_, Core>, language: Language) -> Result<(), Error> {
+    core.choose_language(language)
+}
+
 /// The URL scheme the interface loads Covers from: `cover://localhost/<game id>`,
 /// on Windows `http://cover.localhost/<game id>` (see `coverUrl` in src/operations.ts).
 /// Achievement icons come from `<game id>/achievements/<icon>` under the same scheme
@@ -432,7 +442,9 @@ pub fn run() {
             mark_favorite,
             favorite_count,
             about,
-            open_about_page
+            open_about_page,
+            language,
+            choose_language
         ])
         .register_asynchronous_uri_scheme_protocol(COVER_PROTOCOL, |context, request, responder| {
             let app = context.app_handle().clone();
