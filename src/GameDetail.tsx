@@ -93,7 +93,9 @@ export function GameDetail({
     };
   }, [operations, opened.id, syncs]);
 
-  const tint = useCoverTint(operations, opened.id);
+  // A Local Game's Cover changes when the user chooses an image or goes back to the icon; its Tint follows.
+  const [coverChanges, setCoverChanges] = useState(0);
+  const tint = useCoverTint(operations, opened.id, coverChanges);
   // The Tint replaces the theme's background and accent for everything on the page.
   const tinted = tint
     ? ({ '--color-bg': tint.background, '--color-accent': tint.accent, '--color-accent-ink': tint.accentInk } as CSSProperties)
@@ -123,7 +125,14 @@ export function GameDetail({
         <div className="game-detail-cover">
           {cover(game ?? opened)}
           {game?.source === 'local' && (
-            <LocalGameCoverChoice operations={operations} game={game} onCoverChanged={onCoverChanged} />
+            <LocalGameCoverChoice
+              operations={operations}
+              game={game}
+              onCoverChanged={(changed) => {
+                setCoverChanges((n) => n + 1);
+                onCoverChanged(changed);
+              }}
+            />
           )}
           {game && <FavoriteToggle game={game} onToggle={onFavorite} />}
         </div>

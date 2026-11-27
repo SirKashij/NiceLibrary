@@ -133,7 +133,7 @@ function shownThemeColours(): ThemeColours {
  * `null`, the neutral look, while the Cover hue is asked, when the Game has none, when it cannot
  * be read, or when no Tint keeps the contrast rules.
  */
-export function useCoverTint(operations: Operations, gameId: string): CoverTint | null {
+export function useCoverTint(operations: Operations, gameId: string, coverChanges = 0): CoverTint | null {
   const [hue, setHue] = useState<CoverHue | null>(null);
   // The theme is `data-theme` on the document element (src/theme.tsx).
   const [theme, setTheme] = useState(() => document.documentElement.dataset.theme);
@@ -148,7 +148,7 @@ export function useCoverTint(operations: Operations, gameId: string): CoverTint 
     return () => {
       active = false;
     };
-  }, [operations, gameId]);
+  }, [operations, gameId, coverChanges]);
 
   useEffect(() => {
     const observer = new MutationObserver(() => setTheme(document.documentElement.dataset.theme));

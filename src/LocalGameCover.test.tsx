@@ -1,6 +1,8 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, it, onTestFinished } from 'vitest';
 import { App } from './App';
 import type { CoverImageChoice, Game, Operations } from './operations';
 
@@ -116,7 +118,7 @@ function fakeOperations({
     chooseLibraryLayout: async () => {},
     about: async () => ({ version: '0.1.0', license: 'MIT' }),
     openAboutPage: async () => {},
-    coverHue: async () => null,
+    coverHue: async (gameId) => (chosen.has(gameId) ? { hue: 220, saturation: 0.8 } : null),
     language: async () => 'system',
     chooseLanguage: async () => {},
   };
@@ -169,6 +171,26 @@ describe('The Cover of a Local Game', () => {
       'cover://localhost/local:1?revision=1',
     );
     expect(within(page).queryByRole('button', { name: 'Use the executable’s icon' })).not.toBeInTheDocument();
+  });
+
+  it('gives the detail page its Tint from the chosen image, and takes it back with the icon', async () => {
+    // The theme colours as the app has them, from which the Tint is made.
+    const tokens = document.createElement('style');
+    tokens.textContent = readFileSync(join(__dirname, 'styles', 'tokens.css'), 'utf8');
+    document.head.append(tokens);
+    onTestFinished(() => tokens.remove());
+    const { operations } = fakeOperations();
+    render(<App operations={operations} lang="en" />);
+    const { user, page } = await open('Celeste');
+    expect(page).toHaveAttribute('data-tint', 'neutral');
+
+    await user.click(within(page).getByRole('button', { name: 'Choose an image…' }));
+
+    await waitFor(() => expect(page).toHaveAttribute('data-tint', 'cover'));
+
+    await user.click(await within(page).findByRole('button', { name: 'Use the executable’s icon' }));
+
+    await waitFor(() => expect(page).toHaveAttribute('data-tint', 'neutral'));
   });
 
   it('offers the way back to the icon only when an image is chosen', async () => {

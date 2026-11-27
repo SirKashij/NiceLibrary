@@ -1280,7 +1280,8 @@ impl Core {
     /// without colour to speak of. Reads the cached Cover, downloading it
     /// first like [`Core::cover`] when it is not cached yet.
     pub fn cover_hue(&self, game_id: &str) -> Result<Option<CoverHue>, Error> {
-        Ok(self.cover(game_id)?.as_ref().and_then(cover_hue::dominant_hue))
+        let hue = self.cover(game_id).map(|cover| cover.as_ref().and_then(cover_hue::dominant_hue));
+        self.logged("cover_hue", hue)
     }
 }
 
