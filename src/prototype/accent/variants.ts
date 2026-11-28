@@ -16,6 +16,23 @@ const BASE = `
 :root[data-theme='light'] .brand-mark { background-image: ${mark('#3f6b0c')}; }
 `;
 
+// Variant E as roles: what uses fill follows --color-accent, what uses line follows --color-accent-line.
+const E_ROLES = `
+:root, :root[data-theme='light'] { --color-accent: var(--lime-fill); --color-accent-ink: var(--lime-ink); --color-accent-line: var(--lime-line); }
+.brand-mark, :root[data-theme='light'] .brand-mark { width: 22px; height: 22px; background-image: ${plateMark}; }
+.sidebar { background: linear-gradient(180deg, var(--lime-soft), transparent 55%); }
+.sidebar nav button[aria-current='page'] { color: var(--lime-ink); background: var(--lime-fill); border-radius: 999px; box-shadow: none; }
+.page h1 { background: linear-gradient(120deg, #e4ff7a, #7fd66b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+:root[data-theme='light'] .page h1 { background-image: linear-gradient(120deg, #4f8a10, #2f6b2a); }
+.game-detail h1 { background: none; color: var(--color-text); }
+.game:hover .cover { outline: 2px solid var(--lime-fill); outline-offset: 2px; }
+:root[data-theme='light'] .game:hover .cover { outline-color: var(--lime-line); }
+.segmented button[aria-pressed='true'] { color: var(--color-accent-ink); background: var(--color-accent); }
+button:focus-visible, input:focus-visible { outline-color: var(--color-accent-line); }
+input[type='checkbox'], input[type='radio'], .toolbar-toggle input { accent-color: var(--color-accent-line); }
+.button:hover { border-color: var(--color-accent-line); }
+`;
+
 export interface Variant {
   key: string;
   name: string;
@@ -83,5 +100,21 @@ button:focus-visible, input:focus-visible { outline-color: var(--lime-line); }
 input[type='checkbox'], input[type='radio'], .toolbar-toggle input { accent-color: var(--lime-line); }
 .button:hover { border-color: var(--lime-line); }
 `,
+  },
+  // #94 triage: E with the accent split into roles, to judge the detail page. Fill and ink: --color-accent(-ink),
+  // which the Cover tint already overrides inline. Line: --color-accent-line, lime by default.
+  {
+    key: 'E-A',
+    name: 'E, Detailseite ganz vom Cover',
+    where: 'wie E. Auf der Detailseite eines Spiels kommen ALLE Akzentrollen vom Cover: „Spielen“, gedrücktes Status-Segment, Fokusring (Tab drücken), Sammlungs-Checkboxen, Button-Hover. Kein Lime im Inhalt der Detailseite.',
+    css: `${BASE}${E_ROLES}
+.game-detail[data-tint='cover'] { --color-accent-line: var(--color-accent); }
+`,
+  },
+  {
+    key: 'E-B',
+    name: 'E, Detailseite: Linien bleiben Lime',
+    where: 'wie E. Auf der Detailseite kommen „Spielen“ und das gedrückte Status-Segment vom Cover; Fokusring (Tab drücken), Sammlungs-Checkboxen und Button-Hover bleiben Lime.',
+    css: `${BASE}${E_ROLES}`,
   },
 ];
