@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- The "nl" monogram for the smallest icon size (the 16 px image in icon.ico).
+       Flat lime between the two gradient stops of icon.svg, and strokes two pixels wide on the
+       16 px grid (64 units per pixel), so the n and the l stay apart in the Tray and the title bar. -->
+  <rect width="1024" height="1024" rx="224" fill="#121314"/>
+  <path d="M256 832 V576 A128 128 0 0 1 512 576 V832 M768 192 V832"
+        fill="none" stroke="#b2eb73" stroke-width="128"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

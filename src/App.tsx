@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AboutButton } from './About';
+import { BrandMark } from './BrandMark';
 import { Collections } from './Collections';
 import { FavoritesEntry, FavoriteToggle, NoFavorites, useFavoriteMarking } from './Favorites';
 import { GameCollections } from './GameCollections';
@@ -116,7 +117,7 @@ function Shell({ operations }: { operations: Operations }) {
     <div className="shell">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true" />
+          <BrandMark />
           {t('app.name')}
         </div>
         <nav aria-label={t('nav.main')}>
