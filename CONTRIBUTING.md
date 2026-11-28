@@ -90,7 +90,7 @@ The app writes errors and notable events (Syncs, Launches, a key stored or remov
 
 ## The app icon
 
-The app icon is drawn once, in `src-tauri/icon.svg`: the "nl" monogram on its dark plate. Every file in `src-tauri/icons/` is built from it with `node scripts/build-icons.ts`; never edit those files by hand. The 16 px image in `icon.ico`, which the Tray and the title bar use, comes from the simplified `src-tauri/icon-small.svg` (flat lime, strokes on the pixel grid), because the gradient blurs the n into the l at that size. After changing either SVG, run the script and look at the 16 px and 32 px images enlarged. The sidebar mark (`src/BrandMark.tsx`) draws the same monogram with its colours from `src/styles/tokens.css`; keep its path in step with `icon.svg`.
+The app icon is drawn once, in `src-tauri/icon.svg`: the "nl" monogram on its dark plate. Every file in `src-tauri/icons/` is built from it with `node scripts/build-icons.ts`; never edit those files by hand. The 16 px image in `icon.ico`, which the Tray and the title bar use, comes from the simplified `src-tauri/icon-small.svg` (flat lime, strokes on the pixel grid), because the gradient blurs the n into the l at that size. After changing either SVG, run the script and look at the 16 px and 32 px images enlarged. The sidebar mark (`src/BrandMark.tsx`) draws the same monogram with its colours from `src/styles/tokens.css`; its test fails when its path, stroke or plate drifts from `icon.svg`.
 
 ## Releasing
 

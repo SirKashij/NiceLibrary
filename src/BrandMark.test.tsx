@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { render } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { BrandMark } from './BrandMark';
@@ -9,6 +11,20 @@ describe('the brand mark', () => {
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute('aria-hidden', 'true');
     expect(svg).toHaveAttribute('focusable', 'false');
+  });
+
+  it('draws the same monogram as the app icon', () => {
+    const icon = new DOMParser().parseFromString(
+      readFileSync(join(__dirname, '..', 'src-tauri', 'icon.svg'), 'utf8'),
+      'image/svg+xml',
+    );
+    const { container } = render(<BrandMark />);
+    const shape = (svg: ParentNode) => {
+      const path = svg.querySelector('path');
+      const plate = svg.querySelector('rect');
+      return [path?.getAttribute('d'), path?.getAttribute('stroke-width'), plate?.getAttribute('rx')];
+    };
+    expect(shape(container)).toEqual(shape(icon));
   });
 
   it('strokes its monogram with its own gradient, even when it is shown twice', () => {
