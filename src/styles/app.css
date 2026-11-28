@@ -26,10 +26,10 @@ button:focus-visible, input:focus-visible {
   display: flex; align-items: center; gap: var(--space-2);
   font-family: var(--font-display); font-size: var(--text-size-brand); font-weight: var(--weight-display);
 }
-.brand-mark {
-  width: var(--brand-mark-width); height: var(--brand-mark-height);
-  background: var(--color-text); border-radius: var(--radius-mark);
-}
+.brand-mark { flex: none; width: var(--brand-mark-size); height: var(--brand-mark-size); }
+.brand-plate { fill: var(--brand-plate); }
+.brand-gradient-start { stop-color: var(--brand-gradient-start); }
+.brand-gradient-end { stop-color: var(--brand-gradient-end); }
 .sidebar nav { display: grid; gap: var(--space-1); }
 .sidebar nav button {
   height: var(--nav-item-height); padding-left: var(--space-4);

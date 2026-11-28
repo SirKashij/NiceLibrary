@@ -88,6 +88,10 @@ The Steam Web API key is never kept in the database, a file or a log. It lives o
 
 The app writes errors and notable events (Syncs, Launches, a key stored or removed) to `%APPDATA%\io.github.sirkashij.nicelibrary\logs\nicelibrary.log`. When that file reaches 1 MiB it becomes `nicelibrary.1.log`, the one before `nicelibrary.2.log`, and the oldest is dropped, so the log never takes more than 3 MiB. Before an entry is written, the core replaces every run of 32 or more hexadecimal digits (a Steam Web API key) with `[key]` and every run of 17 or more digits (a SteamID64) with `[SteamID]` (`crates/core/src/log.rs`). The app never sends the log; the settings only open its folder, so the user attaches a file to a bug report themselves. The end-to-end tests start the real app, so they write to that log too.
 
+## The app icon
+
+The app icon is drawn once, in `src-tauri/icon.svg`: the "nl" monogram on its dark plate. Every file in `src-tauri/icons/` is built from it with `node scripts/build-icons.ts`; never edit those files by hand. The 16 px image in `icon.ico`, which the Tray and the title bar use, comes from the simplified `src-tauri/icon-small.svg` (flat lime, strokes on the pixel grid), because the gradient blurs the n into the l at that size. After changing either SVG, run the script and look at the 16 px and 32 px images enlarged. The sidebar mark (`src/BrandMark.tsx`) draws the same monogram with its colours from `src/styles/tokens.css`; keep its path in step with `icon.svg`.
+
 ## Releasing
 
 Releases are built only by the workflow `.github/workflows/release.yml`, from a tagged commit on `main`, on GitHub-hosted runners (ADR-0006). No installer built on a personal computer is ever published.

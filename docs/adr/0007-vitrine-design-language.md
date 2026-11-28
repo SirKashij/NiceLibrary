@@ -14,6 +14,7 @@ Both were chosen from throwaway prototypes on the branch `prototype/ui-variants`
 ## The language
 
 - **Colour**: surfaces `#121314` dark / `#F2F2F0` light, text `#ECEBE8` / `#1A1B1C`. The "accent" in the library is the text colour itself (inverted primary button, white progress line). On a detail page, accent and background tint derive from the Cover's dominant hue. Status colours (playing, completed, dropped) are the only other colours.
+- **Brand mark (exception)**: the "nl" monogram, a lime gradient `#E4FF7A` → `#7FD66B` on the dark plate `#121314`, is the app icon and the mark beside the wordmark in the sidebar (#92). It is the first exception to "no brand accent colour at all": the mark carries colour, the rest of the interface stays neutral. The mark keeps its dark plate in both themes, so it looks the same in dark and light.
 - **Type**: Bricolage Grotesque for display (page titles, game titles, key figures), Instrument Sans for everything else. Both OFL, shipped as files with the app, never from a CDN.
 - **Shape**: small radii by role (Covers 3px, controls 4px), no pills, no cards: sections are separated by hairlines, not boxed.
 - **Covers**: shown large, uncropped, unframed. Games that are not Installed are desaturated.

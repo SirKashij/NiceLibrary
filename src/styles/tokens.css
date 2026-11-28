@@ -54,11 +54,16 @@
   --space-7: 40px;
   --nav-item-height: 34px;
   --sidebar-width: 232px;
-  --brand-mark-width: 14px;
-  --brand-mark-height: 20px;
   --note-max-width: 56ch;
   --icon-size: 14px;
   --icon-stroke: 1.75;
+
+  /* The brand mark: the "nl" monogram of the app icon on its dark plate, the same in both themes (ADR-0007).
+     Its gradient is the brand gradient, for the brand colour of the dark theme to reuse (#94). */
+  --brand-mark-size: 22px;
+  --brand-plate: #121314;
+  --brand-gradient-start: #e4ff7a;
+  --brand-gradient-end: #7fd66b;
 
   /* Covers: Steam's upright library image is 600 x 900. Not Installed: desaturated (ADR-0007). */
   --cover-min-width: 158px;
